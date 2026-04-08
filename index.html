@@ -1644,7 +1644,6 @@ async function spGetSiteId(cfg) {
 }
 
 async function spGetDriveId(cfg, siteId) {
-  // Get the drive (document library) that matches the first segment of folder path
   const libName = cfg.folder.split('/')[0];
   const r = await fetch(
     `https://graph.microsoft.com/v1.0/sites/${siteId}/drives`,
@@ -1652,15 +1651,16 @@ async function spGetDriveId(cfg, siteId) {
   );
   if (!r.ok) throw new Error(`無法列出文件庫（${r.status}）`);
   const d = await r.json();
-  const drive = d.value.find(dv =>
-    dv.name === libName || dv.webUrl?.endsWith('/' + encodeURIComponent(libName))
-  );
-  if (!drive) throw new Error(`找不到文件庫「${libName}」，請確認資料夾路徑第一段是文件庫名稱`);
+  // Match by drive name exactly
+  const drive = d.value.find(dv => dv.name === libName);
+  if (!drive) {
+    const names = d.value.map(dv => dv.name).join('、');
+    throw new Error(`找不到文件庫「${libName}」，現有文件庫：${names}`);
+  }
   return drive.id;
 }
 
 async function spEnsureFolder(cfg, siteId, driveId) {
-  // folder path without the library name (first segment)
   const parts = cfg.folder.split('/').slice(1);
   if (parts.length === 0) return;
   let cur = '';
@@ -1676,8 +1676,8 @@ async function spEnsureFolder(cfg, siteId, driveId) {
 }
 
 async function spWriteFile(cfg, siteId, driveId, filename, content) {
-  // path inside the drive = folder segments after library name + filename
-  const innerPath = cfg.folder.split('/').slice(1).concat([filename]).join('/');
+  const innerParts = cfg.folder.split('/').slice(1);
+  const innerPath = [...innerParts, filename].join('/');
   const encodedPath = spEncodePath(innerPath);
   const r = await fetch(
     `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${encodedPath}:/content`,
@@ -1692,7 +1692,8 @@ async function spWriteFile(cfg, siteId, driveId, filename, content) {
 }
 
 async function spReadFile(cfg, siteId, driveId, filename) {
-  const innerPath = cfg.folder.split('/').slice(1).concat([filename]).join('/');
+  const innerParts = cfg.folder.split('/').slice(1);
+  const innerPath = [...innerParts, filename].join('/');
   const encodedPath = spEncodePath(innerPath);
   const r = await fetch(
     `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${encodedPath}:/content`,
@@ -1704,10 +1705,10 @@ async function spReadFile(cfg, siteId, driveId, filename) {
 }
 
 async function spListFiles(cfg, siteId, driveId) {
-  const innerPath = cfg.folder.split('/').slice(1).join('/');
-  const encodedPath = spEncodePath(innerPath);
+  const innerParts = cfg.folder.split('/').slice(1);
+  const innerPath = innerParts.join('/');
   const url = innerPath
-    ? `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${encodedPath}:/children?$select=name`
+    ? `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${spEncodePath(innerPath)}:/children?$select=name`
     : `https://graph.microsoft.com/v1.0/drives/${driveId}/root/children?$select=name`;
   const r = await fetch(url, { headers: spHeaders() });
   if (!r.ok) return [];
