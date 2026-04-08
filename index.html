@@ -1628,63 +1628,88 @@ function siteApiBase(cfg) {
   return `https://graph.microsoft.com/v1.0/sites/${host}:${path}`;
 }
 
-async function spGetSiteId(cfg) {
-  const r = await fetch(siteApiBase(cfg), { headers: spHeaders() });
-  if (!r.ok) throw new Error('無法取得 SharePoint 站台資訊，請確認網址是否正確');
-  const d = await r.json();
-  return d.id; // format: hostname,siteId,webId
+// Encode a full path for Graph API: encode each segment but keep slashes
+function spEncodePath(p) {
+  return p.split('/').map(seg => encodeURIComponent(seg)).join('/');
 }
 
-async function spEnsureFolder(cfg, siteId) {
-  const parts = cfg.folder.split('/');
-  // Use drive item path endpoint
-  const encoded = encodeURIComponent(cfg.folder);
+async function spGetSiteId(cfg) {
+  const r = await fetch(siteApiBase(cfg), { headers: spHeaders() });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(`無法取得 SharePoint 站台資訊（${r.status}）：${err?.error?.message || '請確認網址是否正確'}`);
+  }
+  const d = await r.json();
+  return d.id;
+}
+
+async function spGetDriveId(cfg, siteId) {
+  // Get the drive (document library) that matches the first segment of folder path
+  const libName = cfg.folder.split('/')[0];
   const r = await fetch(
-    `https://graph.microsoft.com/v1.0/sites/${siteId}/drive/root:/${encoded}`,
+    `https://graph.microsoft.com/v1.0/sites/${siteId}/drives`,
     { headers: spHeaders() }
   );
-  if (r.ok) return; // folder exists
-  // Create folder path segment by segment
+  if (!r.ok) throw new Error(`無法列出文件庫（${r.status}）`);
+  const d = await r.json();
+  const drive = d.value.find(dv =>
+    dv.name === libName || dv.webUrl?.endsWith('/' + encodeURIComponent(libName))
+  );
+  if (!drive) throw new Error(`找不到文件庫「${libName}」，請確認資料夾路徑第一段是文件庫名稱`);
+  return drive.id;
+}
+
+async function spEnsureFolder(cfg, siteId, driveId) {
+  // folder path without the library name (first segment)
+  const parts = cfg.folder.split('/').slice(1);
+  if (parts.length === 0) return;
   let cur = '';
   for (const part of parts) {
-    const parent = cur || 'root';
-    const parentEncoded = cur ? encodeURIComponent(cur) : 'root';
+    const parentPath = cur ? `/root:/${spEncodePath(cur)}:` : '/root';
     cur = cur ? `${cur}/${part}` : part;
-    const check = await fetch(
-      `https://graph.microsoft.com/v1.0/sites/${siteId}/drive/${parent === 'root' ? 'root' : `root:/${parentEncoded}:`}/children`,
+    await fetch(
+      `https://graph.microsoft.com/v1.0/drives/${driveId}${parentPath}/children`,
       { method: 'POST', headers: spHeaders(),
         body: JSON.stringify({ name: part, folder: {}, '@microsoft.graph.conflictBehavior': 'ignore' }) }
     );
   }
 }
 
-async function spWriteFile(cfg, siteId, filename, content) {
-  const path = encodeURIComponent(`${cfg.folder}/${filename}`);
+async function spWriteFile(cfg, siteId, driveId, filename, content) {
+  // path inside the drive = folder segments after library name + filename
+  const innerPath = cfg.folder.split('/').slice(1).concat([filename]).join('/');
+  const encodedPath = spEncodePath(innerPath);
   const r = await fetch(
-    `https://graph.microsoft.com/v1.0/sites/${siteId}/drive/root:/${path}:/content`,
-    { method: 'PUT', headers: { 'Authorization': `Bearer ${spAccessToken}`, 'Content-Type': 'application/json' },
+    `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${encodedPath}:/content`,
+    { method: 'PUT',
+      headers: { 'Authorization': `Bearer ${spAccessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(content) }
   );
-  if (!r.ok) throw new Error(`寫入失敗：${r.status}`);
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(`寫入失敗（${r.status}）：${err?.error?.message || ''}`);
+  }
 }
 
-async function spReadFile(cfg, siteId, filename) {
-  const path = encodeURIComponent(`${cfg.folder}/${filename}`);
+async function spReadFile(cfg, siteId, driveId, filename) {
+  const innerPath = cfg.folder.split('/').slice(1).concat([filename]).join('/');
+  const encodedPath = spEncodePath(innerPath);
   const r = await fetch(
-    `https://graph.microsoft.com/v1.0/sites/${siteId}/drive/root:/${path}:/content`,
+    `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${encodedPath}:/content`,
     { headers: { 'Authorization': `Bearer ${spAccessToken}` } }
   );
   if (r.status === 404) return null;
-  if (!r.ok) throw new Error(`讀取失敗：${r.status}`);
+  if (!r.ok) throw new Error(`讀取失敗（${r.status}）`);
   return await r.json();
 }
 
-async function spListFiles(cfg, siteId) {
-  const path = encodeURIComponent(cfg.folder);
-  const r = await fetch(
-    `https://graph.microsoft.com/v1.0/sites/${siteId}/drive/root:/${path}:/children?$select=name`,
-    { headers: spHeaders() }
-  );
+async function spListFiles(cfg, siteId, driveId) {
+  const innerPath = cfg.folder.split('/').slice(1).join('/');
+  const encodedPath = spEncodePath(innerPath);
+  const url = innerPath
+    ? `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${encodedPath}:/children?$select=name`
+    : `https://graph.microsoft.com/v1.0/drives/${driveId}/root/children?$select=name`;
+  const r = await fetch(url, { headers: spHeaders() });
   if (!r.ok) return [];
   const d = await r.json();
   return (d.value || []).map(f => f.name).filter(n => n.endsWith('.json'));
@@ -1696,8 +1721,9 @@ async function saveToSharePoint(month, record) {
   if (!cfg || !spAccessToken) return;
   try {
     const siteId = await spGetSiteId(cfg);
-    await spEnsureFolder(cfg, siteId);
-    await spWriteFile(cfg, siteId, `${month}.json`, record);
+    const driveId = await spGetDriveId(cfg, siteId);
+    await spEnsureFolder(cfg, siteId, driveId);
+    await spWriteFile(cfg, siteId, driveId, `${month}.json`, record);
   } catch(e) {
     console.error('SP save error', e);
     throw e;
@@ -1712,11 +1738,12 @@ async function spSyncAll() {
   btn.textContent = '同步中…'; btn.disabled = true;
   try {
     const siteId = await spGetSiteId(cfg);
-    const files = await spListFiles(cfg, siteId);
+    const driveId = await spGetDriveId(cfg, siteId);
+    const files = await spListFiles(cfg, siteId, driveId);
     let count = 0;
     for (const fname of files) {
       const month = fname.replace('.json','');
-      const record = await spReadFile(cfg, siteId, fname);
+      const record = await spReadFile(cfg, siteId, driveId, fname);
       if (record && record.month && record.data) {
         localStorage.setItem(`lalaso_month_${month}`, JSON.stringify(record));
         count++;
@@ -1757,6 +1784,7 @@ function saveMonthData() {
       })
       .catch(e => {
         btn.textContent = '⚠ 本地已存，SharePoint 失敗'; btn.disabled = false;
+        alert(`SharePoint 儲存失敗：${e.message}`);
         console.error(e);
       });
   } else {
