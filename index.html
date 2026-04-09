@@ -1021,7 +1021,7 @@ function buildStoreTable(store) {
 
   // Final teachers: sorted by total people desc
   const finalTeachers = teachers
-    .filter(t => CAT_ORDER.some(c => (stat[t]?.[c]?.sessions || 0) > 0))
+    .filter(t => CAT_ORDER.some(c => (stat[t]?.[c]?.people || 0) > 0 || (stat[t]?.[c]?.sessions || 0) > 0))
     .sort((a, b) => {
       const totalA = CAT_ORDER.reduce((s, c) => s + (stat[a]?.[c]?.people || 0), 0);
       const totalB = CAT_ORDER.reduce((s, c) => s + (stat[b]?.[c]?.people || 0), 0);
@@ -1193,7 +1193,7 @@ function buildCombinedTable(stores) {
 
   // Final teachers sorted by total people desc
   const finalTeachers = [...teacherSet]
-    .filter(t => CAT_ORDER.some(c => (stat[t]?.[c]?.sessions || 0) > 0))
+    .filter(t => CAT_ORDER.some(c => (stat[t]?.[c]?.people || 0) > 0 || (stat[t]?.[c]?.sessions || 0) > 0))
     .sort((a, b) => {
       const totalA = CAT_ORDER.reduce((s, c) => s + (stat[a]?.[c]?.people || 0), 0);
       const totalB = CAT_ORDER.reduce((s, c) => s + (stat[b]?.[c]?.people || 0), 0);
