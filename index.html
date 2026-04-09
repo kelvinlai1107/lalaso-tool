@@ -645,6 +645,7 @@ function showTrialModal({ counter, canBack, info, prev, onOk, onSkip, onBack }) 
   const existing = document.getElementById('__modal');
   if (existing) existing.remove();
   const knownTeachers = [...new Set(allRows.filter(r => r.teacher.includes('老師')).map(r => r.teacher))].sort();
+  const isCustomTeacher = prev?.teacher && !knownTeachers.includes(prev.teacher);
   const teacherOptions = knownTeachers.map(t => `<option value="${t}" ${prev?.teacher === t ? 'selected' : ''}>${t}</option>`).join('');
   const defaultCat = prev ? prev.cat : info.cat;
   const catOptions = CAT_ORDER.map(c => `<option value="${c}" ${defaultCat === c ? 'selected' : ''}>${c}（${c === '親子游泳' ? 'ＡＢ' : c === '幼兒游泳' ? 'ＣＤ' : 'ＥＦ'}）</option>`).join('');
@@ -674,11 +675,19 @@ function showTrialModal({ counter, canBack, info, prev, onOk, onSkip, onBack }) 
       <div style="font-size:12px;color:var(--text2);margin-bottom:1rem;">請根據以上資訊，手動指定這堂課的計算方式：</div>
 
       <div class="field-group">
-        <div class="field-label">歸屬老師</div>
-        <select class="field-input" id="mf-teacher" style="cursor:pointer;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+          <div class="field-label" style="margin-bottom:0;">歸屬老師</div>
+          <button type="button" id="btn-toggle-teacher" onclick="toggleCustomTeacher()"
+            style="font-size:11px;padding:2px 8px;border-radius:var(--radius-sm);background:transparent;border:0.5px solid var(--border2);cursor:pointer;color:var(--text2);">
+            ${isCustomTeacher ? '從清單選擇' : '＋ 自行輸入'}
+          </button>
+        </div>
+        <select class="field-input" id="mf-teacher" style="cursor:pointer;display:${isCustomTeacher ? 'none' : 'block'};">
           <option value="">— 請選擇老師 —</option>
           ${teacherOptions}
         </select>
+        <input class="field-input" id="mf-teacher-custom" placeholder="輸入老師名稱，例：新 老師"
+          style="display:${isCustomTeacher ? 'block' : 'none'};" value="${isCustomTeacher ? prev.teacher : ''}">
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
         <div class="field-group">
@@ -706,12 +715,28 @@ function showTrialModal({ counter, canBack, info, prev, onOk, onSkip, onBack }) 
     </div>`;
   document.body.appendChild(el);
 
+  window.__toggleCustomTeacher = () => {
+    const sel = document.getElementById('mf-teacher');
+    const inp = document.getElementById('mf-teacher-custom');
+    const btn = document.getElementById('btn-toggle-teacher');
+    const isCustom = sel.style.display === 'none';
+    sel.style.display = isCustom ? 'block' : 'none';
+    inp.style.display = isCustom ? 'none' : 'block';
+    btn.textContent = isCustom ? '＋ 自行輸入' : '從清單選擇';
+    if (isCustom) { sel.value = ''; } else { inp.value = ''; }
+    const err = document.getElementById('m-err');
+    if (err) { err.textContent = ''; err.style.display = 'none'; }
+  };
+
   window.__trialOk = () => {
-    const teacher = document.getElementById('mf-teacher').value;
+    const sel = document.getElementById('mf-teacher');
+    const inp = document.getElementById('mf-teacher-custom');
+    const isCustom = sel.style.display === 'none';
+    const teacher = isCustom ? inp.value.trim() : sel.value;
     const cat = document.getElementById('mf-cat').value;
     const people = document.getElementById('mf-people').value;
     const sessions = document.getElementById('mf-sessions').value;
-    if (!teacher) { showModalError('請選擇歸屬老師'); return; }
+    if (!teacher) { showModalError(isCustom ? '請輸入老師名稱' : '請選擇歸屬老師'); return; }
     el.remove();
     onOk({ teacher, cat, people, sessions });
   };
@@ -721,6 +746,7 @@ function showTrialModal({ counter, canBack, info, prev, onOk, onSkip, onBack }) 
 function trialOk() { window.__trialOk && window.__trialOk(); }
 function trialSkip() { window.__trialSkip && window.__trialSkip(); }
 function trialBack() { window.__trialBack && window.__trialBack(); }
+function toggleCustomTeacher() { window.__toggleCustomTeacher && window.__toggleCustomTeacher(); }
 
 
 function showModal({ title, counter, desc, fields, canBack, onBack, onOk }) {
