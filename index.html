@@ -166,15 +166,15 @@
       <div style="font-size:15px;font-weight:700;margin-bottom:.5rem;">SharePoint 連線設定</div>
       <p style="font-size:13px;color:var(--text2);margin-bottom:1.25rem;line-height:1.7;">請填入 Azure 應用程式資訊，設定完成後所有月份數據將自動儲存至 SharePoint。</p>
       <div class="field-group"><div class="field-label">Azure Application (Client) ID</div>
-        <input class="field-input" id="sp-client-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
+        <input class="field-input" id="sp-client-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" value="f9691745-459a-417b-a910-c5097b348b93"></div>
       <div class="field-group"><div class="field-label">Azure Directory (Tenant) ID</div>
-        <input class="field-input" id="sp-tenant-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
+        <input class="field-input" id="sp-tenant-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" value="bde3feff-2c6c-4cb7-b2e4-789e237185a3"></div>
       <div class="field-group"><div class="field-label">SharePoint 網站網址</div>
-        <input class="field-input" id="sp-site-url" placeholder="https://yourcompany.sharepoint.com/sites/yoursite"></div>
+        <input class="field-input" id="sp-site-url" placeholder="https://yourcompany.sharepoint.com/sites/yoursite" value="https://lalaso.sharepoint.com/sites/allmembers"></div>
       <div class="field-group"><div class="field-label">資料夾路徑（在文件庫內）</div>
-        <input class="field-input" id="sp-folder-path" placeholder="Shared Documents/LALASO統計數據" value="Shared Documents/LALASO統計數據"></div>
+        <input class="field-input" id="sp-folder-path" placeholder="Shared Documents/LALASO統計數據" value="DocLib1/[ 游泳學院 ]/[ 游泳學院 ]/[ 營運數據 ]/[ LALASO工具 ]"></div>
       <div class="field-group"><div class="field-label">Redirect URI（此工具的完整網址，需與 Azure 設定一致）</div>
-        <input class="field-input" id="sp-redirect-uri" placeholder="https://yourcompany.sharepoint.com/.../swim_academy_report.html"></div>
+        <input class="field-input" id="sp-redirect-uri" placeholder="https://yourcompany.sharepoint.com/.../swim_academy_report.html" value="https://kelvinlai1107.github.io/lalaso-tool/"></div>
       <div style="background:var(--yellow-bg);color:var(--yellow-text);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;margin-bottom:1.25rem;line-height:1.6;">
         <strong>設定說明：</strong>請參考下方「Azure 設定步驟」說明文件完成 Azure 應用程式建立，再填入 Client ID。
       </div>
@@ -1847,11 +1847,11 @@ function saveMonthData() {
   const cfg = getSpConfig();
   if (!cfg) return;
   // Pre-fill config form
-  document.getElementById('sp-client-id').value    = cfg.clientId    || '';
-  document.getElementById('sp-tenant-id').value    = cfg.tenantId    || '';
-  document.getElementById('sp-site-url').value     = cfg.siteUrl     || '';
-  document.getElementById('sp-folder-path').value  = cfg.folder      || 'Shared Documents/LALASO統計數據';
-  document.getElementById('sp-redirect-uri').value = cfg.redirectUri || '';
+  document.getElementById('sp-client-id').value    = cfg.clientId    || 'f9691745-459a-417b-a910-c5097b348b93';
+  document.getElementById('sp-tenant-id').value    = cfg.tenantId    || 'bde3feff-2c6c-4cb7-b2e4-789e237185a3';
+  document.getElementById('sp-site-url').value     = cfg.siteUrl     || 'https://lalaso.sharepoint.com/sites/allmembers';
+  document.getElementById('sp-folder-path').value  = cfg.folder      || 'DocLib1/[ 游泳學院 ]/[ 游泳學院 ]/[ 營運數據 ]/[ LALASO工具 ]';
+  document.getElementById('sp-redirect-uri').value = cfg.redirectUri || 'https://kelvinlai1107.github.io/lalaso-tool/';
   try {
     await initMsal(cfg);
     // Try silent login
