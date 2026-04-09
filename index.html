@@ -443,7 +443,7 @@ function startAnalysis() {
     } else if (/【\s*深水體驗\s*】|【\s*深水池課程\s*】/.test(r.course)) {
       specialAnswers[i] = { type: 'deep_pending' };
       if (!hasDeep) { specialQueue.push({ type: 'deep_once' }); hasDeep = true; }
-    } else if (/[＃＊]體驗課/.test(r.teacher)) {
+    } else if (/[＃＊]體驗課/.test(r.teacher) || /^新\s*老師\d*$/.test(r.teacher.trim())) {
       specialQueue.push({ type: 'trial', i, r });
     }
   });
