@@ -1460,11 +1460,11 @@ function renderMonthlyView() {
   });
   const allStores = [...stores, '合計'];
 
-  // Build tab HTML
+  // Build tab HTML - use index to avoid Chinese character encoding issues
   const tabs = allStores.map((s,i) =>
-    `<div class="stab ${i===0?'on':''}" onclick="switchMonthlyTab('${s}',this)">${s}</div>`).join('');
+    `<div class="stab ${i===0?'on':''}" onclick="switchMonthlyTab(${i},this)">${s}</div>`).join('');
   const panels = allStores.map((s,i) =>
-    `<div id="mpanel-${s.replace(/[^a-zA-Z0-9]/g,'_')}" style="display:${i===0?'block':'none'}">
+    `<div id="mpanel-${i}" style="display:${i===0?'block':'none'}">
       ${buildHistoryStoreTable(rec, s)}
     </div>`).join('');
 
@@ -1474,13 +1474,11 @@ function renderMonthlyView() {
     ${panels}`;
 }
 
-function switchMonthlyTab(store, el) {
+function switchMonthlyTab(idx, el) {
   el.closest('div').querySelectorAll('.stab').forEach(t => t.classList.remove('on'));
   el.classList.add('on');
-  const key = store.replace(/[^a-zA-Z0-9]/g,'_');
-  el.closest('div').nextElementSibling && null;
   document.querySelectorAll('[id^="mpanel-"]').forEach(p => p.style.display = 'none');
-  document.getElementById('mpanel-' + key).style.display = 'block';
+  document.getElementById('mpanel-' + idx).style.display = 'block';
 }
 
 function buildHistoryStoreTable(rec, store) {
