@@ -6,6 +6,7 @@
 <title>LALASO游泳學院人次堂數統計</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.10.0/lib/msal-browser.min.js"></script>
 <style>
   :root {
@@ -252,65 +253,102 @@
     </div>
 
     <div id="h-empty" style="display:none;text-align:center;padding:3rem;color:var(--text2);font-size:14px;">
-      尚無歷史數據。請先完成月報分析並點擊「儲存本月數據」。
+      尚無歷史數據。請先完成月報分析並點擊「儲存本月數據」，或使用「手動匯入」輸入歷史數據。
     </div>
 
-    <div id="h-content" style="display:none">
+    <div id="h-content">
       <!-- Month list -->
       <div style="margin-bottom:1.5rem;">
         <div class="section-title" style="margin-bottom:10px;">已儲存月份</div>
         <div id="h-month-list" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
       </div>
 
-      <!-- Chart tabs -->
+      <!-- History tabs -->
       <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:1.5rem;" id="chart-nav">
-        <div class="stab on" onclick="switchChartTab('trend',this)">趨勢折線圖</div>
+        <div class="stab on" onclick="switchChartTab('monthly',this)">月報格式</div>
+        <div class="stab" onclick="switchChartTab('trend',this)">趨勢折線圖</div>
         <div class="stab" onclick="switchChartTab('compare',this)">月份對照表</div>
+        <div class="stab" onclick="switchChartTab('manual',this)">手動匯入</div>
+      </div>
+
+      <!-- Monthly view panel -->
+      <div id="cpanel-monthly">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;">
+          <div style="font-size:13px;color:var(--text2);">選擇月份</div>
+          <select id="monthly-month-sel" onchange="renderMonthlyView()" style="font-size:13px;padding:5px 10px;border-radius:var(--radius-sm);border:0.5px solid var(--border2);background:var(--surface2);color:var(--text);"></select>
+        </div>
+        <div id="monthly-content"></div>
       </div>
 
       <!-- Trend chart panel -->
-      <div id="cpanel-trend">
-        <div style="display:flex;gap:12px;align-items:center;margin-bottom:1rem;flex-wrap:wrap;">
-          <div style="font-size:13px;color:var(--text2);">顯示維度</div>
-          <select id="trend-metric" onchange="renderTrendChart()" style="font-size:13px;padding:5px 10px;border-radius:var(--radius-sm);border:0.5px solid var(--border2);background:var(--surface2);color:var(--text);">
-            <option value="people">人次</option>
-            <option value="sessions">堂數</option>
-          </select>
+      <div id="cpanel-trend" style="display:none">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:1rem;flex-wrap:wrap;">
+          <div style="font-size:13px;color:var(--text2);">館別</div>
           <select id="trend-scope" onchange="renderTrendChart()" style="font-size:13px;padding:5px 10px;border-radius:var(--radius-sm);border:0.5px solid var(--border2);background:var(--surface2);color:var(--text);">
             <option value="combined">合計（兩館）</option>
             <option value="西屯館">西屯館</option>
             <option value="北屯館">北屯館</option>
-          </select>
-          <select id="trend-by" onchange="renderTrendChart()" style="font-size:13px;padding:5px 10px;border-radius:var(--radius-sm);border:0.5px solid var(--border2);background:var(--surface2);color:var(--text);">
-            <option value="teacher">依老師</option>
-            <option value="course">依課程類別</option>
+            <option value="both">西屯 vs 北屯並排</option>
           </select>
         </div>
-        <div style="position:relative;height:360px;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:1rem;">
-          <canvas id="trend-chart"></canvas>
+        <!-- 課程類別：實線=人次、虛線=堂數，雙Y軸 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;" id="trend-charts-wrap">
+          <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:1rem;">
+            <div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:500;">親子游泳（ＡＢ）</div>
+            <div style="position:relative;height:220px;"><canvas id="trend-chart-A"></canvas></div>
+          </div>
+          <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:1rem;">
+            <div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:500;">幼兒游泳（ＣＤ）</div>
+            <div style="position:relative;height:220px;"><canvas id="trend-chart-C"></canvas></div>
+          </div>
+          <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:1rem;">
+            <div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:500;">兒童游泳（ＥＦ）</div>
+            <div style="position:relative;height:220px;"><canvas id="trend-chart-E"></canvas></div>
+          </div>
+          <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:1rem;">
+            <div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:500;">全館合計</div>
+            <div style="position:relative;height:220px;"><canvas id="trend-chart-total"></canvas></div>
+          </div>
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:var(--text2);display:flex;gap:20px;">
+          <span>── 實線 = 人次（左Y軸）</span>
+          <span>╌╌ 虛線 = 堂數（右Y軸）</span>
         </div>
       </div>
 
       <!-- Compare table panel -->
       <div id="cpanel-compare" style="display:none">
-        <div style="display:flex;gap:12px;align-items:center;margin-bottom:1rem;flex-wrap:wrap;">
-          <div style="font-size:13px;color:var(--text2);">顯示維度</div>
-          <select id="cmp-metric" onchange="renderCompareTable()" style="font-size:13px;padding:5px 10px;border-radius:var(--radius-sm);border:0.5px solid var(--border2);background:var(--surface2);color:var(--text);">
-            <option value="people">人次</option>
-            <option value="sessions">堂數</option>
-          </select>
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:1rem;flex-wrap:wrap;">
+          <div style="font-size:13px;color:var(--text2);">館別</div>
           <select id="cmp-scope" onchange="renderCompareTable()" style="font-size:13px;padding:5px 10px;border-radius:var(--radius-sm);border:0.5px solid var(--border2);background:var(--surface2);color:var(--text);">
             <option value="combined">合計（兩館）</option>
             <option value="西屯館">西屯館</option>
             <option value="北屯館">北屯館</option>
           </select>
-          <select id="cmp-by" onchange="renderCompareTable()" style="font-size:13px;padding:5px 10px;border-radius:var(--radius-sm);border:0.5px solid var(--border2);background:var(--surface2);color:var(--text);">
-            <option value="teacher">依老師</option>
-            <option value="course">依課程類別</option>
-          </select>
         </div>
         <div class="table-wrap" id="compare-table-wrap"></div>
       </div>
+
+      <!-- Manual import panel -->
+      <div id="cpanel-manual" style="display:none">
+        <p style="font-size:13px;color:var(--text2);margin-bottom:1.25rem;line-height:1.7;">
+          手動輸入歷史月份數據（適用於 2026 年以前的資料）。請依課程類別和館別填入每位老師的人次與堂數。
+        </p>
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;">
+          <div class="field-group" style="margin:0;">
+            <div class="field-label">月份（YYYY-MM）</div>
+            <input class="field-input" id="manual-month" placeholder="例：2025-12" style="width:160px;">
+          </div>
+          <div style="padding-top:18px;">
+            <button class="btn btn-outline btn-sm" onclick="initManualTable()">建立輸入表格</button>
+          </div>
+        </div>
+        <div id="manual-table-wrap"></div>
+        <div id="manual-actions" style="display:none;margin-top:1rem;display:none;">
+          <button class="btn btn-primary" onclick="saveManualData()">儲存此月數據</button>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -318,6 +356,8 @@
 <footer>LALASO游泳學院人次堂數統計 · 本工具在瀏覽器本地端運算，資料不會上傳至任何伺服器</footer>
 
 <script>
+// Register Chart.js datalabels plugin
+if (typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
 // ─── Constants ────────────────────────────────────────────────
 const COURSE_GROUPS = {
   '親子游泳': [/【[ＡA]】親子游泳/, /【[ＢB]】親子游泳/, /【[ＮN]】新生寶寶/, /【[ＡA]】親子體驗/],
@@ -1380,150 +1420,243 @@ function loadAllHistory() {
 function renderHistoryView() {
   const records = loadAllHistory();
   const sub = document.getElementById('h-sub');
+
   if (records.length === 0) {
     document.getElementById('h-empty').style.display = 'block';
-    document.getElementById('h-content').style.display = 'none';
+    document.getElementById('h-month-list').innerHTML = '';
     sub.textContent = '尚無數據';
-    return;
+  } else {
+    document.getElementById('h-empty').style.display = 'none';
+    sub.textContent = `共 ${records.length} 個月份 · ${records[0].month} ～ ${records[records.length-1].month}`;
+    document.getElementById('h-month-list').innerHTML = records.map(r =>
+      `<div style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--surface2);border:0.5px solid var(--border);border-radius:99px;font-size:13px;">
+        ${r.month}
+        <span onclick="deleteMonth('${r.month}')" style="cursor:pointer;color:var(--text3);font-size:11px;" title="刪除">✕</span>
+      </div>`).join('');
+
+    // Populate monthly selector
+    const msel = document.getElementById('monthly-month-sel');
+    const curM = msel.value;
+    msel.innerHTML = records.map(r => `<option value="${r.month}">${r.month}</option>`).join('');
+    if (records.find(r => r.month === curM)) msel.value = curM;
+    renderMonthlyView();
   }
-  document.getElementById('h-empty').style.display = 'none';
-  document.getElementById('h-content').style.display = 'block';
-  sub.textContent = `共 ${records.length} 個月份 · ${records[0].month} ～ ${records[records.length-1].month}`;
-
-  // Month pills
-  document.getElementById('h-month-list').innerHTML = records.map(r =>
-    `<div style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--surface2);border:0.5px solid var(--border);border-radius:99px;font-size:13px;">
-      ${r.month}
-      <span onclick="deleteMonth('${r.month}')" style="cursor:pointer;color:var(--text3);font-size:11px;padding:1px 4px;border-radius:3px;" title="刪除">✕</span>
-    </div>`).join('');
-
-  // Populate store options dynamically
-  const stores = new Set();
-  records.forEach(r => Object.keys(r.data).forEach(s => { if (s !== '合計') stores.add(s); }));
-  ['trend-scope','cmp-scope'].forEach(id => {
-    const sel = document.getElementById(id);
-    const cur = sel.value;
-    sel.innerHTML = `<option value="combined">合計（兩館）</option>` +
-      [...stores].map(s => `<option value="${s}">${s}</option>`).join('');
-    if ([...stores, 'combined'].includes(cur)) sel.value = cur;
-  });
 
   renderTrendChart();
   renderCompareTable();
 }
 
-// ─── Get value from a record for given scope/metric/key ───────
-function getVal(record, scope, metric, key, isTeacher) {
-  let storeKeys = scope === 'combined'
+// ─── Monthly view (月報格式) ───────────────────────────────────
+function renderMonthlyView() {
+  const month = document.getElementById('monthly-month-sel').value;
+  if (!month) { document.getElementById('monthly-content').innerHTML = ''; return; }
+  const records = loadAllHistory();
+  const rec = records.find(r => r.month === month);
+  if (!rec) return;
+
+  const stores = Object.keys(rec.data).filter(s => s !== '合計').sort((a,b) => {
+    const order = ['西屯館','北屯館'];
+    return (order.indexOf(a)===-1?99:order.indexOf(a)) - (order.indexOf(b)===-1?99:order.indexOf(b));
+  });
+  const allStores = [...stores, '合計'];
+
+  // Build tab HTML
+  const tabs = allStores.map((s,i) =>
+    `<div class="stab ${i===0?'on':''}" onclick="switchMonthlyTab('${s}',this)">${s}</div>`).join('');
+  const panels = allStores.map((s,i) =>
+    `<div id="mpanel-${s.replace(/[^a-zA-Z0-9]/g,'_')}" style="display:${i===0?'block':'none'}">
+      ${buildHistoryStoreTable(rec, s)}
+    </div>`).join('');
+
+  document.getElementById('monthly-content').innerHTML = `
+    <div style="font-size:14px;font-weight:600;margin-bottom:1rem;color:var(--text2);">${rec.title || month}</div>
+    <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:1.25rem;">${tabs}</div>
+    ${panels}`;
+}
+
+function switchMonthlyTab(store, el) {
+  el.closest('div').querySelectorAll('.stab').forEach(t => t.classList.remove('on'));
+  el.classList.add('on');
+  const key = store.replace(/[^a-zA-Z0-9]/g,'_');
+  el.closest('div').nextElementSibling && null;
+  document.querySelectorAll('[id^="mpanel-"]').forEach(p => p.style.display = 'none');
+  document.getElementById('mpanel-' + key).style.display = 'block';
+}
+
+function buildHistoryStoreTable(rec, store) {
+  const sd = rec.data[store];
+  if (!sd || !sd.teachers || sd.teachers.length === 0)
+    return `<p style="padding:1rem;color:var(--text2);font-size:13px;">無資料</p>`;
+
+  const teachers = sd.teachers;
+  const stat = sd.stat;
+  const thCols = teachers.map(t => `<th class="teacher-th">${t.replace(' 老師','')}</th>`).join('');
+  let html = `<div class="table-wrap"><table class="stat">
+    <thead><tr>
+      <th colspan="2" style="text-align:left">課程 / 老師</th>${thCols}
+      <th class="total">Total</th>
+    </tr></thead><tbody>`;
+
+  const grandP = {}, grandS = {};
+  teachers.forEach(t => { grandP[t] = 0; grandS[t] = 0; });
+
+  CAT_ORDER.forEach(cat => {
+    const cls = CAT_CLS[cat];
+    let rP = 0, rS = 0;
+    const pCells = teachers.map(t => {
+      const v = stat[t]?.[cat]?.people || 0;
+      grandP[t] += v; rP += v;
+      return `<td class="${cls} num">${fmt(v)}</td>`;
+    }).join('');
+    const sCells = teachers.map(t => {
+      const v = stat[t]?.[cat]?.sessions || 0;
+      grandS[t] += v; rS += v;
+      return `<td class="${cls} num">${v}</td>`;
+    }).join('');
+    html += `<tr><td class="${cls} lbl" rowspan="2">${CAT_LABEL[cat]}</td>
+      <td class="${cls} sublbl">人次</td>${pCells}<td class="${cls} total num">${fmt(rP)}</td></tr>
+    <tr><td class="${cls} sublbl">堂數</td>${sCells}<td class="${cls} total num">${rS}</td></tr>`;
+  });
+
+  const totalP = teachers.reduce((s,t) => s+grandP[t], 0);
+  const totalS = teachers.reduce((s,t) => s+grandS[t], 0);
+  const pTotals = teachers.map(t => `<td class="cat-total total num">${fmt(grandP[t])}</td>`).join('');
+  const sTotals = teachers.map(t => `<td class="cat-total total num">${grandS[t]}</td>`).join('');
+  const avgCells = teachers.map(t => {
+    const avg = grandS[t] > 0 ? (grandP[t]/grandS[t]).toFixed(1) : '—';
+    return `<td class="cat-total total num">${avg}</td>`;
+  }).join('');
+  const grandAvg = totalS > 0 ? (totalP/totalS).toFixed(1) : '—';
+
+  html += `<tr><td class="cat-total lbl" rowspan="3">TOTAL</td>
+    <td class="cat-total sublbl">總人次</td>${pTotals}<td class="cat-total total num">${fmt(totalP)}</td></tr>
+  <tr><td class="cat-total sublbl">總堂數</td>${sTotals}<td class="cat-total total num">${totalS}</td></tr>
+  <tr><td class="cat-total sublbl">堂均人數</td>${avgCells}<td class="cat-total total num">${grandAvg}</td></tr>
+  </tbody></table></div>`;
+  return html;
+}
+
+// ─── Get cat value from record ────────────────────────────────
+function getCatVal(record, scope, metric, cat) {
+  const storeKeys = scope === 'combined'
     ? Object.keys(record.data).filter(s => s !== '合計')
     : [scope];
   let total = 0;
   storeKeys.forEach(s => {
     const sd = record.data[s];
     if (!sd) return;
-    if (isTeacher) {
-      CAT_ORDER.forEach(cat => {
-        total += sd.stat?.[key]?.[cat]?.[metric] || 0;
-      });
-    } else {
-      // key is a course category
-      sd.teachers.forEach(t => {
-        total += sd.stat?.[t]?.[key]?.[metric] || 0;
-      });
-    }
+    (sd.teachers || []).forEach(t => { total += sd.stat?.[t]?.[cat]?.[metric] || 0; });
   });
   return Math.round(total * 10) / 10;
 }
 
-// ─── Trend chart ──────────────────────────────────────────────
-let trendChartInst = null;
+// ─── Trend charts (4 charts: 3 courses + total, dual Y axis) ──
+const trendChartInsts = {};
 function renderTrendChart() {
   const records = loadAllHistory();
   if (!records.length) return;
-  const metric = document.getElementById('trend-metric').value;
   const scope = document.getElementById('trend-scope').value;
-  const by = document.getElementById('trend-by').value;
   const months = records.map(r => r.month);
 
-  let keys = [];
-  if (by === 'teacher') {
-    const ts = new Set();
-    records.forEach(r => {
-      const storeKeys = scope === 'combined' ? Object.keys(r.data).filter(s=>s!=='合計') : [scope];
-      storeKeys.forEach(s => { (r.data[s]?.teachers||[]).forEach(t => ts.add(t)); });
-    });
-    keys = [...ts].sort();
-  } else {
-    keys = CAT_ORDER;
-  }
+  const CAT_COLORS = { '親子游泳': '#d85a30', '幼兒游泳': '#1d9e75', '兒童游泳': '#378add' };
+  const STORE_COLORS = { '西屯館': '#378add', '北屯館': '#d85a30' };
 
-  const COLORS = ['#1a1917','#d85a30','#1d9e75','#378add','#ba7517','#993556','#639922','#533ab7','#888780'];
-  const datasets = keys.map((k, i) => ({
-    label: k.replace(' 老師',''),
-    data: records.map(r => getVal(r, scope, metric, k, by==='teacher')),
-    borderColor: COLORS[i % COLORS.length],
-    backgroundColor: COLORS[i % COLORS.length] + '22',
-    borderWidth: 2, pointRadius: 4, tension: 0.3, fill: false,
-  }));
+  const isBoth = scope === 'both';
 
-  const ctx = document.getElementById('trend-chart').getContext('2d');
-  if (trendChartInst) trendChartInst.destroy();
-  trendChartInst = new Chart(ctx, {
-    type: 'line',
-    data: { labels: months, datasets },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } } },
-      scales: {
-        x: { grid: { color: '#e2e0d822' }, ticks: { font: { size: 11 } } },
-        y: { beginAtZero: true, grid: { color: '#e2e0d844' }, ticks: { font: { size: 11 } } }
-      }
+  const makeChart = (canvasId, cat, titleOverride) => {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return;
+    if (trendChartInsts[canvasId]) trendChartInsts[canvasId].destroy();
+
+    let datasets = [];
+    if (isBoth) {
+      // Two stores, people solid, sessions dashed
+      ['西屯館','北屯館'].forEach(s => {
+        const col = STORE_COLORS[s];
+        const pData = records.map(r => cat === 'total'
+          ? CAT_ORDER.reduce((sum, c) => sum + getCatVal(r, s, 'people', c), 0)
+          : getCatVal(r, s, 'people', cat));
+        const sData = records.map(r => cat === 'total'
+          ? CAT_ORDER.reduce((sum, c) => sum + getCatVal(r, s, 'sessions', c), 0)
+          : getCatVal(r, s, 'sessions', cat));
+        datasets.push({ label: `${s} 人次`, data: pData, borderColor: col, backgroundColor: col+'22',
+          borderWidth: 2, pointRadius: 4, tension: 0.3, fill: false, yAxisID: 'yP',
+          datalabels: { anchor: 'end', align: 'top', font: { size: 10 }, formatter: v => v || '' } });
+        datasets.push({ label: `${s} 堂數`, data: sData, borderColor: col, backgroundColor: col+'11',
+          borderWidth: 2, borderDash: [5,4], pointRadius: 4, tension: 0.3, fill: false, yAxisID: 'yS',
+          datalabels: { anchor: 'start', align: 'bottom', font: { size: 10 }, formatter: v => v || '' } });
+      });
+    } else {
+      const col = cat === 'total' ? '#1a1917' : CAT_COLORS[cat];
+      const pData = records.map(r => cat === 'total'
+        ? CAT_ORDER.reduce((sum, c) => sum + getCatVal(r, scope, 'people', c), 0)
+        : getCatVal(r, scope, 'people', cat));
+      const sData = records.map(r => cat === 'total'
+        ? CAT_ORDER.reduce((sum, c) => sum + getCatVal(r, scope, 'sessions', c), 0)
+        : getCatVal(r, scope, 'sessions', cat));
+      datasets.push({ label: '人次', data: pData, borderColor: col, backgroundColor: col+'22',
+        borderWidth: 2.5, pointRadius: 5, tension: 0.3, fill: false, yAxisID: 'yP',
+        datalabels: { anchor: 'end', align: 'top', font: { size: 11, weight: '600' }, color: col, formatter: v => v || '' } });
+      datasets.push({ label: '堂數', data: sData, borderColor: col, backgroundColor: col+'11',
+        borderWidth: 2, borderDash: [5,4], pointRadius: 4, tension: 0.3, fill: false, yAxisID: 'yS',
+        datalabels: { anchor: 'start', align: 'bottom', font: { size: 10 }, color: col+'bb', formatter: v => v || '' } });
     }
-  });
+
+    trendChartInsts[canvasId] = new Chart(ctx, {
+      type: 'line',
+      data: { labels: months, datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+          datalabels: { display: true }
+        },
+        scales: {
+          x: { grid: { color: '#e2e0d822' }, ticks: { font: { size: 10 } } },
+          yP: { position: 'left', beginAtZero: true, title: { display: true, text: '人次', font: { size: 10 } }, ticks: { font: { size: 10 } } },
+          yS: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: '堂數', font: { size: 10 } }, ticks: { font: { size: 10 } } }
+        }
+      }
+    });
+  };
+
+  // Update chart title labels in DOM
+  const catTitles = { '親子游泳': '親子游泳（ＡＢ）', '幼兒游泳': '幼兒游泳（ＣＤ）', '兒童游泳': '兒童游泳（ＥＦ）' };
+  makeChart('trend-chart-A', '親子游泳');
+  makeChart('trend-chart-C', '幼兒游泳');
+  makeChart('trend-chart-E', '兒童游泳');
+  makeChart('trend-chart-total', 'total');
 }
 
-// ─── Compare table ────────────────────────────────────────────
+// ─── Compare table (人次/堂數 together) ───────────────────────
 function renderCompareTable() {
   const records = loadAllHistory();
   if (!records.length) return;
-  const metric = document.getElementById('cmp-metric').value;
   const scope = document.getElementById('cmp-scope').value;
-  const by = document.getElementById('cmp-by').value;
   const months = records.map(r => r.month);
+  const keys = CAT_ORDER;
 
-  let keys = [];
-  if (by === 'teacher') {
-    const ts = new Set();
-    records.forEach(r => {
-      const storeKeys = scope === 'combined' ? Object.keys(r.data).filter(s=>s!=='合計') : [scope];
-      storeKeys.forEach(s => { (r.data[s]?.teachers||[]).forEach(t => ts.add(t)); });
-    });
-    keys = [...ts].sort();
-  } else {
-    keys = CAT_ORDER;
-  }
-
-  const metricLabel = metric === 'people' ? '人次' : '堂數';
-  const thMonths = months.map(m => `<th style="text-align:center;white-space:nowrap;">${m}</th>`).join('');
-  let rows = keys.map(k => {
+  const thMonths = months.map(m => `<th style="text-align:center;white-space:nowrap;" colspan="1">${m}</th>`).join('');
+  let rows = keys.map(cat => {
     const cells = records.map(r => {
-      const v = getVal(r, scope, metric, k, by === 'teacher');
-      return `<td style="text-align:center;" class="num">${fmt(v)}</td>`;
+      const p = fmt(getCatVal(r, scope, 'people', cat));
+      const s = getCatVal(r, scope, 'sessions', cat);
+      return `<td style="text-align:center;white-space:nowrap;" class="num">${p}<span style="color:var(--text3);font-size:11px;">／${s}</span></td>`;
     }).join('');
-    return `<tr><td style="font-weight:500;white-space:nowrap;">${k.replace(' 老師','')}</td>${cells}</tr>`;
+    return `<tr><td style="font-weight:500;white-space:nowrap;">${cat}</td>${cells}</tr>`;
   }).join('');
 
-  // Total row
   const totalCells = records.map(r => {
-    const total = keys.reduce((s, k) => s + getVal(r, scope, metric, k, by === 'teacher'), 0);
-    return `<td style="text-align:center;font-weight:600;" class="num">${fmt(Math.round(total*10)/10)}</td>`;
+    const p = fmt(Math.round(CAT_ORDER.reduce((s,c)=>s+getCatVal(r,scope,'people',c),0)*10)/10);
+    const s = CAT_ORDER.reduce((sum,c)=>sum+getCatVal(r,scope,'sessions',c),0);
+    return `<td style="text-align:center;font-weight:600;white-space:nowrap;" class="num">${p}<span style="color:var(--text3);font-size:11px;">／${s}</span></td>`;
   }).join('');
 
   document.getElementById('compare-table-wrap').innerHTML = `
+    <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">數字格式：人次／堂數</div>
     <table class="stat" style="font-size:13px;">
       <thead><tr>
-        <th style="text-align:left;">${by === 'teacher' ? '老師' : '課程'}（${metricLabel}）</th>
-        ${thMonths}
+        <th style="text-align:left;">課程類別</th>${thMonths}
       </tr></thead>
       <tbody>${rows}
         <tr style="background:var(--cat-total);">
@@ -1536,9 +1669,132 @@ function renderCompareTable() {
 function switchChartTab(tab, el) {
   document.querySelectorAll('#chart-nav .stab').forEach(t => t.classList.remove('on'));
   el.classList.add('on');
-  document.getElementById('cpanel-trend').style.display = tab === 'trend' ? 'block' : 'none';
-  document.getElementById('cpanel-compare').style.display = tab === 'compare' ? 'block' : 'none';
+  ['monthly','trend','compare','manual'].forEach(t => {
+    const p = document.getElementById('cpanel-' + t);
+    if (p) p.style.display = t === tab ? 'block' : 'none';
+  });
+  if (tab === 'trend') renderTrendChart();
+  if (tab === 'compare') renderCompareTable();
 }
+
+// ─── Manual import ────────────────────────────────────────────
+function initManualTable() {
+  const month = document.getElementById('manual-month').value.trim();
+  if (!/^\d{4}-\d{2}$/.test(month)) { alert('請輸入正確格式，例：2025-12'); return; }
+
+  const stores = ['西屯館', '北屯館'];
+  let html = '';
+  stores.forEach(store => {
+    html += `<div style="margin-bottom:2rem;">
+      <div style="font-size:14px;font-weight:600;margin-bottom:10px;color:var(--text2);">${store}</div>
+      <div style="margin-bottom:8px;display:flex;gap:8px;align-items:center;">
+        <input class="field-input" id="manual-teacher-input-${store}" placeholder="老師名稱，例：MOMO 老師" style="width:200px;">
+        <button class="btn btn-outline btn-sm" onclick="addManualTeacher('${store}')">＋ 新增老師</button>
+      </div>
+      <div class="table-wrap">
+        <table class="stat" id="manual-table-${store}">
+          <thead><tr>
+            <th style="text-align:left;">課程</th><th style="text-align:left;">項目</th>
+            <th id="manual-th-${store}" colspan="0"></th>
+          </tr></thead>
+          <tbody id="manual-tbody-${store}">
+            ${CAT_ORDER.map(cat => `
+              <tr>
+                <td class="${CAT_CLS[cat]} lbl" rowspan="2">${CAT_LABEL[cat]}</td>
+                <td class="${CAT_CLS[cat]} sublbl">人次</td>
+              </tr>
+              <tr><td class="${CAT_CLS[cat]} sublbl">堂數</td></tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('manual-table-wrap').innerHTML = html;
+  document.getElementById('manual-actions').style.display = 'block';
+  window.__manualMonth = month;
+  window.__manualTeachers = { '西屯館': [], '北屯館': [] };
+}
+
+function addManualTeacher(store) {
+  const inp = document.getElementById(`manual-teacher-input-${store}`);
+  const name = inp.value.trim();
+  if (!name) { alert('請輸入老師名稱'); return; }
+  if (window.__manualTeachers[store].includes(name)) { alert('已存在此老師'); return; }
+  window.__manualTeachers[store].push(name);
+  inp.value = '';
+
+  // Add column header
+  const th = document.getElementById(`manual-th-${store}`);
+  const colCount = window.__manualTeachers[store].length;
+  th.setAttribute('colspan', colCount);
+  th.innerHTML = window.__manualTeachers[store].map(t =>
+    `<span style="display:inline-block;min-width:80px;text-align:center;">${t.replace(' 老師','')}</span>`).join('');
+
+  // Add input cells to each row
+  const tbody = document.getElementById(`manual-tbody-${store}`);
+  const rows = tbody.querySelectorAll('tr');
+  let rowIdx = 0;
+  CAT_ORDER.forEach((cat, ci) => {
+    const pRow = rows[ci * 2];
+    const sRow = rows[ci * 2 + 1];
+    const tIdx = window.__manualTeachers[store].length - 1;
+    const t = name;
+    pRow.innerHTML += `<td class="${CAT_CLS[cat]}"><input type="number" min="0" step="0.5" value="0" style="width:70px;padding:4px 6px;border:0.5px solid var(--border2);border-radius:4px;font-size:12px;text-align:center;background:var(--surface);" id="mi-${store}-${cat}-${tIdx}-p"></td>`;
+    sRow.innerHTML += `<td class="${CAT_CLS[cat]}"><input type="number" min="0" step="1" value="0" style="width:70px;padding:4px 6px;border:0.5px solid var(--border2);border-radius:4px;font-size:12px;text-align:center;background:var(--surface);" id="mi-${store}-${cat}-${tIdx}-s"></td>`;
+  });
+}
+
+function saveManualData() {
+  const month = window.__manualMonth;
+  if (!month) return;
+  const teachers = window.__manualTeachers || {};
+  const data = {};
+
+  ['西屯館','北屯館'].forEach(store => {
+    const ts = teachers[store] || [];
+    if (ts.length === 0) return;
+    const stat = {};
+    ts.forEach((t, tIdx) => {
+      stat[t] = {};
+      CAT_ORDER.forEach(cat => {
+        const p = parseFloat(document.getElementById(`mi-${store}-${cat}-${tIdx}-p`)?.value) || 0;
+        const s = parseInt(document.getElementById(`mi-${store}-${cat}-${tIdx}-s`)?.value) || 0;
+        stat[t][cat] = { people: p, sessions: s };
+      });
+    });
+    data[store] = { teachers: ts, stat };
+  });
+
+  // Build 合計
+  const allTeachers = [...new Set(Object.values(teachers).flat())];
+  const combinedStat = {};
+  allTeachers.forEach(t => {
+    combinedStat[t] = {};
+    CAT_ORDER.forEach(cat => {
+      const p = Object.values(data).reduce((sum, sd) => sum + (sd.stat?.[t]?.[cat]?.people || 0), 0);
+      const s = Object.values(data).reduce((sum, sd) => sum + (sd.stat?.[t]?.[cat]?.sessions || 0), 0);
+      combinedStat[t][cat] = { people: p, sessions: s };
+    });
+  });
+  data['合計'] = { teachers: allTeachers, stat: combinedStat };
+
+  const record = { month, title: `${month} 手動匯入`, data, savedAt: new Date().toISOString() };
+  localStorage.setItem(`lalaso_month_${month}`, JSON.stringify(record));
+
+  // Push to SharePoint if connected
+  if (spAccessToken) {
+    saveToSharePoint(month, record).catch(e => console.error('SP save error', e));
+  }
+
+  alert(`${month} 數據已儲存！`);
+  document.getElementById('manual-table-wrap').innerHTML = '';
+  document.getElementById('manual-actions').style.display = 'none';
+  document.getElementById('manual-month').value = '';
+  renderHistoryView();
+}
+
 
 // ─── History data management ──────────────────────────────────
 function deleteMonth(month) {
