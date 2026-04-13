@@ -311,8 +311,8 @@
           </div>
         </div>
         <div style="margin-top:10px;font-size:12px;color:var(--text2);display:flex;gap:20px;">
-          <span>── 實線 = 人次（左Y軸）</span>
-          <span>╌╌ 虛線 = 堂數（右Y軸）</span>
+          <span>▬ 折線 = 人次（左Y軸）</span>
+          <span>█ 長條 = 堂數（右Y軸）</span>
         </div>
       </div>
 
@@ -1470,7 +1470,7 @@ function renderMonthlyView() {
 
   document.getElementById('monthly-content').innerHTML = `
     <div style="font-size:14px;font-weight:600;margin-bottom:1rem;color:var(--text2);">${rec.title || month}</div>
-    <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:1.25rem;">${tabs}</div>
+    <div class="store-tabs">${tabs}</div>
     ${panels}`;
 }
 
@@ -1548,78 +1548,95 @@ function getCatVal(record, scope, metric, cat) {
   return Math.round(total * 10) / 10;
 }
 
-// ─── Trend charts (4 charts: 3 courses + total, dual Y axis) ──
+// ─── Trend charts (bar=堂數, line=人次, dual Y axis) ──────────
 const trendChartInsts = {};
 function renderTrendChart() {
   const records = loadAllHistory();
   if (!records.length) return;
   const scope = document.getElementById('trend-scope').value;
   const months = records.map(r => r.month);
-
-  const CAT_COLORS = { '親子游泳': '#d85a30', '幼兒游泳': '#1d9e75', '兒童游泳': '#378add' };
-  const STORE_COLORS = { '西屯館': '#378add', '北屯館': '#d85a30' };
-
   const isBoth = scope === 'both';
 
-  const makeChart = (canvasId, cat, titleOverride) => {
+  const CAT_COLORS = { '親子游泳': '#d85a30', '幼兒游泳': '#1d9e75', '兒童游泳': '#378add', total: '#1a1917' };
+  const STORE_COLORS = { '西屯館': '#378add', '北屯館': '#d85a30' };
+
+  const makeChart = (canvasId, cat) => {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;
     if (trendChartInsts[canvasId]) trendChartInsts[canvasId].destroy();
 
+    const getP = (r, s) => cat === 'total'
+      ? CAT_ORDER.reduce((sum, c) => sum + getCatVal(r, s, 'people', c), 0)
+      : getCatVal(r, s, 'people', cat);
+    const getS = (r, s) => cat === 'total'
+      ? CAT_ORDER.reduce((sum, c) => sum + getCatVal(r, s, 'sessions', c), 0)
+      : getCatVal(r, s, 'sessions', cat);
+
     let datasets = [];
     if (isBoth) {
-      // Two stores, people solid, sessions dashed
-      ['西屯館','北屯館'].forEach(s => {
+      ['西屯館', '北屯館'].forEach(s => {
         const col = STORE_COLORS[s];
-        const pData = records.map(r => cat === 'total'
-          ? CAT_ORDER.reduce((sum, c) => sum + getCatVal(r, s, 'people', c), 0)
-          : getCatVal(r, s, 'people', cat));
-        const sData = records.map(r => cat === 'total'
-          ? CAT_ORDER.reduce((sum, c) => sum + getCatVal(r, s, 'sessions', c), 0)
-          : getCatVal(r, s, 'sessions', cat));
-        datasets.push({ label: `${s} 人次`, data: pData, borderColor: col, backgroundColor: col+'22',
-          borderWidth: 2, pointRadius: 4, tension: 0.3, fill: false, yAxisID: 'yP',
-          datalabels: { anchor: 'end', align: 'top', font: { size: 10 }, formatter: v => v || '' } });
-        datasets.push({ label: `${s} 堂數`, data: sData, borderColor: col, backgroundColor: col+'11',
-          borderWidth: 2, borderDash: [5,4], pointRadius: 4, tension: 0.3, fill: false, yAxisID: 'yS',
-          datalabels: { anchor: 'start', align: 'bottom', font: { size: 10 }, formatter: v => v || '' } });
+        // 長條：堂數
+        datasets.push({
+          type: 'bar', label: `${s} 堂數`,
+          data: records.map(r => getS(r, s)),
+          backgroundColor: col + '55', borderColor: col, borderWidth: 1,
+          yAxisID: 'yS', barPercentage: 0.5,
+          datalabels: { anchor: 'end', align: 'top', font: { size: 10 }, color: col, formatter: v => v > 0 ? v : '' }
+        });
+        // 折線：人次
+        datasets.push({
+          type: 'line', label: `${s} 人次`,
+          data: records.map(r => getP(r, s)),
+          borderColor: col, backgroundColor: col + '22',
+          borderWidth: 2.5, pointRadius: 5, tension: 0.3, fill: false,
+          yAxisID: 'yP',
+          datalabels: { anchor: 'end', align: 'top', font: { size: 10, weight: '600' }, color: col, formatter: v => v > 0 ? v : '' }
+        });
       });
     } else {
-      const col = cat === 'total' ? '#1a1917' : CAT_COLORS[cat];
-      const pData = records.map(r => cat === 'total'
-        ? CAT_ORDER.reduce((sum, c) => sum + getCatVal(r, scope, 'people', c), 0)
-        : getCatVal(r, scope, 'people', cat));
-      const sData = records.map(r => cat === 'total'
-        ? CAT_ORDER.reduce((sum, c) => sum + getCatVal(r, scope, 'sessions', c), 0)
-        : getCatVal(r, scope, 'sessions', cat));
-      datasets.push({ label: '人次', data: pData, borderColor: col, backgroundColor: col+'22',
-        borderWidth: 2.5, pointRadius: 5, tension: 0.3, fill: false, yAxisID: 'yP',
-        datalabels: { anchor: 'end', align: 'top', font: { size: 11, weight: '600' }, color: col, formatter: v => v || '' } });
-      datasets.push({ label: '堂數', data: sData, borderColor: col, backgroundColor: col+'11',
-        borderWidth: 2, borderDash: [5,4], pointRadius: 4, tension: 0.3, fill: false, yAxisID: 'yS',
-        datalabels: { anchor: 'start', align: 'bottom', font: { size: 10 }, color: col+'bb', formatter: v => v || '' } });
+      const col = CAT_COLORS[cat] || '#1a1917';
+      // 長條：堂數（右Y軸，淺色）
+      datasets.push({
+        type: 'bar', label: '堂數',
+        data: records.map(r => getS(r, scope)),
+        backgroundColor: col + '44', borderColor: col + '88', borderWidth: 1,
+        yAxisID: 'yS', barPercentage: 0.6,
+        datalabels: { anchor: 'end', align: 'top', font: { size: 10 }, color: col + 'aa', formatter: v => v > 0 ? v : '' }
+      });
+      // 折線：人次（左Y軸，深色）
+      datasets.push({
+        type: 'line', label: '人次',
+        data: records.map(r => getP(r, scope)),
+        borderColor: col, backgroundColor: col + '22',
+        borderWidth: 2.5, pointRadius: 5, tension: 0.3, fill: false,
+        yAxisID: 'yP',
+        datalabels: { anchor: 'end', align: '-45', font: { size: 11, weight: '600' }, color: col, formatter: v => v > 0 ? v : '' }
+      });
     }
 
     trendChartInsts[canvasId] = new Chart(ctx, {
-      type: 'line',
       data: { labels: months, datasets },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+          legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 }, usePointStyle: true } },
           datalabels: { display: true }
         },
         scales: {
           x: { grid: { color: '#e2e0d822' }, ticks: { font: { size: 10 } } },
-          yP: { position: 'left', beginAtZero: true, title: { display: true, text: '人次', font: { size: 10 } }, ticks: { font: { size: 10 } } },
-          yS: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: '堂數', font: { size: 10 } }, ticks: { font: { size: 10 } } }
+          yP: { type: 'linear', position: 'left', beginAtZero: true,
+            title: { display: true, text: '人次（折線）', font: { size: 10 } },
+            ticks: { font: { size: 10 } } },
+          yS: { type: 'linear', position: 'right', beginAtZero: true,
+            grid: { drawOnChartArea: false },
+            title: { display: true, text: '堂數（長條）', font: { size: 10 } },
+            ticks: { font: { size: 10 } } }
         }
       }
     });
   };
 
-  // Update chart title labels in DOM
-  const catTitles = { '親子游泳': '親子游泳（ＡＢ）', '幼兒游泳': '幼兒游泳（ＣＤ）', '兒童游泳': '兒童游泳（ＥＦ）' };
   makeChart('trend-chart-A', '親子游泳');
   makeChart('trend-chart-C', '幼兒游泳');
   makeChart('trend-chart-E', '兒童游泳');
