@@ -388,12 +388,18 @@ dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag
 fi.addEventListener('change', e => { if (e.target.files[0]) processFile(e.target.files[0]); });
 
 function processFile(file) {
+  // Store original file for SharePoint upload later
+  window.__uploadedFile = file;
   const reader = new FileReader();
   reader.onload = ev => {
     const wb = XLSX.read(ev.target.result, { type: 'array' });
     const ws = wb.Sheets[wb.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
     parseBookfast(rows, file.name);
+    // Upload original Excel to SharePoint if connected
+    if (spAccessToken) {
+      uploadExcelToSharePoint(file).catch(e => console.error('Excel SP upload failed:', e));
+    }
   };
   reader.readAsArrayBuffer(file);
 }
@@ -1983,6 +1989,26 @@ async function spEnsureFolder(cfg, siteId, driveId) {
   }
 }
 
+// Ensure a specific subfolder path (absolute from drive root, lib prefix excluded)
+async function spEnsureSubfolder(driveId, innerPath) {
+  const parts = innerPath.split('/');
+  let cur = '';
+  for (const part of parts) {
+    const parentPath = cur ? `/root:/${spEncodePath(cur)}:` : '/root';
+    cur = cur ? `${cur}/${part}` : part;
+    await fetch(
+      `https://graph.microsoft.com/v1.0/drives/${driveId}${parentPath}/children`,
+      { method: 'POST', headers: spHeaders(),
+        body: JSON.stringify({ name: part, folder: {}, '@microsoft.graph.conflictBehavior': 'ignore' }) }
+    );
+  }
+}
+
+// Get the inner path (without lib name) for a given cfg folder
+function spInnerFolder(cfg) {
+  return cfg.folder.split('/').slice(1).join('/');
+}
+
 async function spWriteFile(cfg, siteId, driveId, filename, content) {
   const innerParts = cfg.folder.split('/').slice(1);
   const innerPath = [...innerParts, filename].join('/');
@@ -1999,27 +2025,62 @@ async function spWriteFile(cfg, siteId, driveId, filename, content) {
   }
 }
 
+// Write binary file (for Excel upload)
+async function spWriteBinaryFile(driveId, innerPath, arrayBuffer, contentType) {
+  const encodedPath = spEncodePath(innerPath);
+  const r = await fetch(
+    `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${encodedPath}:/content`,
+    { method: 'PUT',
+      headers: { 'Authorization': `Bearer ${spAccessToken}`, 'Content-Type': contentType },
+      body: arrayBuffer }
+  );
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(`Excel 上傳失敗（${r.status}）：${err?.error?.message || ''}`);
+  }
+}
+
 async function spReadFile(cfg, siteId, driveId, filename) {
   const innerParts = cfg.folder.split('/').slice(1);
-  const innerPath = [...innerParts, filename].join('/');
+  // Read from json檔案 subfolder
+  const innerPath = [...innerParts, 'json檔案', filename].join('/');
   const encodedPath = spEncodePath(innerPath);
   const r = await fetch(
     `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${encodedPath}:/content`,
     { headers: { 'Authorization': `Bearer ${spAccessToken}` } }
   );
-  if (r.status === 404) return null;
+  if (r.status === 404) {
+    // fallback: try old path (root of LALASO工具)
+    const oldPath = spEncodePath([...innerParts, filename].join('/'));
+    const r2 = await fetch(
+      `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${oldPath}:/content`,
+      { headers: { 'Authorization': `Bearer ${spAccessToken}` } }
+    );
+    if (r2.status === 404) return null;
+    if (!r2.ok) throw new Error(`讀取失敗（${r2.status}）`);
+    return await r2.json();
+  }
   if (!r.ok) throw new Error(`讀取失敗（${r.status}）`);
   return await r.json();
 }
 
 async function spListFiles(cfg, siteId, driveId) {
   const innerParts = cfg.folder.split('/').slice(1);
-  const innerPath = innerParts.join('/');
-  const url = innerPath
-    ? `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${spEncodePath(innerPath)}:/children?$select=name`
-    : `https://graph.microsoft.com/v1.0/drives/${driveId}/root/children?$select=name`;
+  // List from json檔案 subfolder
+  const innerPath = [...innerParts, 'json檔案'].join('/');
+  const url = `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${spEncodePath(innerPath)}:/children?$select=name`;
   const r = await fetch(url, { headers: spHeaders() });
-  if (!r.ok) return [];
+  if (!r.ok) {
+    // fallback to root folder
+    const rootPath = innerParts.join('/');
+    const url2 = rootPath
+      ? `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${spEncodePath(rootPath)}:/children?$select=name`
+      : `https://graph.microsoft.com/v1.0/drives/${driveId}/root/children?$select=name`;
+    const r2 = await fetch(url2, { headers: spHeaders() });
+    if (!r2.ok) return [];
+    const d2 = await r2.json();
+    return (d2.value || []).map(f => f.name).filter(n => n.endsWith('.json'));
+  }
   const d = await r.json();
   return (d.value || []).map(f => f.name).filter(n => n.endsWith('.json'));
 }
@@ -2031,11 +2092,50 @@ async function saveToSharePoint(month, record) {
   try {
     const siteId = await spGetSiteId(cfg);
     const driveId = await spGetDriveId(cfg, siteId);
+    // Ensure base folder
     await spEnsureFolder(cfg, siteId, driveId);
-    await spWriteFile(cfg, siteId, driveId, `${month}.json`, record);
+    // Ensure json檔案 subfolder
+    const innerParts = cfg.folder.split('/').slice(1);
+    const jsonFolder = [...innerParts, 'json檔案'].join('/');
+    await spEnsureSubfolder(driveId, jsonFolder);
+    // Write JSON to json檔案 subfolder
+    const jsonPath = [...innerParts, 'json檔案', `${month}.json`].join('/');
+    const encodedPath = spEncodePath(jsonPath);
+    const r = await fetch(
+      `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${encodedPath}:/content`,
+      { method: 'PUT',
+        headers: { 'Authorization': `Bearer ${spAccessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(record) }
+    );
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      throw new Error(`JSON 寫入失敗（${r.status}）：${err?.error?.message || ''}`);
+    }
   } catch(e) {
     console.error('SP save error', e);
     throw e;
+  }
+}
+
+// ─── Upload Excel to SharePoint ───────────────────────────────
+async function uploadExcelToSharePoint(file) {
+  const cfg = getSpConfig();
+  if (!cfg || !spAccessToken) return;
+  try {
+    const siteId = await spGetSiteId(cfg);
+    const driveId = await spGetDriveId(cfg, siteId);
+    const innerParts = cfg.folder.split('/').slice(1);
+    // Ensure excel預約報表 subfolder
+    const excelFolder = [...innerParts, 'excel預約報表'].join('/');
+    await spEnsureSubfolder(driveId, excelFolder);
+    // Upload file
+    const arrayBuffer = await file.arrayBuffer();
+    const excelPath = [...innerParts, 'excel預約報表', file.name].join('/');
+    await spWriteBinaryFile(driveId, excelPath, arrayBuffer, file.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    console.log(`Excel uploaded: ${file.name}`);
+  } catch(e) {
+    console.error('Excel upload error', e);
+    // Non-blocking: don't throw, just log
   }
 }
 
