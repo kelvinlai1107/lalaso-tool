@@ -330,7 +330,7 @@
           </div>
         </div>
         <div id="manual-table-wrap"></div>
-        <div id="manual-actions" style="display:none;margin-top:1rem;display:none;">
+        <div id="manual-actions" style="display:none;margin-top:1rem;">
           <button class="btn btn-primary" onclick="saveManualData()">儲存此月數據</button>
         </div>
       </div>
@@ -1833,14 +1833,22 @@ function importHistoryJson(input) {
       const records = JSON.parse(e.target.result);
       if (!Array.isArray(records)) throw new Error('格式錯誤');
       let count = 0;
+      const toSync = [];
       records.forEach(r => {
         if (r.month && r.data) {
           localStorage.setItem(`lalaso_month_${r.month}`, JSON.stringify(r));
+          toSync.push(r);
           count++;
         }
       });
       alert(`成功匯入 ${count} 個月份的數據`);
       renderHistoryView();
+      // Sync to SharePoint if connected
+      if (spAccessToken && toSync.length > 0) {
+        Promise.all(toSync.map(r => saveToSharePoint(r.month, r)))
+          .then(() => console.log(`已同步 ${toSync.length} 個月份至 SharePoint`))
+          .catch(e => console.error('SharePoint 同步失敗', e));
+      }
     } catch(e) { alert('匯入失敗，請確認檔案格式正確'); }
   };
   reader.readAsText(file);
