@@ -84,10 +84,11 @@
   .notice-icon { flex-shrink: 0; font-size: 15px; }
 
   /* Store tabs */
-  .store-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 1.75rem; overflow: hidden; }
-  .stab { padding: 10px 24px; font-size: 14px; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; color: var(--text2); margin-bottom: -2px; transition: all .15s; }
+  .store-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 1.75rem; }
+  .stab { padding: 10px 24px; font-size: 14px; font-weight: 600; cursor: pointer; color: var(--text2); transition: all .15s; position: relative; }
   .stab:hover { color: var(--text); }
-  .stab.on { color: var(--text); border-bottom-color: var(--text); }
+  .stab.on { color: var(--text); }
+  .stab.on::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 3px; background: var(--text); border-radius: 2px 2px 0 0; }
 
   /* Stat table */
   .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); margin-bottom: 1.5rem; }
@@ -1413,17 +1414,33 @@ function renderHistoryView() {
   } else {
     document.getElementById('h-empty').style.display = 'none';
     sub.textContent = `共 ${records.length} 個月份 · ${records[0].month} ～ ${records[records.length-1].month}`;
-    document.getElementById('h-month-list').innerHTML = records.map(r =>
-      `<div style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--surface2);border:0.5px solid var(--border);border-radius:99px;font-size:13px;">
-        ${r.month}
-        <span onclick="deleteMonth('${r.month}')" style="cursor:pointer;color:var(--text3);font-size:11px;" title="刪除">✕</span>
+    // 已儲存月份：依年份分組顯示
+    const byYear = {};
+    records.forEach(r => {
+      const y = r.month.slice(0, 4);
+      if (!byYear[y]) byYear[y] = [];
+      byYear[y].push(r.month);
+    });
+    document.getElementById('h-month-list').innerHTML = Object.keys(byYear).sort((a,b) => b-a).map(y => `
+      <div style="margin-bottom:8px;">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;">${y} 年</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${byYear[y].slice().sort((a,b)=>b.localeCompare(a)).map(m => `
+            <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:var(--surface2);border:0.5px solid var(--border);border-radius:99px;font-size:13px;">
+              ${m}
+              <span onclick="deleteMonth('${m}')" style="cursor:pointer;color:var(--text3);font-size:11px;" title="刪除">✕</span>
+            </div>`).join('')}
+        </div>
       </div>`).join('');
 
-    // Populate monthly selector
+    // 月份選單：從新到舊
     const msel = document.getElementById('monthly-month-sel');
     const curM = msel.value;
-    msel.innerHTML = records.map(r => `<option value="${r.month}">${r.month}</option>`).join('');
-    if (records.find(r => r.month === curM)) msel.value = curM;
+    const sortedDesc = [...records].sort((a,b) => b.month.localeCompare(a.month));
+    msel.innerHTML = sortedDesc.map(r => `<option value="${r.month}">${r.month}</option>`).join('');
+    // 預設選最新月份
+    if (sortedDesc.find(r => r.month === curM)) msel.value = curM;
+    else msel.value = sortedDesc[0].month;
     renderMonthlyView();
   }
 
