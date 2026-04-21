@@ -130,12 +130,32 @@ input[type=text]:focus{border-color:var(--itx)}
   #tab-schedule{display:block!important}
 }
 @media(max-width:600px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.auth-bar{display:flex;align-items:center;justify-content:space-between;background:var(--bg);border-radius:var(--rl);border:.5px solid var(--bd);padding:10px 16px;margin-bottom:12px;gap:10px;flex-wrap:wrap}
+.auth-left{display:flex;align-items:center;gap:8px;font-size:13px}
+.auth-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.auth-dot{width:8px;height:8px;border-radius:50%;background:var(--tx3);flex-shrink:0}
 </style>
 </head>
 <body>
 <div class="page">
 <h1>游泳學院排課與產能管理工具</h1>
 <p class="sub">西屯館（4教學區）× 北屯館（5教學區）</p>
+
+<!-- AUTH BAR -->
+<div class="auth-bar">
+  <div class="auth-left">
+    <span class="auth-icon">&#9679;</span>
+    <span id="auth-status">載入中...</span>
+  </div>
+  <div class="auth-right">
+    <span id="sync-info" class="hidden" style="font-size:11px;color:var(--tx2)">
+      <span id="sync-status"></span>
+    </span>
+    <button id="btn-sync" class="btn hidden" onclick="saveToSharePoint()">&#8593; 同步到 SharePoint</button>
+    <button id="btn-signin" class="btn pri" onclick="signIn()">&#128274; 登入公司帳號</button>
+    <button id="btn-signout" class="btn hidden" onclick="signOut()">登出</button>
+  </div>
+</div>
 
 <div class="tabs">
   <button class="tab on" onclick="switchTab('schedule')">排課矩陣</button>
@@ -1039,6 +1059,8 @@ function processFile(file) {
       svI();
       log.innerHTML = '<span style="color:#1D9E75;font-weight:500">匯入成功！</span> 共 ' + cnt + ' 筆，涵蓋 ' + yms.join('、') + ' 月份';
       renderImpHist(); updateHistCtrl();
+      // Auto-upload original xlsx to SharePoint
+      if (msalAccount) uploadXlsxToSharePoint(file);
     } catch(err) { log.textContent = '解析失敗：' + err.message; console.error(err); }
   };
   reader.readAsArrayBuffer(file);
@@ -1077,7 +1099,265 @@ function switchTab(t) {
 // ===== INIT =====
 initSchedSelectors();
 renderSched();
+initMsal();
+
+// ===== MICROSOFT / SHAREPOINT INTEGRATION =====
+var MSAL_CONFIG = {
+  clientId: '316d0e94-909f-4786-ac0e-9010d578ee44',
+  tenantId: 'bde3feff-2c6c-4cb7-b2e4-789e237185a3'
+};
+
+// SharePoint 設定
+// 網站：https://lalaso.sharepoint.com/sites/academymanage
+// 根資料夾：[ 營運數據 ]/產能利用率
+var SP_HOST     = 'lalaso.sharepoint.com';
+var SP_SITE     = '/sites/academymanage';
+var SP_ROOT     = '[ 營運數據 ]/產能利用率';
+var SP_FOLDER_REPORT  = SP_ROOT + '/團體課預約報表';
+var SP_FOLDER_RESULT  = SP_ROOT + '/產能利用率分析';
+var SP_DATA_FILE      = SP_ROOT + '/產能利用率分析/swim_data.json';
+
+var msalApp = null;
+var msalAccount = null;
+var spDriveId = null;
+var lastSyncTime = null;
+
+// Graph API base for this SharePoint site
+var GRAPH_SITE_BASE = null;
+
+function initMsal() {
+  if (typeof msal === 'undefined') {
+    document.getElementById('auth-status').textContent = '載入登入模組中...';
+    setTimeout(initMsal, 500);
+    return;
+  }
+  msalApp = new msal.PublicClientApplication({
+    auth: {
+      clientId: MSAL_CONFIG.clientId,
+      authority: 'https://login.microsoftonline.com/' + MSAL_CONFIG.tenantId,
+      redirectUri: window.location.href.split('?')[0].split('#')[0]
+    },
+    cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: false }
+  });
+  msalApp.handleRedirectPromise().then(function(resp) {
+    if (resp && resp.account) msalAccount = resp.account;
+    var accounts = msalApp.getAllAccounts();
+    if (accounts.length > 0) {
+      msalAccount = accounts[0];
+      onSignedIn();
+    } else {
+      setAuthUI(false);
+    }
+  }).catch(function(e) {
+    console.error('MSAL redirect error', e);
+    setAuthUI(false);
+  });
+}
+
+function setAuthUI(signedIn) {
+  var status   = document.getElementById('auth-status');
+  var signInBtn  = document.getElementById('btn-signin');
+  var signOutBtn = document.getElementById('btn-signout');
+  var syncBtn    = document.getElementById('btn-sync');
+  var syncInfo   = document.getElementById('sync-info');
+  if (signedIn) {
+    status.textContent = msalAccount ? msalAccount.username : '已登入';
+    status.style.color = '#1D9E75';
+    signInBtn.classList.add('hidden');
+    signOutBtn.classList.remove('hidden');
+    syncBtn.classList.remove('hidden');
+    syncInfo.classList.remove('hidden');
+  } else {
+    status.textContent = '尚未登入';
+    status.style.color = 'var(--tx2)';
+    signInBtn.classList.remove('hidden');
+    signOutBtn.classList.add('hidden');
+    syncBtn.classList.add('hidden');
+    syncInfo.classList.add('hidden');
+  }
+}
+
+function signIn() {
+  if (!msalApp) return;
+  msalApp.loginRedirect({
+    scopes: ['https://graph.microsoft.com/Files.ReadWrite', 'https://graph.microsoft.com/Sites.ReadWrite.All']
+  });
+}
+
+function signOut() {
+  if (!msalApp || !msalAccount) return;
+  msalApp.logoutRedirect({ account: msalAccount });
+}
+
+function onSignedIn() {
+  setAuthUI(true);
+  // Resolve site drive ID then load data
+  resolveSiteDrive().then(function() {
+    loadFromSharePoint();
+  }).catch(function(e) {
+    setSyncStatus('無法連線 SharePoint：' + e.message, '#E24B4A');
+  });
+}
+
+function getToken() {
+  var scopes = ['https://graph.microsoft.com/Files.ReadWrite', 'https://graph.microsoft.com/Sites.ReadWrite.All'];
+  return msalApp.acquireTokenSilent({ scopes: scopes, account: msalAccount })
+    .catch(function() {
+      return msalApp.acquireTokenPopup({ scopes: scopes });
+    });
+}
+
+function setSyncStatus(msg, color) {
+  var el = document.getElementById('sync-status');
+  if (el) { el.textContent = msg; el.style.color = color || 'var(--tx2)'; }
+}
+
+// Resolve the SharePoint site's drive ID (Document Library)
+function resolveSiteDrive() {
+  if (spDriveId) return Promise.resolve(spDriveId);
+  return getToken().then(function(tokenResp) {
+    var token = tokenResp.accessToken;
+    var headers = { 'Authorization': 'Bearer ' + token };
+    // Get site ID
+    return fetch(
+      'https://graph.microsoft.com/v1.0/sites/' + SP_HOST + ':' + SP_SITE,
+      { headers: headers }
+    ).then(function(r) {
+      if (!r.ok) throw new Error('無法取得 Site ID，HTTP ' + r.status);
+      return r.json();
+    }).then(function(site) {
+      var siteId = site.id;
+      GRAPH_SITE_BASE = 'https://graph.microsoft.com/v1.0/sites/' + siteId;
+      // Get document library drive
+      return fetch(GRAPH_SITE_BASE + '/drives', { headers: headers });
+    }).then(function(r) {
+      if (!r.ok) throw new Error('無法取得 Drive 清單，HTTP ' + r.status);
+      return r.json();
+    }).then(function(drivesResp) {
+      // Use the first drive (Documents)
+      var drives = drivesResp.value;
+      if (!drives || !drives.length) throw new Error('找不到文件庫');
+      spDriveId = drives[0].id;
+      return spDriveId;
+    });
+  });
+}
+
+// Build Graph URL for a file inside the SP folder
+function spFileUrl(filePath) {
+  return 'https://graph.microsoft.com/v1.0/drives/' + spDriveId + '/root:/' + filePath;
+}
+
+// Load swim_data.json from 產能利用率分析 folder
+function loadFromSharePoint() {
+  if (!msalAccount || !spDriveId) return;
+  setSyncStatus('從 SharePoint 載入資料中...', '#EF9F27');
+  getToken().then(function(tokenResp) {
+    var token = tokenResp.accessToken;
+    var headers = { 'Authorization': 'Bearer ' + token };
+    return fetch(spFileUrl(SP_DATA_FILE), { headers: headers })
+      .then(function(r) {
+        if (r.status === 404) return null;
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function(meta) {
+        if (!meta) {
+          setSyncStatus('SharePoint 尚無資料，使用本機資料', 'var(--tx2)');
+          return null;
+        }
+        var dlUrl = meta['@microsoft.graph.downloadUrl'];
+        return fetch(dlUrl).then(function(r) { return r.json(); });
+      })
+      .then(function(data) {
+        if (!data) return;
+        if (data.schedData) { schedData = data.schedData; svS(); }
+        if (data.HD)        { HD = data.HD;               svH(); }
+        if (data.IR)        { IR = data.IR;               svI(); }
+        if (data.teachers)  { teachers = data.teachers;   svT(); }
+        lastSyncTime = new Date();
+        setSyncStatus('已從 SharePoint 載入（' + lastSyncTime.toLocaleTimeString('zh-TW') + '）', '#1D9E75');
+        renderSched();
+        renderTeachers();
+      });
+  }).catch(function(e) {
+    setSyncStatus('載入失敗：' + e.message, '#E24B4A');
+    console.error('SP load error', e);
+  });
+}
+
+// Save swim_data.json to 產能利用率分析 folder
+function saveToSharePoint() {
+  if (!msalAccount) { alert('請先登入公司帳號'); return; }
+  var doSave = function() {
+    setSyncStatus('同步到 SharePoint 中...', '#EF9F27');
+    var payload = JSON.stringify({
+      schedData: schedData,
+      HD: HD,
+      IR: IR,
+      teachers: teachers,
+      savedAt: new Date().toISOString()
+    });
+    return getToken().then(function(tokenResp) {
+      var token = tokenResp.accessToken;
+      return fetch(
+        spFileUrl(SP_DATA_FILE) + ':/content',
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+          },
+          body: payload
+        }
+      );
+    }).then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      lastSyncTime = new Date();
+      setSyncStatus('已同步（' + lastSyncTime.toLocaleTimeString('zh-TW') + '）', '#1D9E75');
+    });
+  };
+  // Make sure drive is resolved first
+  resolveSiteDrive().then(doSave).catch(function(e) {
+    setSyncStatus('同步失敗：' + e.message, '#E24B4A');
+    console.error('SP save error', e);
+  });
+}
+
+// Upload Bookfast xlsx to 團體課預約報表 folder
+function uploadXlsxToSharePoint(file) {
+  if (!msalAccount || !spDriveId) return;
+  setSyncStatus('上傳報表到 SharePoint...', '#EF9F27');
+  getToken().then(function(tokenResp) {
+    var token = tokenResp.accessToken;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var destPath = SP_FOLDER_REPORT + '/' + file.name;
+      fetch(
+        spFileUrl(destPath) + ':/content',
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          },
+          body: ev.target.result
+        }
+      ).then(function(r) {
+        if (r.ok) {
+          setSyncStatus('報表已上傳到「團體課預約報表」資料夾', '#1D9E75');
+          // Also save updated analysis data
+          saveToSharePoint();
+        } else {
+          setSyncStatus('報表上傳失敗 HTTP ' + r.status, '#E24B4A');
+        }
+      });
+    };
+    reader.readAsArrayBuffer(file);
+  }).catch(function(e) { console.error('SP upload error', e); });
+}
 
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.23.0/lib/msal-browser.min.js"></script>
 </body>
 </html>
