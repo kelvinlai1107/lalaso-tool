@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>游泳學院排課與產能管理工具</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fff;--bg2:#f5f5f3;--bg3:#ececea;--tx:#1a1a18;--tx2:#5f5e5a;--tx3:#888780;
+  --bd:rgba(0,0,0,.12);--bd2:rgba(0,0,0,.22);--ibg:#e6f1fb;--itx:#0c447c;
+  --r:8px;--rl:12px
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1c1c1a;--bg2:#252523;--bg3:#2e2e2c;--tx:#f0ede8;--tx2:#a0a09a;--tx3:#6e6e68;
+  --bd:rgba(255,255,255,.12);--bd2:rgba(255,255,255,.22);--ibg:#0c2d4a;--itx:#85b7eb
+}}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg3);color:var(--tx);min-height:100vh;padding:16px 12px;font-size:14px}
+.page{max-width:1200px;margin:0 auto}
+h1{font-size:19px;font-weight:500;margin-bottom:3px}
+.sub{font-size:12px;color:var(--tx2);margin-bottom:14px}
+.tabs{display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap}
+.tab{padding:7px 16px;border:.5px solid var(--bd2);border-radius:var(--r);background:transparent;color:var(--tx2);cursor:pointer;font-size:13px;font-weight:500;transition:all .15s}
+.tab.on{background:var(--ibg);color:var(--itx);border-color:transparent}
+.card{background:var(--bg);border-radius:var(--rl);border:.5px solid var(--bd);padding:16px;margin-bottom:12px}
+.sec{font-size:12px;font-weight:500;color:var(--tx2);margin-bottom:8px}
+.hidden{display:none}
+.btn{padding:6px 13px;border:.5px solid var(--bd2);border-radius:var(--r);background:transparent;color:var(--tx);cursor:pointer;font-size:12px;white-space:nowrap}
+.btn:hover{background:var(--bg2)}
+.btn.pri{background:var(--ibg);color:var(--itx);border-color:transparent}
+.btn.red{color:#E24B4A;border-color:#E24B4A44}
+.btn.red:hover{background:#E24B4A11}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+select{padding:5px 8px;border:.5px solid var(--bd2);border-radius:var(--r);background:var(--bg);color:var(--tx);font-size:12px;cursor:pointer}
+input[type=text]{padding:6px 10px;border:.5px solid var(--bd2);border-radius:var(--r);background:var(--bg);color:var(--tx);font-size:12px;outline:none}
+input[type=text]:focus{border-color:var(--itx)}
+
+/* SCHEDULE */
+.sched-header{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.sched-title{font-size:15px;font-weight:500;margin-bottom:6px}
+.week-tabs{display:flex;gap:5px;flex-wrap:wrap}
+.wtab{padding:5px 12px;border:.5px solid var(--bd2);border-radius:20px;background:transparent;color:var(--tx2);cursor:pointer;font-size:12px;font-weight:500;transition:all .12s}
+.wtab.on{background:var(--ibg);color:var(--itx);border-color:transparent}
+.grid-wrap{overflow-x:auto;margin-bottom:10px}
+.sched-grid{border-collapse:collapse;font-size:12px;min-width:800px;width:100%}
+.sched-grid th{background:var(--bg2);color:var(--tx2);font-weight:500;padding:6px 3px;text-align:center;border:.5px solid var(--bd);white-space:nowrap;font-size:11px}
+.sched-grid th.day-hd{font-size:12px;font-weight:500;color:var(--tx);background:var(--bg2)}
+.sched-grid td{border:.5px solid var(--bd);padding:2px 3px;vertical-align:top}
+.time-cell{font-size:11px;color:var(--tx2);text-align:center;white-space:nowrap;background:var(--bg2);padding:4px 3px;font-weight:500;min-width:44px}
+.slot-cell{min-height:28px;padding:2px;min-width:48px}
+.slot-add{width:100%;min-height:24px;border:.5px dashed var(--bd2);border-radius:5px;background:transparent;cursor:pointer;font-size:11px;color:var(--tx3);display:flex;align-items:center;justify-content:center}
+.slot-add:hover{background:var(--bg2)}
+.ctag{display:flex;align-items:center;gap:2px;font-size:10px;padding:2px 4px;border-radius:4px;color:#fff;font-weight:500;margin-bottom:2px;width:100%}
+.ct-n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ct-d{background:none;border:none;cursor:pointer;color:rgba(255,255,255,.7);font-size:11px;line-height:1;padding:0;flex-shrink:0}
+.ct-d:hover{color:#fff}
+.lg-inp{width:100%;border:none;background:transparent;font-size:10px;color:var(--tx);outline:none;padding:2px;resize:none;min-height:22px}
+.lg-inp:focus{background:var(--bg2);border-radius:3px}
+.diff-box{padding:10px 12px;background:var(--bg2);border-radius:var(--r);font-size:12px;border-left:3px solid #EF9F27;line-height:1.7}
+
+/* MODAL */
+.mov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center}
+.mov.open{display:flex}
+.modal{background:var(--bg);border-radius:var(--rl);border:.5px solid var(--bd2);padding:18px;width:320px;max-width:94vw;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:14px;font-weight:500;margin-bottom:2px}
+.mmeta{font-size:11px;color:var(--tx2);margin-bottom:10px}
+.clist{display:flex;flex-direction:column;gap:4px;margin-bottom:8px;max-height:220px;overflow-y:auto}
+.copt{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r);border:.5px solid var(--bd);cursor:pointer;font-size:12px;transition:background .1s}
+.copt:hover{background:var(--bg2)}
+.cdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.trlist{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;max-height:120px;overflow-y:auto}
+.tropt{padding:5px 11px;border:.5px solid var(--bd2);border-radius:20px;background:transparent;cursor:pointer;font-size:12px;color:var(--tx);transition:all .1s}
+.tropt.on{background:var(--ibg);color:var(--itx);border-color:transparent}
+.modal-actions{display:flex;gap:6px;margin-top:10px}
+.mclose{flex:1;padding:8px;border:.5px solid var(--bd2);border-radius:var(--r);background:transparent;color:var(--tx2);cursor:pointer;font-size:12px}
+.mclose:hover{background:var(--bg2)}
+
+/* TEACHERS */
+.teacher-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.teacher-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;border:.5px solid var(--bd2);background:var(--bg2);font-size:12px}
+.tc-del{background:none;border:none;cursor:pointer;color:var(--tx3);font-size:13px;line-height:1;padding:0;margin-left:2px}
+.tc-del:hover{color:#E24B4A}
+
+/* HISTORY */
+.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.mc{background:var(--bg2);border-radius:var(--r);padding:12px}
+.mcl{font-size:11px;color:var(--tx2);margin-bottom:4px}
+.mcv{font-size:20px;font-weight:500}
+.pb{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-top:6px}
+.pf{height:100%;border-radius:3px;transition:width .25s}
+.pbars{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.pb-btn{padding:4px 12px;border:.5px solid var(--bd2);border-radius:20px;background:transparent;color:var(--tx2);cursor:pointer;font-size:12px;font-weight:500}
+.pb-btn.on{background:var(--ibg);color:var(--itx);border-color:transparent}
+.cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:12px}
+.chd{font-size:10px;color:var(--tx2);text-align:center;padding:3px 0;font-weight:500}
+.cday{border-radius:5px;padding:4px 2px;text-align:center;border:.5px solid transparent;min-height:44px}
+.cday:hover:not(.cempty){border-color:var(--bd2);cursor:pointer}
+.cday.on{border-color:var(--bd2)}
+.cday.cempty{cursor:default}
+.cdn{font-size:11px;font-weight:500;margin-bottom:1px}
+.cdp{font-size:10px;font-weight:500}
+.htable{width:100%;border-collapse:collapse;font-size:12px}
+.htable th{background:var(--bg2);color:var(--tx2);font-weight:500;padding:7px 10px;text-align:left;border:.5px solid var(--bd)}
+.htable td{padding:7px 10px;border:.5px solid var(--bd)}
+.tag{display:inline-block;font-size:10px;padding:2px 6px;border-radius:20px;font-weight:500}
+.tl0{background:#e1f5ee;color:#085041}
+.tl1{background:#faeeda;color:#633806}
+.tl2{background:#fcebeb;color:#791f1f}
+@media(prefers-color-scheme:dark){
+  .tl0{background:#04342c;color:#9fe1cb}
+  .tl1{background:#412402;color:#fac775}
+  .tl2{background:#501313;color:#f7c1c1}
+}
+
+/* IMPORT */
+.izone{border:1.5px dashed var(--bd2);border-radius:var(--rl);padding:16px;text-align:center;cursor:pointer;background:var(--bg2)}
+.izone:hover,.izone.drag{background:var(--bg3);border-color:var(--itx)}
+.izone p{font-size:12px;color:var(--tx2);margin-bottom:4px}
+.izone input{display:none}
+.ilog{margin-top:10px;font-size:12px;color:var(--tx2)}
+
+/* PRINT */
+@media print{
+  body{background:#fff;padding:0;color:#000}
+  .tabs,.sched-header .btn,.week-tabs,.no-print{display:none!important}
+  .card{border:none;padding:4px}
+  .sched-grid{font-size:10px}
+  .slot-add,.ct-d{display:none!important}
+  #tab-history,#tab-import,#tab-teachers{display:none!important}
+  #tab-schedule{display:block!important}
+}
+@media(max-width:600px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<div class="page">
+<h1>游泳學院排課與產能管理工具</h1>
+<p class="sub">西屯館（4教學區）× 北屯館（5教學區）</p>
+
+<div class="tabs">
+  <button class="tab on" onclick="switchTab('schedule')">排課矩陣</button>
+  <button class="tab" onclick="switchTab('history')">歷史分析</button>
+  <button class="tab" onclick="switchTab('import')">匯入報表</button>
+  <button class="tab" onclick="switchTab('teachers')">教師管理</button>
+</div>
+
+<!-- SCHEDULE -->
+<div id="tab-schedule">
+<div class="card">
+  <div class="sched-header">
+    <div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+        <span class="sched-title" id="sched-title">排課矩陣</span>
+        <select id="sched-venue" onchange="renderSched()">
+          <option value="x">西屯館</option>
+          <option value="b">北屯館</option>
+        </select>
+        <select id="sched-year"  onchange="onSchedYearChange()"></select>
+        <select id="sched-month" onchange="onSchedMonthChange()"></select>
+      </div>
+      <div class="week-tabs" id="week-tabs"></div>
+    </div>
+    <div class="row no-print" style="margin-left:auto;margin-bottom:0">
+      <button class="btn" onclick="copyWeekToNext()">複製本週到下週 →</button>
+      <button class="btn pri" onclick="window.print()">&#128438; 匯出 PDF</button>
+    </div>
+  </div>
+  <div class="grid-wrap" id="sched-grid-wrap"></div>
+  <div id="diff-notes"></div>
+</div>
+</div>
+
+<!-- HISTORY -->
+<div id="tab-history" class="hidden">
+<div class="card">
+  <div class="sec">歷史產能利用率（Bookfast 報表）</div>
+  <div class="pbars">
+    <button class="pb-btn on" onclick="setPeriod('month')">月</button>
+    <button class="pb-btn" onclick="setPeriod('week')">週</button>
+    <button class="pb-btn" onclick="setPeriod('year')">年</button>
+    <select id="hv-sel" onchange="renderHistory()">
+      <option value="x">西屯館</option>
+      <option value="b">北屯館</option>
+      <option value="all">兩館合計</option>
+    </select>
+    <select id="hy-sel" onchange="onHYearChange()"></select>
+    <select id="hm-sel" onchange="renderHistory()"></select>
+  </div>
+  <div id="hist-content"></div>
+  <div class="row" style="margin-top:10px">
+    <button class="btn" onclick="copyHistReport()" id="hcbtn">複製分析報表</button>
+    <button class="btn red" onclick="clearAllHistory()">清除所有歷史</button>
+  </div>
+</div>
+</div>
+
+<!-- IMPORT -->
+<div id="tab-import" class="hidden">
+<div class="card">
+  <div class="sec">匯入 Bookfast 預約報表（xlsx）</div>
+  <p style="font-size:12px;color:var(--tx2);margin-bottom:12px">每月18號上傳下個月的報表，系統自動解析並儲存到歷史分析（不影響排課矩陣）。</p>
+  <div class="izone" id="izone"
+    ondrop="onDrop(event)" ondragover="onDragOver(event)" ondragleave="onDragLeave()"
+    onclick="document.getElementById('finput').click()">
+    <p>拖曳 xlsx 至此，或點擊選擇檔案</p>
+    <p style="font-size:11px;color:var(--tx3)">團體課預約報表_XXXXXX.xlsx</p>
+    <input type="file" id="finput" accept=".xlsx" onchange="onFileSelect(event)">
+  </div>
+  <div class="ilog" id="ilog"></div>
+  <div class="sec" style="margin-top:16px">已匯入紀錄</div>
+  <div id="imp-hist"></div>
+</div>
+</div>
+
+<!-- TEACHERS -->
+<div id="tab-teachers" class="hidden">
+<div class="card">
+  <div class="sec">教師名單管理</div>
+  <div class="teacher-list" id="teacher-list"></div>
+  <div class="row">
+    <input type="text" id="new-teacher" placeholder="輸入教師代號（如 LA、TC）" style="width:200px"
+      onkeydown="if(event.key==='Enter')addTeacher()">
+    <button class="btn pri" onclick="addTeacher()">新增教師</button>
+  </div>
+  <p style="font-size:12px;color:var(--tx2);margin-top:8px">教師代號會出現在排課矩陣的老師選單中。</p>
+</div>
+</div>
+</div>
+
+<!-- MODAL -->
+<div class="mov" id="mov" onclick="closeOv(event)">
+<div class="modal">
+  <h3 id="mt"></h3>
+  <p class="mmeta" id="mm"></p>
+  <div class="sec" style="margin-bottom:5px">選擇課程</div>
+  <div class="clist" id="cl"></div>
+  <div class="sec" style="margin-bottom:5px;margin-top:8px">選擇老師（可不選）</div>
+  <div class="trlist" id="trl"></div>
+  <div class="modal-actions">
+    <button class="mclose" onclick="closeModal()">取消</button>
+    <button class="btn pri" onclick="confirmModal()">確認新增</button>
+  </div>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<script>
+var APR_DATA={"2026":{"4":{"b":{"2026/04/30/19:30":["幼兒C","兒童E"],"2026/04/30/18:30":["幼兒C","兒童E"],"2026/04/30/17:30":["幼兒C","兒童E"],"2026/04/30/16:30":["幼兒C","幼兒C"],"2026/04/30/11:30":["親子A"],"2026/04/30/10:30":["親子A"],"2026/04/30/09:30":["親子A"],"2026/04/29/19:30":["幼兒C"],"2026/04/29/18:30":["兒童E"],"2026/04/29/17:30":["幼兒C","兒童E"],"2026/04/29/16:30":["幼兒D"],"2026/04/29/15:30":["親子A"],"2026/04/29/11:30":["幼兒C","親子A"],"2026/04/29/10:30":["親子A","親子A"],"2026/04/29/09:30":["親子A","親子A"],"2026/04/28/19:30":["兒童E"],"2026/04/28/18:30":["兒童E"],"2026/04/28/17:30":["幼兒D","兒童E"],"2026/04/28/16:30":["幼兒C","幼兒C"],"2026/04/28/15:30":["親子A","自游時光"],"2026/04/28/11:30":["親子A","親子N"],"2026/04/28/10:30":["親子A","親子A"],"2026/04/28/09:30":["親子A","親子A"],"2026/04/26/16:00":["水上樂園"],"2026/04/26/17:00":["水上樂園"],"2026/04/26/14:00":["水上樂園"],"2026/04/26/15:00":["水上樂園"],"2026/04/26/11:30":["兒童E","自游時光"],"2026/04/26/10:30":["親子A","自游時光"],"2026/04/26/09:30":["親子A","自游時光"],"2026/04/25/17:00":["兒童F"],"2026/04/25/16:00":["兒童E","兒童E","幼兒C"],"2026/04/25/15:00":["兒童E","兒童E","幼兒C"],"2026/04/25/11:30":["幼兒C","幼兒D"],"2026/04/25/10:30":["親子B","親子A"],"2026/04/25/09:30":["親子A","親子A"],"2026/04/24/19:30":["兒童F"],"2026/04/24/18:30":["兒童E","幼兒D"],"2026/04/24/17:30":["幼兒C"],"2026/04/24/16:30":["幼兒C","幼兒C"],"2026/04/24/15:30":["親子B","親子A"],"2026/04/24/11:30":["親子A"],"2026/04/24/10:30":["親子A"],"2026/04/24/09:30":["親子A"],"2026/04/23/19:30":["幼兒C","兒童E"],"2026/04/23/18:30":["幼兒C","兒童E"],"2026/04/23/17:30":["幼兒C","兒童E"],"2026/04/23/16:30":["幼兒C","幼兒C"],"2026/04/23/11:30":["親子A"],"2026/04/23/10:30":["親子A"],"2026/04/23/09:30":["親子A"],"2026/04/22/19:30":["幼兒C"],"2026/04/22/18:30":["兒童E"],"2026/04/22/17:30":["幼兒C","兒童E"],"2026/04/22/16:30":["幼兒D"],"2026/04/22/15:30":["親子A"],"2026/04/22/11:30":["幼兒C","親子A"],"2026/04/22/10:30":["親子A","親子A"],"2026/04/22/09:30":["親子A","親子A"],"2026/04/21/19:30":["兒童E"],"2026/04/21/18:30":["兒童E"],"2026/04/21/17:30":["幼兒D","兒童E"],"2026/04/21/16:30":["幼兒C","幼兒C"],"2026/04/21/15:30":["親子A","自游時光"],"2026/04/21/11:30":["親子A","親子N"],"2026/04/21/10:30":["親子A","親子A"],"2026/04/21/09:30":["親子A","親子A"],"2026/04/17/19:30":["兒童F"],"2026/04/17/18:30":["兒童E","幼兒D"],"2026/04/17/17:30":["幼兒C"],"2026/04/17/16:30":["幼兒C","幼兒C"],"2026/04/17/15:30":["親子B","親子A"],"2026/04/17/11:30":["親子A"],"2026/04/17/10:30":["親子A"],"2026/04/17/09:30":["親子A"],"2026/04/16/19:30":["幼兒C","兒童E"],"2026/04/16/18:30":["幼兒C","兒童E"],"2026/04/16/17:30":["幼兒C","兒童E"],"2026/04/16/16:30":["幼兒C","幼兒C"],"2026/04/16/11:30":["親子A"],"2026/04/16/10:30":["親子A"],"2026/04/16/09:30":["親子A"],"2026/04/15/19:30":["幼兒C"],"2026/04/15/18:30":["兒童E"],"2026/04/15/17:30":["幼兒C","兒童E"],"2026/04/15/16:30":["幼兒D"],"2026/04/15/15:30":["親子A"],"2026/04/15/11:30":["幼兒C","親子A"],"2026/04/15/10:30":["親子A","親子A"],"2026/04/15/09:30":["親子A","親子A"],"2026/04/14/19:30":["兒童E"],"2026/04/14/18:30":["兒童E"],"2026/04/14/17:30":["幼兒D","兒童E"],"2026/04/14/16:30":["幼兒C","幼兒C"],"2026/04/14/15:30":["親子A","自游時光"],"2026/04/14/11:30":["親子A","親子N"],"2026/04/14/10:30":["親子A","親子A"],"2026/04/14/09:30":["親子A","親子A"],"2026/04/12/11:30":["幼兒C","自游時光"],"2026/04/12/10:30":["親子A","自游時光"],"2026/04/12/09:30":["親子A","自游時光"],"2026/04/11/17:00":["兒童F"],"2026/04/11/16:00":["兒童E","兒童E","幼兒C"],"2026/04/11/15:00":["兒童E","兒童E","幼兒C"],"2026/04/11/11:30":["幼兒C","幼兒D"],"2026/04/11/10:30":["親子B","親子A"],"2026/04/11/09:30":["親子A","親子A"],"2026/04/10/19:30":["兒童F"],"2026/04/10/18:30":["兒童E","幼兒D"],"2026/04/10/17:30":["幼兒C"],"2026/04/10/16:30":["幼兒C","幼兒C"],"2026/04/10/15:30":["親子B","親子A"],"2026/04/10/11:30":["親子A"],"2026/04/10/10:30":["親子A"],"2026/04/10/09:30":["親子A"],"2026/04/09/19:30":["幼兒C","兒童E"],"2026/04/09/18:30":["幼兒C","兒童E"],"2026/04/09/17:30":["幼兒C","兒童E"],"2026/04/09/16:30":["幼兒C","幼兒C"],"2026/04/09/11:30":["親子A"],"2026/04/09/10:30":["親子A"],"2026/04/09/09:30":["親子A"],"2026/04/08/19:30":["幼兒C"],"2026/04/08/18:30":["兒童E"],"2026/04/08/17:30":["幼兒C","兒童E"],"2026/04/08/16:30":["幼兒D"],"2026/04/08/15:30":["親子A"],"2026/04/08/11:30":["幼兒C","親子A"],"2026/04/08/10:30":["親子A","親子A"],"2026/04/08/09:30":["親子A","親子A"],"2026/04/07/19:30":["兒童E"],"2026/04/07/18:30":["兒童E"],"2026/04/07/17:30":["幼兒D","兒童E"],"2026/04/07/16:30":["幼兒C","幼兒C"],"2026/04/07/15:30":["親子A"],"2026/04/07/11:30":["親子A","親子N"],"2026/04/07/10:30":["親子A","親子A"],"2026/04/07/09:30":["親子A","親子A"],"2026/04/05/11:30":["親子A","親子A"],"2026/04/05/10:30":["親子A","親子A"],"2026/04/05/09:30":["親子A","親子A"],"2026/04/04/17:00":["兒童F"],"2026/04/04/16:00":["兒童E","兒童E","幼兒C"],"2026/04/04/15:00":["兒童E","兒童E","幼兒C"],"2026/04/04/11:30":["幼兒C","幼兒D"],"2026/04/04/10:30":["親子B","親子A"],"2026/04/04/09:30":["親子A","親子A"],"2026/04/03/19:30":["兒童F"],"2026/04/03/18:30":["兒童E","幼兒D"],"2026/04/03/17:30":["幼兒C"],"2026/04/03/16:30":["幼兒C","幼兒C"],"2026/04/03/15:30":["親子B","親子A"],"2026/04/03/11:30":["親子A"],"2026/04/03/10:30":["親子A"],"2026/04/03/09:30":["親子A"],"2026/04/02/19:30":["幼兒C","兒童E"],"2026/04/02/18:30":["幼兒C","兒童E"],"2026/04/02/17:30":["幼兒C","兒童E"],"2026/04/02/16:30":["幼兒C","幼兒C"],"2026/04/02/11:30":["親子A"],"2026/04/02/10:30":["親子A"],"2026/04/02/09:30":["親子A"],"2026/04/01/19:30":["幼兒C"],"2026/04/01/18:30":["兒童E"],"2026/04/01/17:30":["幼兒C","兒童E"],"2026/04/01/16:30":["幼兒D"],"2026/04/01/15:30":["親子A"],"2026/04/01/11:30":["幼兒C","親子A"],"2026/04/01/10:30":["親子A","親子A"],"2026/04/01/09:30":["親子A","親子A"]},"x":{"2026/04/30/19:30":["兒童E","幼兒C"],"2026/04/30/18:30":["幼兒D","兒童E","幼兒C"],"2026/04/30/17:30":["幼兒C","兒童E","兒童E"],"2026/04/30/16:30":["幼兒C","幼兒C"],"2026/04/30/11:30":["親子A"],"2026/04/29/19:30":["幼兒C","兒童E"],"2026/04/29/18:30":["幼兒C","兒童E"],"2026/04/29/17:30":["幼兒C","兒童E","兒童E"],"2026/04/29/16:30":["幼兒C","兒童E","兒童E"],"2026/04/29/15:30":["親子A"],"2026/04/29/13:30":["自游時光"],"2026/04/29/11:30":["親子A"],"2026/04/29/10:30":["親子A"],"2026/04/29/09:30":["親子A"],"2026/04/28/19:30":["幼兒C"],"2026/04/28/18:30":["幼兒C"],"2026/04/28/17:30":["幼兒C","幼兒C","兒童E"],"2026/04/28/16:30":["幼兒C","兒童E"],"2026/04/28/15:30":["親子A"],"2026/04/28/13:30":["自游時光"],"2026/04/28/11:30":["親子A"],"2026/04/28/10:30":["親子A","親子A"],"2026/04/28/09:30":["親子A","親子A"],"2026/04/26/16:00":["水上樂園"],"2026/04/26/17:00":["水上樂園"],"2026/04/26/14:00":["水上樂園"],"2026/04/26/15:00":["水上樂園"],"2026/04/26/11:30":["兒童E","親子A"],"2026/04/26/10:30":["幼兒C","親子A"],"2026/04/26/09:30":["親子A","親子A"],"2026/04/25/17:00":["兒童F"],"2026/04/25/16:00":["兒童E","兒童E","幼兒C"],"2026/04/25/15:00":["兒童E","兒童E","幼兒C","兒童E"],"2026/04/25/11:30":["幼兒C","兒童E","幼兒D"],"2026/04/25/10:30":["親子A","親子A"],"2026/04/25/09:30":["親子A","親子B"],"2026/04/24/19:30":["兒童F"],"2026/04/24/18:30":["幼兒C","兒童E"],"2026/04/24/17:30":["幼兒C","幼兒C","兒童E"],"2026/04/24/16:30":["幼兒C","幼兒C"],"2026/04/24/15:30":["親子A"],"2026/04/24/13:30":["自游時光"],"2026/04/24/11:30":["親子A"],"2026/04/24/10:30":["親子A"],"2026/04/24/09:30":["親子B"],"2026/04/23/19:30":["兒童E","幼兒C"],"2026/04/23/18:30":["幼兒D","兒童E","幼兒C"],"2026/04/23/17:30":["幼兒C","兒童E","兒童E"],"2026/04/23/16:30":["幼兒C","幼兒C"],"2026/04/23/11:30":["親子A"],"2026/04/22/19:30":["幼兒C","兒童E"],"2026/04/22/18:30":["幼兒C","兒童E"],"2026/04/22/17:30":["幼兒C","兒童E","兒童E"],"2026/04/22/16:30":["幼兒C","兒童E","兒童E"],"2026/04/22/15:30":["親子A"],"2026/04/22/13:30":["自游時光"],"2026/04/22/11:30":["親子A"],"2026/04/22/10:30":["親子A"],"2026/04/22/09:30":["親子A"],"2026/04/21/19:30":["幼兒C"],"2026/04/21/18:30":["幼兒C"],"2026/04/21/17:30":["幼兒C","幼兒C","兒童E"],"2026/04/21/16:30":["幼兒C","兒童E"],"2026/04/21/15:30":["親子A"],"2026/04/21/13:30":["自游時光"],"2026/04/21/11:30":["親子N","親子A"],"2026/04/21/10:30":["親子A","親子A"],"2026/04/21/09:30":["親子A","親子A"],"2026/04/17/19:30":["兒童F"],"2026/04/17/18:30":["幼兒C","兒童E"],"2026/04/17/17:30":["幼兒C","幼兒C","兒童E"],"2026/04/17/16:30":["幼兒C","幼兒C"],"2026/04/17/15:30":["親子A"],"2026/04/17/13:30":["自游時光"],"2026/04/17/11:30":["親子A"],"2026/04/17/10:30":["親子A"],"2026/04/17/09:30":["親子B"],"2026/04/16/19:30":["兒童E","幼兒C"],"2026/04/16/18:30":["幼兒D","兒童E","幼兒C"],"2026/04/16/17:30":["幼兒C","兒童E","兒童E"],"2026/04/16/16:30":["幼兒C","幼兒C"],"2026/04/16/11:30":["親子A"],"2026/04/15/19:30":["幼兒C","兒童E"],"2026/04/15/18:30":["幼兒C","兒童E"],"2026/04/15/17:30":["幼兒C","兒童E","兒童E"],"2026/04/15/16:30":["幼兒C","兒童E","兒童E"],"2026/04/15/15:30":["親子A"],"2026/04/15/11:30":["親子A"],"2026/04/15/10:30":["親子A"],"2026/04/15/09:30":["親子A"],"2026/04/14/19:30":["幼兒C"],"2026/04/14/18:30":["幼兒C"],"2026/04/14/17:30":["幼兒C","幼兒C","兒童E"],"2026/04/14/16:30":["幼兒C","兒童E"],"2026/04/14/15:30":["親子A"],"2026/04/14/13:30":["自游時光"],"2026/04/14/11:30":["親子N","親子A"],"2026/04/14/10:30":["親子A","親子A"],"2026/04/14/09:30":["親子A","親子A"],"2026/04/12/11:30":["親子A","親子A"],"2026/04/12/10:30":["親子A","親子A"],"2026/04/12/09:30":["親子A","親子A"],"2026/04/11/17:00":["兒童F"],"2026/04/11/16:00":["兒童E","兒童E","幼兒C"],"2026/04/11/15:00":["兒童E","兒童E","幼兒C","兒童E"],"2026/04/11/11:30":["幼兒C","兒童E","幼兒D"],"2026/04/11/10:30":["親子A","親子A"],"2026/04/11/09:30":["親子A","親子B"],"2026/04/10/19:30":["兒童F"],"2026/04/10/18:30":["幼兒C","兒童E"],"2026/04/10/17:30":["幼兒C","幼兒C","兒童E"],"2026/04/10/16:30":["幼兒C","幼兒C"],"2026/04/10/15:30":["親子A"],"2026/04/10/13:30":["自游時光"],"2026/04/10/11:30":["親子A"],"2026/04/10/10:30":["親子A"],"2026/04/10/09:30":["親子B"],"2026/04/09/19:30":["兒童E","幼兒C"],"2026/04/09/18:30":["幼兒D","兒童E","幼兒C"],"2026/04/09/17:30":["幼兒C","兒童E","兒童E"],"2026/04/09/16:30":["幼兒C","幼兒C"],"2026/04/08/19:30":["幼兒C","兒童E"],"2026/04/08/18:30":["幼兒C","兒童E"],"2026/04/08/17:30":["幼兒C","兒童E","兒童E"],"2026/04/08/16:30":["幼兒C","兒童E","兒童E"],"2026/04/08/15:30":["親子A"],"2026/04/08/13:30":["自游時光"],"2026/04/08/11:30":["親子A"],"2026/04/08/10:30":["親子A"],"2026/04/08/09:30":["親子A"],"2026/04/07/19:30":["幼兒C"],"2026/04/07/18:30":["幼兒C"],"2026/04/07/17:30":["幼兒C","幼兒C","兒童E"],"2026/04/07/16:30":["幼兒C","兒童E"],"2026/04/07/15:30":["親子A"],"2026/04/07/13:30":["自游時光"],"2026/04/07/11:30":["親子N","親子A"],"2026/04/07/10:30":["親子A","親子A"],"2026/04/07/09:30":["親子A","親子A"],"2026/04/05/11:30":["幼兒C","自游時光"],"2026/04/05/10:30":["親子A","自游時光"],"2026/04/05/09:30":["親子A","自游時光"],"2026/04/04/17:00":["兒童F"],"2026/04/04/16:00":["兒童E","兒童E","幼兒C"],"2026/04/04/15:00":["兒童E","兒童E","幼兒C","兒童E"],"2026/04/04/11:30":["幼兒C","兒童E","幼兒D"],"2026/04/04/10:30":["親子A","親子A"],"2026/04/04/09:30":["親子A","親子B"],"2026/04/03/19:30":["兒童F"],"2026/04/03/18:30":["幼兒C","兒童E"],"2026/04/03/17:30":["幼兒C","幼兒C","兒童E"],"2026/04/03/16:30":["幼兒C","幼兒C"],"2026/04/03/15:30":["親子A"],"2026/04/03/13:30":["自游時光"],"2026/04/03/11:30":["親子A"],"2026/04/03/10:30":["親子A"],"2026/04/03/09:30":["親子B"],"2026/04/02/19:30":["兒童E","幼兒C"],"2026/04/02/18:30":["幼兒D","兒童E","幼兒C"],"2026/04/02/17:30":["幼兒C","兒童E","兒童E"],"2026/04/02/16:30":["幼兒C","幼兒C"],"2026/04/02/11:30":["親子A"],"2026/04/01/19:30":["幼兒C","兒童E"],"2026/04/01/18:30":["幼兒C","兒童E"],"2026/04/01/17:30":["幼兒C","兒童E","兒童E"],"2026/04/01/16:30":["幼兒C","兒童E","兒童E"],"2026/04/01/15:30":["親子A"],"2026/04/01/13:30":["自游時光"],"2026/04/01/11:30":["親子A"],"2026/04/01/10:30":["親子A"],"2026/04/01/09:30":["親子A"]}}}};
+</script>
+<script>
+// ===== CONSTANTS =====
+var VENUES = {x:{name:'西屯館',zones:4}, b:{name:'北屯館',zones:5}};
+
+var COURSE_OPTS = [
+  {label:'N',    cid:'pn', color:'#0F6E56'},
+  {label:'A',    cid:'pa', color:'#185FA5'},
+  {label:'A體',  cid:'pa', color:'#378ADD'},
+  {label:'A體專',cid:'pa', color:'#5B9BD5'},
+  {label:'B',    cid:'pb', color:'#7B3F9E'},
+  {label:'C',    cid:'yc', color:'#1D9E75'},
+  {label:'C體',  cid:'yc', color:'#3DB892'},
+  {label:'C體專',cid:'yc', color:'#5DCAA5'},
+  {label:'C補專',cid:'yc', color:'#85C9A0'},
+  {label:'D',    cid:'yd', color:'#639922'},
+  {label:'E',    cid:'ce', color:'#854F0B'},
+  {label:'E體',  cid:'ce', color:'#A06030'},
+  {label:'E體專',cid:'ce', color:'#B87840'},
+  {label:'E補專',cid:'ce', color:'#C89050'},
+  {label:'F',    cid:'cf', color:'#993556'},
+  {label:'自游', cid:'fz', color:'#534AB7'},
+  {label:'水樂', cid:'wp', color:'#D85A30'}
+];
+
+var CZONES = {
+  pn:{x:2,b:2}, pa:{x:2,b:2}, pb:{x:2,b:2},
+  yc:{x:1,b:1}, yd:{x:1,b:1}, ce:{x:1,b:1},
+  cf:{x:4,b:5}, fz:{x:2,b:2}, wp:{x:4,b:5}
+};
+
+var DAY_KEYS   = ['tue','wed','thu','fri','sat','sun'];
+var DAY_LABELS = {tue:'週二',wed:'週三',thu:'週四',fri:'週五',sat:'週六',sun:'週日'};
+
+var WEEKDAY_SLOTS = ['09:30','10:30','11:30','13:30','15:00','15:30','16:00','16:30','17:30','18:30','19:30'];
+var WEEKEND_SLOTS = ['09:30','10:30','11:30','14:00','15:00','16:00','17:00'];
+
+// Sub-label for each slot (the paired time)
+var SLOT_SUB = {
+  '09:30':'09:40','10:30':'10:40','11:30':'11:40',
+  '15:00':'15:10','16:00':'16:10','18:30':'18:40','19:30':'19:40'
+};
+
+var BF_COURSE = {
+  '【Ａ】親子游泳':'pa','【Ａ】親子游泳｜體驗專班':'pa',
+  '【Ａ】親子體驗｜北屯':'pa','【Ａ】親子體驗｜西屯':'pa',
+  '【Ｂ】親子游泳':'pb',
+  '【Ｃ】幼兒游泳':'yc','【Ｃ】幼兒游泳｜補課專班':'yc',
+  '【Ｃ】幼兒游泳｜體驗專班':'yc','【Ｃ】幼兒體驗｜北屯':'yc','【Ｃ】幼兒體驗｜西屯':'yc',
+  '【Ｄ】幼兒游泳':'yd',
+  '【Ｅ】兒童游泳':'ce','【Ｅ】兒童游泳｜補課專班':'ce',
+  '【Ｅ】兒童游泳｜體驗專班':'ce','【Ｅ】兒童體驗｜北屯':'ce','【Ｅ】兒童體驗｜西屯':'ce',
+  '【Ｆ】兒童游泳':'cf',
+  '【Ｎ】新生寶寶游泳':'pn','【Ｎ】新生寶寶｜北屯':'pn','【Ｎ】新生寶寶｜西屯':'pn',
+  '【Ｓ】自游時光｜西屯':'fz','【Ｓ】自游時光｜北屯':'fz',
+  '【Ｐ】水上樂園｜西屯':'wp','【Ｐ】水上樂園｜北屯':'wp'
+};
+
+var BF_TIME = {
+  '09:20~10:00':['09:30'],'09:30~10:10':['09:30'],'09:40~10:20':['09:30'],
+  '10:20~11:00':['10:30'],'10:30~11:10':['10:30'],'10:40~11:20':['10:30'],'10:40~11:30':['10:30'],
+  '11:20~12:10':['11:30'],'11:30~12:10':['11:30'],'11:30~12:20':['11:30'],
+  '11:40~12:20':['11:30'],'11:40~12:30':['11:30'],
+  '13:00~13:40':['13:30'],
+  '14:30~15:50':['14:00','15:00'],
+  '15:00~15:50':['15:00'],'15:10~16:00':['15:00'],'15:20~16:00':['15:30'],'15:30~16:10':['15:30'],
+  '16:00~16:50':['16:00'],'16:00~17:20':['16:00','17:00'],
+  '16:10~17:00':['16:00'],'16:20~17:10':['16:30'],'16:30~17:20':['16:30'],
+  '17:00~17:50':['17:00'],'17:10~18:00':['17:00'],'17:20~18:10':['17:30'],'17:30~18:20':['17:30'],
+  '18:30~19:20':['18:30'],'18:40~19:30':['18:30'],
+  '19:30~20:20':['19:30'],'19:40~20:30':['19:30']
+};
+
+var CNAME_TO_CID = {
+  '親子A':'pa','親子B':'pb','親子N':'pn',
+  '幼兒C':'yc','幼兒D':'yd','兒童E':'ce','兒童F':'cf',
+  '自游時光':'fz','水上樂園':'wp'
+};
+
+var CID_LABEL = {
+  pn:'親子N',pa:'親子A',pb:'親子B',
+  yc:'幼兒C',yd:'幼兒D',ce:'兒童E',cf:'兒童F',
+  fz:'自游時光',wp:'水上樂園'
+};
+
+var CID_COLOR = {
+  pn:'#0F6E56',pa:'#185FA5',pb:'#7B3F9E',
+  yc:'#1D9E75',yd:'#639922',ce:'#854F0B',cf:'#993556',
+  fz:'#534AB7',wp:'#D85A30'
+};
+
+// ===== STATE =====
+var schedVenue = 'x';
+var schedYear  = 2026;
+var schedMonth = 5;
+var schedWeek  = 1;
+var mTarget    = null;
+var mSelCourse = null;
+var mSelTeacher= null;
+var hPeriod    = 'month';
+var selDate    = null;
+
+var schedData = JSON.parse(localStorage.getItem('ssd') || '{}');
+var teachers  = JSON.parse(localStorage.getItem('str') || '["LA","TC","RB","JM","EE","Cooper","Jimmy","Taco","Joanne","LALA","Ruby"]');
+var HD        = JSON.parse(localStorage.getItem('sh')  || '{}');
+var IR        = JSON.parse(localStorage.getItem('sir') || '[]');
+
+// Pre-load April 2026
+(function() {
+  var ym = '2026-4';
+  if (HD[ym]) return;
+  HD[ym] = {x:{}, b:{}};
+  if (!APR_DATA || !APR_DATA['2026'] || !APR_DATA['2026']['4']) return;
+  var mo = APR_DATA['2026']['4'];
+  var vks = Object.keys(mo);
+  for (var vi = 0; vi < vks.length; vi++) {
+    var vk = vks[vi];
+    var slotKeys = Object.keys(mo[vk]);
+    for (var si = 0; si < slotKeys.length; si++) {
+      var dateSlot = slotKeys[si];
+      var slash = dateSlot.lastIndexOf('/');
+      var date  = dateSlot.slice(0, slash);
+      var slot  = dateSlot.slice(slash + 1);
+      if (!HD[ym][vk][date]) HD[ym][vk][date] = {};
+      if (!HD[ym][vk][date][slot]) HD[ym][vk][date][slot] = [];
+      var cnames = mo[vk][dateSlot];
+      for (var ci = 0; ci < cnames.length; ci++) {
+        var cid = CNAME_TO_CID[cnames[ci]];
+        if (cid && HD[ym][vk][date][slot].indexOf(cid) < 0)
+          HD[ym][vk][date][slot].push(cid);
+      }
+    }
+  }
+  svH();
+  var found = false;
+  for (var i = 0; i < IR.length; i++) { if (IR[i].ym === ym) { found = true; break; } }
+  if (!found) IR.push({fn:'團體課預約報表_260401-260430（內建）', ym:ym, cnt:581, at:'2026/04/15'});
+  svI();
+})();
+
+function svH() { localStorage.setItem('sh',  JSON.stringify(HD)); }
+function svI() { localStorage.setItem('sir', JSON.stringify(IR)); }
+function svS() { localStorage.setItem('ssd', JSON.stringify(schedData)); }
+function svT() { localStorage.setItem('str', JSON.stringify(teachers)); }
+
+// ===== UTILS =====
+function pad(n) { return n < 10 ? '0' + n : String(n); }
+function fmtDate(d) { return d.getFullYear() + '/' + pad(d.getMonth()+1) + '/' + pad(d.getDate()); }
+function getDaysInMonth(y, m) {
+  var days = [], d = new Date(y, m-1, 1);
+  while (d.getMonth() === m-1) { days.push(new Date(d)); d.setDate(d.getDate()+1); }
+  return days;
+}
+function rc(r) { return r >= 0.8 ? '#E24B4A' : r >= 0.5 ? '#EF9F27' : '#1D9E75'; }
+function tlabel(r) { return r >= 0.8 ? '飽和' : r >= 0.5 ? '穩定' : '離峰'; }
+function tcls(r)   { return r >= 0.8 ? 'tl2'  : r >= 0.5 ? 'tl1'  : 'tl0'; }
+
+function getDateSlots(ds) {
+  var d = new Date(ds.replace(/\//g, '-'));
+  var wd = d.getDay();
+  if (wd === 1) return [];
+  if (wd === 0 || wd === 6) return WEEKEND_SLOTS.slice();
+  return WEEKDAY_SLOTS.slice();
+}
+function czForVenue(cid, vk) {
+  var z = CZONES[cid];
+  return z ? (vk === 'x' ? z.x : z.b) : 0;
+}
+function dateCap(ds, vk) { return getDateSlots(ds).length * VENUES[vk].zones; }
+function dateUsed(ds, vk, ym) {
+  var sm = ((HD[ym] || {})[vk] || {})[ds] || {};
+  var sls = getDateSlots(ds), t = 0;
+  for (var i = 0; i < sls.length; i++) {
+    var arr = sm[sls[i]] || [];
+    for (var j = 0; j < arr.length; j++) t += czForVenue(arr[j], vk);
+  }
+  return t;
+}
+function isoWeek(date) {
+  var d = new Date(date);
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+  var y = d.getFullYear(), start = new Date(y, 0, 1);
+  var w = Math.ceil(((d - start) / 86400000 + 1) / 7);
+  return y + '-W' + (w < 10 ? '0' + w : String(w));
+}
+
+// ===== SCHEDULE: WEEK UTILS =====
+function getWeeksInMonth(y, m) {
+  var days = getDaysInMonth(y, m);
+  var weeks = 1;
+  for (var i = 7; i < days.length; i++) {
+    if (days[i].getDay() === 2) weeks++;
+  }
+  return Math.max(weeks, 4);
+}
+
+// Return the actual Date for week w, daykey dk in month y/m
+// Week 1 = the week whose Tuesday falls in this month (or first Tuesday)
+function getWeekDate(y, m, w, dk) {
+  var dkOff = {tue:0, wed:1, thu:2, fri:3, sat:4, sun:5};
+  var off = dkOff[dk];
+  if (off === undefined) return null;
+  var days = getDaysInMonth(y, m);
+  // Find first Tuesday
+  var firstTue = -1;
+  for (var i = 0; i < days.length; i++) {
+    if (days[i].getDay() === 2) { firstTue = i; break; }
+  }
+  if (firstTue < 0) return null;
+  var idx = firstTue + (w - 1) * 7 + off;
+  if (idx < 0 || idx >= days.length) return null;
+  // Verify correct weekday
+  var expected = [2,3,4,5,6,0][off];
+  if (days[idx].getDay() !== expected) return null;
+  return days[idx];
+}
+
+function getSlotsForDk(dk) {
+  return (dk === 'sat' || dk === 'sun') ? WEEKEND_SLOTS : WEEKDAY_SLOTS;
+}
+
+function schedKey(vk, y, m, w, dk, sl) {
+  return vk + '-' + y + '-' + m + '-' + w + '-' + dk + '-' + sl;
+}
+
+// ===== SCHEDULE RENDER =====
+function initSchedSelectors() {
+  var now = new Date();
+  var ny = now.getFullYear(), nm = now.getMonth() + 2;
+  if (nm > 12) { nm = 1; ny++; }
+  schedYear = ny; schedMonth = nm;
+
+  var ySel = document.getElementById('sched-year');
+  var mSel = document.getElementById('sched-month');
+  var yh = '';
+  for (var y = 2026; y <= 2028; y++)
+    yh += '<option value="' + y + '"' + (y === schedYear ? ' selected' : '') + '>' + y + '年</option>';
+  ySel.innerHTML = yh;
+
+  var mh = '';
+  for (var mo = 1; mo <= 12; mo++)
+    mh += '<option value="' + mo + '"' + (mo === schedMonth ? ' selected' : '') + '>' + mo + '月</option>';
+  mSel.innerHTML = mh;
+
+  renderWeekTabs();
+}
+
+function onSchedYearChange()  { schedYear  = parseInt(document.getElementById('sched-year').value);  schedWeek = 1; renderWeekTabs(); renderSched(); }
+function onSchedMonthChange() { schedMonth = parseInt(document.getElementById('sched-month').value); schedWeek = 1; renderWeekTabs(); renderSched(); loadPrevMonth(); }
+
+function renderWeekTabs() {
+  var nw = getWeeksInMonth(schedYear, schedMonth);
+  var h = '';
+  for (var w = 1; w <= nw; w++)
+    h += '<button class="wtab' + (schedWeek === w ? ' on' : '') + '" onclick="switchWeek(' + w + ')">第' + w + '週</button>';
+  document.getElementById('week-tabs').innerHTML = h;
+}
+
+function switchWeek(w) { schedWeek = w; renderWeekTabs(); renderSched(); }
+
+function renderSched() {
+  var v  = document.getElementById('sched-venue').value;
+  schedVenue = v;
+  var y  = schedYear, mo = schedMonth, w = schedWeek;
+  document.getElementById('sched-title').textContent =
+    y + '年' + mo + '月 第' + w + '週 — ' + VENUES[v].name;
+
+  // All slots union
+  var allSlots = ['09:30','10:30','11:30','13:30','14:00','15:00','15:30','16:00','16:30','17:00','17:30','18:30','19:30'];
+
+  var h = '<table class="sched-grid"><thead>';
+  // Row 1: day headers
+  h += '<tr><th rowspan="2" style="min-width:50px">時段</th>';
+  for (var di = 0; di < DAY_KEYS.length; di++) {
+    var dk = DAY_KEYS[di];
+    var dateObj = getWeekDate(y, mo, w, dk);
+    var dateLbl = dateObj ? '<br><span style="font-size:10px;font-weight:400;color:var(--tx2)">' + mo + '/' + dateObj.getDate() + '</span>' : '';
+    h += '<th colspan="3" class="day-hd">' + DAY_LABELS[dk] + dateLbl + '</th>';
+  }
+  h += '</tr>';
+  // Row 2: sub-headers
+  h += '<tr>';
+  for (var di = 0; di < DAY_KEYS.length; di++) {
+    h += '<th style="font-size:10px;min-width:55px">班</th><th style="font-size:10px;min-width:36px">老師</th><th style="font-size:10px;min-width:44px">救生</th>';
+  }
+  h += '</tr></thead><tbody>';
+
+  for (var si = 0; si < allSlots.length; si++) {
+    var sl = allSlots[si];
+    // Check if any day uses this slot
+    var anyDay = false;
+    for (var di = 0; di < DAY_KEYS.length; di++) {
+      if (getSlotsForDk(DAY_KEYS[di]).indexOf(sl) >= 0) { anyDay = true; break; }
+    }
+    if (!anyDay) continue;
+
+    var sub = SLOT_SUB[sl] ? '<br><span style="font-size:9px;color:var(--tx3)">' + SLOT_SUB[sl] + '</span>' : '';
+    h += '<tr><td class="time-cell">' + sl + sub + '</td>';
+
+    for (var di = 0; di < DAY_KEYS.length; di++) {
+      var dk = DAY_KEYS[di];
+      var validSl = getSlotsForDk(dk);
+      if (validSl.indexOf(sl) < 0) {
+        h += '<td colspan="3" style="background:var(--bg3)"></td>';
+        continue;
+      }
+      var key   = schedKey(v, y, mo, w, dk, sl);
+      var lgKey = 'lg-' + key;
+      var items = schedData[key] || [];
+      var lgVal = (schedData[lgKey] || '').replace(/"/g, '&quot;');
+
+      // Class cell
+      h += '<td class="slot-cell">';
+      for (var ii = 0; ii < items.length; ii++) {
+        var it = items[ii];
+        h += '<div class="ctag" style="background:' + it.color + '">'
+           + '<span class="ct-n">' + it.label + '</span>'
+           + '<button class="ct-d" onclick="delItem(\'' + key + '\',' + ii + ',event)">×</button>'
+           + '</div>';
+      }
+      h += '<button class="slot-add" onclick="openModal(\'' + key + '\',\'' + dk + '\',\'' + sl + '\')">+</button>';
+      h += '</td>';
+
+      // Teacher cell
+      h += '<td class="slot-cell">';
+      for (var ii = 0; ii < items.length; ii++) {
+        var it = items[ii];
+        h += '<div class="ctag" style="background:' + it.color + '">'
+           + '<span class="ct-n" style="font-size:10px">' + (it.teacher || '—') + '</span>'
+           + '</div>';
+      }
+      h += '</td>';
+
+      // Lifeguard cell
+      h += '<td class="slot-cell">'
+         + '<textarea class="lg-inp" rows="1" placeholder="救生" onchange="saveLG(\'' + lgKey + '\',this.value)">'
+         + lgVal
+         + '</textarea></td>';
+    }
+    h += '</tr>';
+  }
+  h += '</tbody></table>';
+  document.getElementById('sched-grid-wrap').innerHTML = h;
+  renderDiffNotes();
+}
+
+function delItem(key, idx, e) {
+  e.stopPropagation();
+  if (!schedData[key]) return;
+  schedData[key].splice(idx, 1);
+  svS(); renderSched();
+}
+function saveLG(key, val) { schedData[key] = val; svS(); }
+
+function renderDiffNotes() {
+  var v = schedVenue, y = schedYear, mo = schedMonth;
+  var nw = getWeeksInMonth(y, mo);
+  if (nw <= 1) { document.getElementById('diff-notes').innerHTML = ''; return; }
+  var diffs = [];
+  for (var w = 2; w <= nw; w++) {
+    var wd = [];
+    for (var di = 0; di < DAY_KEYS.length; di++) {
+      var dk = DAY_KEYS[di];
+      var sls = getSlotsForDk(dk);
+      for (var si = 0; si < sls.length; si++) {
+        var sl = sls[si];
+        var k1 = schedKey(v, y, mo, 1, dk, sl);
+        var kw = schedKey(v, y, mo, w, dk, sl);
+        if (JSON.stringify(schedData[k1] || []) !== JSON.stringify(schedData[kw] || []))
+          wd.push(DAY_LABELS[dk] + ' ' + sl);
+      }
+    }
+    if (wd.length) diffs.push('第' + w + '週與第1週不同：' + wd.join('、'));
+  }
+  var el = document.getElementById('diff-notes');
+  if (!diffs.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div class="diff-box"><strong>備註（各週差異）</strong><br>' + diffs.join('<br>') + '</div>';
+}
+
+function copyWeekToNext() {
+  var v = schedVenue, y = schedYear, mo = schedMonth, w = schedWeek;
+  var nw = getWeeksInMonth(y, mo);
+  if (w >= nw) { alert('已是最後一週'); return; }
+  for (var di = 0; di < DAY_KEYS.length; di++) {
+    var dk = DAY_KEYS[di];
+    var sls = getSlotsForDk(dk);
+    for (var si = 0; si < sls.length; si++) {
+      var sl = sls[si];
+      var k1 = schedKey(v, y, mo, w,   dk, sl);
+      var k2 = schedKey(v, y, mo, w+1, dk, sl);
+      schedData[k2] = JSON.parse(JSON.stringify(schedData[k1] || []));
+      var lg1 = 'lg-' + k1, lg2 = 'lg-' + k2;
+      if (schedData[lg1]) schedData[lg2] = schedData[lg1];
+    }
+  }
+  svS(); schedWeek = w + 1; renderWeekTabs(); renderSched();
+}
+
+function loadPrevMonth() {
+  var v = schedVenue, y = schedYear, mo = schedMonth;
+  var py = y, pm = mo - 1;
+  if (pm < 1) { pm = 12; py--; }
+  // Check if prev month has any data
+  var hasAny = false;
+  for (var di = 0; di < DAY_KEYS.length; di++) {
+    var k = schedKey(v, py, pm, 1, DAY_KEYS[di], '09:30');
+    if (schedData[k] && schedData[k].length) { hasAny = true; break; }
+  }
+  if (!hasAny) return;
+  var nw  = getWeeksInMonth(y, mo);
+  var pnw = getWeeksInMonth(py, pm);
+  for (var w = 1; w <= nw; w++) {
+    var srcW = Math.min(w, pnw);
+    for (var di = 0; di < DAY_KEYS.length; di++) {
+      var dk = DAY_KEYS[di];
+      var sls = getSlotsForDk(dk);
+      for (var si = 0; si < sls.length; si++) {
+        var sl = sls[si];
+        var src = schedKey(v, py, pm, srcW, dk, sl);
+        var dst = schedKey(v, y,  mo, w,    dk, sl);
+        if (!(schedData[dst] && schedData[dst].length) && schedData[src])
+          schedData[dst] = JSON.parse(JSON.stringify(schedData[src]));
+      }
+    }
+  }
+  svS(); renderSched();
+}
+
+// ===== MODAL =====
+function openModal(key, dk, sl) {
+  mTarget = {key:key, dk:dk, sl:sl};
+  mSelCourse  = null;
+  mSelTeacher = null;
+  document.getElementById('mt').textContent = '新增課程 — ' + DAY_LABELS[dk] + ' ' + sl;
+  document.getElementById('mm').textContent = VENUES[schedVenue].name;
+
+  var cl = '';
+  for (var i = 0; i < COURSE_OPTS.length; i++) {
+    var c = COURSE_OPTS[i];
+    cl += '<div class="copt" id="copt-' + i + '" onclick="selCourse(' + i + ')">'
+        + '<span class="cdot" style="background:' + c.color + '"></span>'
+        + '<span>' + c.label + '</span></div>';
+  }
+  document.getElementById('cl').innerHTML = cl;
+
+  var tl2 = '';
+  for (var i = 0; i < teachers.length; i++)
+    tl2 += '<button class="tropt" id="topt-' + i + '" onclick="selTeacher(\'' + teachers[i] + '\')">' + teachers[i] + '</button>';
+  document.getElementById('trl').innerHTML = tl2;
+
+  document.getElementById('mov').classList.add('open');
+}
+
+function selCourse(idx) {
+  mSelCourse = COURSE_OPTS[idx];
+  var opts = document.querySelectorAll('.copt');
+  for (var i = 0; i < opts.length; i++)
+    opts[i].style.background = (i === idx) ? mSelCourse.color + '33' : '';
+}
+
+function selTeacher(name) {
+  mSelTeacher = (mSelTeacher === name) ? null : name;
+  var opts = document.querySelectorAll('.tropt');
+  for (var i = 0; i < opts.length; i++)
+    opts[i].classList.toggle('on', teachers[i] === mSelTeacher);
+}
+
+function confirmModal() {
+  if (!mSelCourse) { alert('請選擇課程'); return; }
+  var key = mTarget.key;
+  if (!schedData[key]) schedData[key] = [];
+  schedData[key].push({
+    label:   mSelCourse.label,
+    cid:     mSelCourse.cid,
+    color:   mSelCourse.color,
+    teacher: mSelTeacher || ''
+  });
+  svS(); closeModal(); renderSched();
+}
+
+function closeModal() { document.getElementById('mov').classList.remove('open'); mTarget = null; }
+function closeOv(e)   { if (e.target === document.getElementById('mov')) closeModal(); }
+
+// ===== TEACHERS =====
+function renderTeachers() {
+  var h = '';
+  for (var i = 0; i < teachers.length; i++) {
+    h += '<div class="teacher-chip">' + teachers[i]
+       + '<button class="tc-del" onclick="delTeacher(' + i + ')">×</button></div>';
+  }
+  document.getElementById('teacher-list').innerHTML = h;
+}
+function addTeacher() {
+  var inp = document.getElementById('new-teacher');
+  var name = inp.value.trim();
+  if (!name) return;
+  if (teachers.indexOf(name) < 0) { teachers.push(name); svT(); }
+  inp.value = '';
+  renderTeachers();
+}
+function delTeacher(idx) { teachers.splice(idx, 1); svT(); renderTeachers(); }
+
+// ===== HISTORY =====
+function setPeriod(p) {
+  selDate = null; hPeriod = p;
+  var btns = document.querySelectorAll('.pb-btn');
+  var ps = ['month','week','year'];
+  for (var i = 0; i < btns.length; i++) btns[i].classList.toggle('on', ps[i] === p);
+  updateHistCtrl(); renderHistory();
+}
+
+function updateHistCtrl() {
+  var yrs = [], seen = {}, keys = Object.keys(HD);
+  for (var i = 0; i < keys.length; i++) {
+    var y2 = keys[i].split('-')[0];
+    if (!seen[y2]) { seen[y2] = 1; yrs.push(y2); }
+  }
+  yrs.sort().reverse();
+  var ySel = document.getElementById('hy-sel');
+  var mSel = document.getElementById('hm-sel');
+  if (!ySel) return;
+  var cy = ySel.value || yrs[0] || '2026';
+  var yh = '';
+  for (var i = 0; i < yrs.length; i++)
+    yh += '<option value="' + yrs[i] + '"' + (yrs[i] === cy ? ' selected' : '') + '>' + yrs[i] + '年</option>';
+  ySel.innerHTML = yh;
+
+  if (hPeriod === 'year') { mSel.style.display = 'none'; return; }
+  mSel.style.display = '';
+  var mos = [], seen2 = {};
+  for (var i = 0; i < keys.length; i++) {
+    var p2 = keys[i].split('-');
+    if (p2[0] === cy) { var m2 = parseInt(p2[1]); if (!seen2[m2]) { seen2[m2]=1; mos.push(m2); } }
+  }
+  mos.sort(function(a,b){return a-b;});
+  var cm = mSel.value || (mos.length ? String(mos[mos.length-1]) : '4');
+  var mh = '';
+  for (var i = 0; i < mos.length; i++)
+    mh += '<option value="' + mos[i] + '"' + (mos[i] == cm ? ' selected' : '') + '>' + mos[i] + '月</option>';
+  mSel.innerHTML = mh;
+}
+
+function onHYearChange() { updateHistCtrl(); renderHistory(); }
+
+function renderHistory() {
+  updateHistCtrl();
+  var v  = document.getElementById('hv-sel').value;
+  var yr = document.getElementById('hy-sel').value || '2026';
+  var mo = parseInt(document.getElementById('hm-sel').value || '4');
+  var ym = yr + '-' + mo;
+  var el = document.getElementById('hist-content');
+  if (!el) return;
+  if      (hPeriod === 'month') el.innerHTML = renderMonthView(parseInt(yr), mo, v, ym);
+  else if (hPeriod === 'week')  el.innerHTML = renderWeekView(parseInt(yr), mo, v, ym);
+  else                          el.innerHTML = renderYearView(yr, v);
+}
+
+function getVR(ds, ym, v) {
+  if (v === 'all') {
+    return { cap: dateCap(ds,'x') + dateCap(ds,'b'), used: dateUsed(ds,'x',ym) + dateUsed(ds,'b',ym) };
+  }
+  return { cap: dateCap(ds, v), used: dateUsed(ds, v, ym) };
+}
+
+function renderMonthView(yr, mo, v, ym) {
+  var days = getDaysInMonth(yr, mo);
+  var offset = (days[0].getDay() + 6) % 7;
+  var hds = ['一','二','三','四','五','六','日'];
+  var h = '<div class="cgrid">';
+  for (var i = 0; i < hds.length; i++) h += '<div class="chd">' + hds[i] + '</div>';
+  for (var i = 0; i < offset; i++)     h += '<div class="cday cempty"></div>';
+  var mC = 0, mU = 0;
+  for (var di = 0; di < days.length; di++) {
+    var d = days[di], ds = fmtDate(d), vr = getVR(ds, ym, v);
+    mC += vr.cap; mU += vr.used;
+    var isSel = selDate === ds;
+    if (!vr.cap) {
+      h += '<div class="cday" style="background:var(--bg2)'
+         + (isSel ? ';border:.5px solid var(--bd2)' : '') + '">'
+         + '<div class="cdn" style="color:var(--tx3)">' + d.getDate() + '</div>'
+         + '<div style="font-size:9px;color:var(--tx3)">休館</div></div>';
+      continue;
+    }
+    var r = vr.used / vr.cap, p = Math.round(r * 100);
+    var op = Math.max(0.12, r);
+    var hex = Math.round(op * 255).toString(16);
+    if (hex.length < 2) hex = '0' + hex;
+    h += '<div class="cday' + (isSel ? ' on' : '') + '" style="background:' + rc(r) + hex
+       + ';cursor:pointer' + (isSel ? ';border:.5px solid var(--bd2)' : '') + '"'
+       + ' onclick="selectDate(\'' + ds + '\')">'
+       + '<div class="cdn">' + d.getDate() + '</div>'
+       + '<div class="cdp" style="color:' + rc(r) + '">' + p + '%</div></div>';
+  }
+  h += '</div>';
+  var tR = mC ? mU / mC : 0, pct = Math.round(tR * 100), col = rc(tR);
+  h += '<div class="metrics">'
+     + '<div class="mc"><div class="mcl">月總產能</div><div class="mcv">' + mC + '</div></div>'
+     + '<div class="mc"><div class="mcl">月實際排課</div><div class="mcv">' + mU + '</div></div>'
+     + '<div class="mc"><div class="mcl">月平均利用率</div>'
+     + '<div class="mcv" style="color:' + col + '">' + pct + '% <span class="tag ' + tcls(tR) + '">' + tlabel(tR) + '</span></div>'
+     + '<div class="pb"><div class="pf" style="width:' + pct + '%;background:' + col + '"></div></div>'
+     + '</div></div>';
+  h += '<div id="day-detail">'
+     + (selDate ? renderDayDetail(selDate, v, ym) : '<p style="font-size:12px;color:var(--tx3);margin-top:6px">點擊日期查看課程明細</p>')
+     + '</div>';
+  return h;
+}
+
+function selectDate(ds) { selDate = (selDate === ds) ? null : ds; renderHistory(); }
+
+function renderDayDetail(ds, v, ym) {
+  var wds = ['日','一','二','三','四','五','六'];
+  var d   = new Date(ds.replace(/\//g, '-'));
+  var sls = getDateSlots(ds);
+  if (!sls.length) return '';
+  var vks = (v === 'all') ? ['x','b'] : [v];
+  var h   = '<div style="margin-top:12px"><div class="sec">' + ds + '（週' + wds[d.getDay()] + '）課程明細</div>';
+  for (var vi = 0; vi < vks.length; vi++) {
+    var vk = vks[vi];
+    var sm = ((HD[ym] || {})[vk] || {})[ds] || {};
+    var Z  = VENUES[vk].zones;
+    if (v === 'all') h += '<div style="font-size:11px;font-weight:500;color:var(--tx2);margin-bottom:4px">' + VENUES[vk].name + '</div>';
+    h += '<table class="htable" style="margin-bottom:' + (vi < vks.length-1 ? '10px' : '0') + '">'
+       + '<thead><tr><th>時段</th><th style="text-align:left">課程</th><th>佔用</th><th>剩餘</th><th>利用率</th></tr></thead><tbody>';
+    for (var si = 0; si < sls.length; si++) {
+      var sl   = sls[si];
+      var cids = sm[sl] || [];
+      var used = 0;
+      for (var ci = 0; ci < cids.length; ci++) used += czForVenue(cids[ci], vk);
+      var rem  = Z - used, r = used / Z, p = Math.round(r * 100);
+      var cH = '';
+      if (!cids.length) {
+        cH = '<span style="font-size:11px;color:var(--tx3)">—</span>';
+      } else {
+        for (var ci = 0; ci < cids.length; ci++) {
+          var cid   = cids[ci];
+          var zu    = czForVenue(cid, vk);
+          var clr   = CID_COLOR[cid] || '#888';
+          var clbl  = CID_LABEL[cid] || cid;
+          cH += '<span style="display:inline-flex;align-items:center;font-size:10px;padding:2px 6px;border-radius:4px;color:#fff;background:' + clr + ';font-weight:500;margin:1px 2px 1px 0">'
+              + clbl + ' ' + zu + '區</span>';
+        }
+      }
+      h += '<tr>'
+         + '<td style="font-size:11px;color:var(--tx2);white-space:nowrap">' + sl + '</td>'
+         + '<td style="text-align:left;padding:4px 8px">' + cH + '</td>'
+         + '<td style="font-size:12px;font-weight:500">' + used + '/' + Z + '</td>'
+         + '<td style="font-size:12px;font-weight:500;color:' + (rem===0?'#1D9E75':rem<0?'#E24B4A':'var(--tx)') + '">' + rem + '</td>'
+         + '<td style="font-size:11px;font-weight:500;color:' + rc(r) + '">' + p + '%</td></tr>';
+    }
+    h += '</tbody></table>';
+  }
+  h += '</div>';
+  return h;
+}
+
+function renderWeekView(yr, mo, v, ym) {
+  var days = getDaysInMonth(yr, mo), weeks = {}, wOrder = [];
+  for (var i = 0; i < days.length; i++) {
+    var wk = isoWeek(days[i]);
+    if (!weeks[wk]) { weeks[wk] = []; wOrder.push(wk); }
+    weeks[wk].push(days[i]);
+  }
+  var h = '<table class="htable"><thead><tr><th>週次</th><th>日期範圍</th><th>產能</th><th>已排課</th><th>利用率</th></tr></thead><tbody>';
+  for (var wi = 0; wi < wOrder.length; wi++) {
+    var wk = wOrder[wi], wDays = weeks[wk], cap = 0, used = 0;
+    for (var i = 0; i < wDays.length; i++) {
+      var vr = getVR(fmtDate(wDays[i]), ym, v);
+      cap += vr.cap; used += vr.used;
+    }
+    var r = cap ? used/cap : 0, p = Math.round(r*100);
+    h += '<tr><td style="font-weight:500">' + wk + '</td>'
+       + '<td style="font-size:11px;color:var(--tx2)">' + fmtDate(wDays[0]) + ' ~ ' + fmtDate(wDays[wDays.length-1]) + '</td>'
+       + '<td>' + cap + '</td><td>' + used + '</td>'
+       + '<td style="font-weight:500;color:' + rc(r) + '">' + p + '% <span class="tag ' + tcls(r) + '">' + tlabel(r) + '</span></td></tr>';
+  }
+  h += '</tbody></table>';
+  return h;
+}
+
+function renderYearView(yr, v) {
+  var h = '<table class="htable"><thead><tr><th>月份</th><th>產能</th><th>已排課</th><th>利用率</th></tr></thead><tbody>';
+  var hasData = false;
+  for (var mo = 1; mo <= 12; mo++) {
+    var ym = yr + '-' + mo;
+    if (!HD[ym]) continue;
+    hasData = true;
+    var days = getDaysInMonth(parseInt(yr), mo), cap = 0, used = 0;
+    for (var i = 0; i < days.length; i++) {
+      var vr = getVR(fmtDate(days[i]), ym, v);
+      cap += vr.cap; used += vr.used;
+    }
+    var r = cap ? used/cap : 0, p = Math.round(r*100);
+    h += '<tr><td style="font-weight:500">' + mo + '月</td><td>' + cap + '</td><td>' + used + '</td>'
+       + '<td style="font-weight:500;color:' + rc(r) + '">' + p + '% <span class="tag ' + tcls(r) + '">' + tlabel(r) + '</span></td></tr>';
+  }
+  if (!hasData) h += '<tr><td colspan="4" style="text-align:center;color:var(--tx3);padding:16px">尚無資料</td></tr>';
+  h += '</tbody></table>';
+  return h;
+}
+
+function copyHistReport() {
+  var v  = document.getElementById('hv-sel').value;
+  var yr = document.getElementById('hy-sel').value || '2026';
+  var mo = parseInt(document.getElementById('hm-sel').value || '4');
+  var ym = yr + '-' + mo;
+  var vn = {x:'西屯館', b:'北屯館', all:'兩館合計'};
+  var lines = [yr + '年' + mo + '月 產能利用率 — ' + vn[v], '', '日期\t星期\t產能\t已排課\t利用率'];
+  var wds = ['日','一','二','三','四','五','六'];
+  var days = getDaysInMonth(parseInt(yr), mo);
+  for (var i = 0; i < days.length; i++) {
+    var d = days[i], ds = fmtDate(d), vr = getVR(ds, ym, v);
+    var r = vr.cap ? Math.round(vr.used / vr.cap * 100) : null;
+    lines.push(ds + '\t週' + wds[d.getDay()] + '\t' + vr.cap + '\t' + vr.used + '\t' + (r === null ? '休館' : r + '%'));
+  }
+  navigator.clipboard.writeText(lines.join('\n')).then(function() {
+    var b = document.getElementById('hcbtn');
+    b.textContent = '已複製！';
+    setTimeout(function() { b.textContent = '複製分析報表'; }, 2000);
+  });
+}
+
+function clearAllHistory() {
+  if (!confirm('確定要清除所有歷史紀錄？')) return;
+  HD = {}; IR = []; svH(); svI();
+  renderHistory(); renderImpHist();
+}
+
+// ===== IMPORT =====
+function onDragOver(e)  { e.preventDefault(); document.getElementById('izone').classList.add('drag'); }
+function onDragLeave()  { document.getElementById('izone').classList.remove('drag'); }
+function onDrop(e)      { e.preventDefault(); document.getElementById('izone').classList.remove('drag'); var f = e.dataTransfer.files[0]; if (f) processFile(f); }
+function onFileSelect(e){ var f = e.target.files[0]; if (f) processFile(f); }
+
+function processFile(file) {
+  var log = document.getElementById('ilog');
+  log.textContent = '解析中...';
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      var wb   = XLSX.read(ev.target.result, {type:'array'});
+      var ws   = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      var hi   = -1;
+      for (var i = 0; i < rows.length; i++) {
+        if (rows[i].indexOf('課程名稱') >= 0) { hi = i; break; }
+      }
+      if (hi < 0) { log.textContent = '找不到標題列'; return; }
+      var hdr = rows[hi];
+      var ciD = hdr.indexOf('課程日期'), ciT = hdr.indexOf('課程時間');
+      var ciN = hdr.indexOf('課程名稱'),  ciV = hdr.indexOf('開課店別');
+      var cnt = 0, newD = {};
+      for (var i = hi + 1; i < rows.length; i++) {
+        var row  = rows[i];
+        var rN   = String(row[ciN]).trim();
+        var cid  = BF_COURSE[rN];
+        if (!cid) continue;
+        var slots = BF_TIME[String(row[ciT]).trim()];
+        if (!slots) continue;
+        var vk   = String(row[ciV]).indexOf('西屯') >= 0 ? 'x' : 'b';
+        var rawD = row[ciD], ds = '';
+        if (typeof rawD === 'number') {
+          var dd = new Date(Math.round((rawD - 25569) * 86400 * 1000));
+          ds = dd.getUTCFullYear() + '/' + pad(dd.getUTCMonth()+1) + '/' + pad(dd.getUTCDate());
+        } else {
+          ds = String(rawD).trim();
+        }
+        if (!/\d{4}\/\d{2}\/\d{2}/.test(ds)) continue;
+        var yr2 = ds.split('/')[0], mo2 = parseInt(ds.split('/')[1]), ym2 = yr2 + '-' + mo2;
+        if (!newD[ym2]) newD[ym2] = {x:{}, b:{}};
+        if (!newD[ym2][vk][ds]) newD[ym2][vk][ds] = {};
+        for (var si = 0; si < slots.length; si++) {
+          var sl = slots[si];
+          if (!newD[ym2][vk][ds][sl]) newD[ym2][vk][ds][sl] = [];
+          if (newD[ym2][vk][ds][sl].indexOf(cid) < 0) newD[ym2][vk][ds][sl].push(cid);
+        }
+        cnt++;
+      }
+      var yms = Object.keys(newD);
+      for (var i = 0; i < yms.length; i++) HD[yms[i]] = newD[yms[i]];
+      svH();
+      for (var i = 0; i < yms.length; i++) {
+        var ym2 = yms[i], found = false;
+        for (var j = 0; j < IR.length; j++) {
+          if (IR[j].ym === ym2) { IR[j] = {fn:file.name, ym:ym2, cnt:cnt, at:new Date().toLocaleDateString('zh-TW')}; found = true; break; }
+        }
+        if (!found) IR.push({fn:file.name, ym:ym2, cnt:cnt, at:new Date().toLocaleDateString('zh-TW')});
+      }
+      svI();
+      log.innerHTML = '<span style="color:#1D9E75;font-weight:500">匯入成功！</span> 共 ' + cnt + ' 筆，涵蓋 ' + yms.join('、') + ' 月份';
+      renderImpHist(); updateHistCtrl();
+    } catch(err) { log.textContent = '解析失敗：' + err.message; console.error(err); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderImpHist() {
+  var el = document.getElementById('imp-hist');
+  if (!IR.length) { el.innerHTML = '<p style="font-size:12px;color:var(--tx3)">尚未匯入任何報表</p>'; return; }
+  var sorted = IR.slice().sort(function(a,b){ return b.ym.localeCompare(a.ym); });
+  var h = '<table class="htable"><thead><tr><th>月份</th><th>檔案名稱</th><th>筆數</th><th>匯入日期</th></tr></thead><tbody>';
+  for (var i = 0; i < sorted.length; i++) {
+    var r = sorted[i], p = r.ym.split('-');
+    h += '<tr><td style="font-weight:500">' + p[0] + '年' + p[1] + '月</td>'
+       + '<td style="font-size:11px;color:var(--tx2)">' + r.fn + '</td>'
+       + '<td>' + r.cnt + '</td>'
+       + '<td style="font-size:11px;color:var(--tx2)">' + r.at + '</td></tr>';
+  }
+  h += '</tbody></table>';
+  el.innerHTML = h;
+}
+
+// ===== TAB SWITCH =====
+function switchTab(t) {
+  var ids = ['schedule','history','import','teachers'];
+  for (var i = 0; i < ids.length; i++) {
+    var el = document.getElementById('tab-' + ids[i]);
+    if (el) el.classList.toggle('hidden', ids[i] !== t);
+  }
+  var tabs = document.querySelectorAll('.tab');
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.toggle('on', ids[i] === t);
+  if (t === 'history')  { updateHistCtrl(); renderHistory(); }
+  if (t === 'import')   renderImpHist();
+  if (t === 'teachers') renderTeachers();
+}
+
+// ===== INIT =====
+initSchedSelectors();
+renderSched();
+
+</script>
+</body>
+</html>
