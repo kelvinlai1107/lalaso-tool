@@ -1109,13 +1109,15 @@ var MSAL_CONFIG = {
 
 // SharePoint 設定
 // 網站：https://lalaso.sharepoint.com/sites/academymanage
+// 文件庫：DocLib
 // 根資料夾：[ 營運數據 ]/產能利用率
-var SP_HOST     = 'lalaso.sharepoint.com';
-var SP_SITE     = '/sites/academymanage';
-var SP_ROOT     = '[ 營運數據 ]/產能利用率';
-var SP_FOLDER_REPORT  = SP_ROOT + '/團體課預約報表';
-var SP_FOLDER_RESULT  = SP_ROOT + '/產能利用率分析';
-var SP_DATA_FILE      = SP_ROOT + '/產能利用率分析/swim_data.json';
+var SP_HOST          = 'lalaso.sharepoint.com';
+var SP_SITE          = '/sites/academymanage';
+var SP_DRIVE_NAME    = 'DocLib';
+var SP_ROOT          = '[ 營運數據 ]/產能利用率';
+var SP_FOLDER_REPORT = SP_ROOT + '/團體課預約報表';
+var SP_FOLDER_RESULT = SP_ROOT + '/產能利用率分析';
+var SP_DATA_FILE     = SP_ROOT + '/產能利用率分析/swim_data.json';
 
 var msalApp = null;
 var msalAccount = null;
@@ -1245,32 +1247,43 @@ function setSyncStatus(msg, color) {
   if (el) { el.textContent = msg; el.style.color = color || 'var(--tx2)'; }
 }
 
-// Resolve the SharePoint site's drive ID (Document Library)
+// Resolve the SharePoint site's DocLib drive ID
 function resolveSiteDrive() {
   if (spDriveId) return Promise.resolve(spDriveId);
   return getToken().then(function(tokenResp) {
     var token = tokenResp.accessToken;
     var headers = { 'Authorization': 'Bearer ' + token };
-    // Get site ID
+    // Step 1: get site ID
     return fetch(
       'https://graph.microsoft.com/v1.0/sites/' + SP_HOST + ':' + SP_SITE,
       { headers: headers }
     ).then(function(r) {
-      if (!r.ok) throw new Error('無法取得 Site ID，HTTP ' + r.status);
+      if (!r.ok) throw new Error('無法取得 Site，HTTP ' + r.status);
       return r.json();
     }).then(function(site) {
-      var siteId = site.id;
-      GRAPH_SITE_BASE = 'https://graph.microsoft.com/v1.0/sites/' + siteId;
-      // Get document library drive
+      GRAPH_SITE_BASE = 'https://graph.microsoft.com/v1.0/sites/' + site.id;
+      console.log('[SP] site id:', site.id);
+      // Step 2: list all drives and find DocLib
       return fetch(GRAPH_SITE_BASE + '/drives', { headers: headers });
     }).then(function(r) {
       if (!r.ok) throw new Error('無法取得 Drive 清單，HTTP ' + r.status);
       return r.json();
-    }).then(function(drivesResp) {
-      // Use the first drive (Documents)
-      var drives = drivesResp.value;
-      if (!drives || !drives.length) throw new Error('找不到文件庫');
-      spDriveId = drives[0].id;
+    }).then(function(resp) {
+      var drives = resp.value;
+      console.log('[SP] drives:', drives.map(function(d){ return d.name; }));
+      // Find DocLib by name
+      var found = null;
+      for (var i = 0; i < drives.length; i++) {
+        if (drives[i].name === SP_DRIVE_NAME) { found = drives[i]; break; }
+      }
+      // Fallback: use first drive
+      if (!found) {
+        console.warn('[SP] DocLib not found, using first drive:', drives[0] && drives[0].name);
+        found = drives[0];
+      }
+      if (!found) throw new Error('找不到任何文件庫');
+      spDriveId = found.id;
+      console.log('[SP] using drive:', found.name, spDriveId);
       return spDriveId;
     });
   });
