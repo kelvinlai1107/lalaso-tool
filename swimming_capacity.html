@@ -1113,7 +1113,8 @@ var MSAL_CONFIG = {
 // 根資料夾：[ 營運數據 ]/產能利用率
 var SP_HOST          = 'lalaso.sharepoint.com';
 var SP_SITE          = '/sites/academymanage';
-var SP_DRIVE_NAME    = 'DocLib';
+var SP_DRIVE_NAME    = '營運統計';
+var SP_DRIVE_WEBURL  = '/DocLib';
 var SP_ROOT          = '[ 營運數據 ]/產能利用率';
 var SP_FOLDER_REPORT = SP_ROOT + '/團體課預約報表';
 var SP_FOLDER_RESULT = SP_ROOT + '/產能利用率分析';
@@ -1272,24 +1273,22 @@ function resolveSiteDrive() {
       console.log('[SP] drives:', drives.map(function(d){
         return d.name + ' (' + d.webUrl + ')';
       }));
-      // Find by webUrl containing /DocLib
+      // Find by webUrl ending exactly with /DocLib (not DocLib1, DocLib2...)
       var found = null;
       for (var i = 0; i < drives.length; i++) {
-        if (drives[i].webUrl && drives[i].webUrl.indexOf('/DocLib') >= 0) {
-          found = drives[i]; break;
-        }
+        var url = drives[i].webUrl || '';
+        // Match /DocLib exactly at end, not /DocLib1 etc
+        if (/\/DocLib$/.test(url)) { found = drives[i]; break; }
       }
-      // Fallback: find by name
+      // Fallback: match by name
       if (!found) {
         for (var i = 0; i < drives.length; i++) {
           if (drives[i].name === SP_DRIVE_NAME) { found = drives[i]; break; }
         }
       }
-      // Fallback: use largest drive (most content)
       if (!found && drives.length) {
-        drives.sort(function(a,b){ return (b.quota&&b.quota.used||0)-(a.quota&&a.quota.used||0); });
         found = drives[0];
-        console.warn('[SP] fallback to largest drive:', found.name);
+        console.warn('[SP] fallback to first drive:', found.name);
       }
       if (!found) throw new Error('找不到任何文件庫');
       spDriveId = found.id;
