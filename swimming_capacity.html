@@ -1113,8 +1113,8 @@ var MSAL_CONFIG = {
 // 根資料夾：[ 營運數據 ]/產能利用率
 var SP_HOST          = 'lalaso.sharepoint.com';
 var SP_SITE          = '/sites/academymanage';
-var SP_DRIVE_NAME    = '[ 營運數據 ]';
-var SP_ROOT          = '產能利用率';
+var SP_DRIVE_NAME    = 'DocLib';
+var SP_ROOT          = '[ 營運數據 ]/產能利用率';
 var SP_FOLDER_REPORT = SP_ROOT + '/團體課預約報表';
 var SP_FOLDER_RESULT = SP_ROOT + '/產能利用率分析';
 var SP_DATA_FILE     = SP_ROOT + '/產能利用率分析/swim_data.json';
@@ -1263,27 +1263,37 @@ function resolveSiteDrive() {
     }).then(function(site) {
       GRAPH_SITE_BASE = 'https://graph.microsoft.com/v1.0/sites/' + site.id;
       console.log('[SP] site id:', site.id);
-      // Step 2: list all drives and find DocLib
       return fetch(GRAPH_SITE_BASE + '/drives', { headers: headers });
     }).then(function(r) {
       if (!r.ok) throw new Error('無法取得 Drive 清單，HTTP ' + r.status);
       return r.json();
     }).then(function(resp) {
       var drives = resp.value;
-      console.log('[SP] drives:', drives.map(function(d){ return d.name; }));
-      // Find DocLib by name
+      console.log('[SP] drives:', drives.map(function(d){
+        return d.name + ' (' + d.webUrl + ')';
+      }));
+      // Find by webUrl containing /DocLib
       var found = null;
       for (var i = 0; i < drives.length; i++) {
-        if (drives[i].name === SP_DRIVE_NAME) { found = drives[i]; break; }
+        if (drives[i].webUrl && drives[i].webUrl.indexOf('/DocLib') >= 0) {
+          found = drives[i]; break;
+        }
       }
-      // Fallback: use first drive
+      // Fallback: find by name
       if (!found) {
-        console.warn('[SP] DocLib not found, using first drive:', drives[0] && drives[0].name);
+        for (var i = 0; i < drives.length; i++) {
+          if (drives[i].name === SP_DRIVE_NAME) { found = drives[i]; break; }
+        }
+      }
+      // Fallback: use largest drive (most content)
+      if (!found && drives.length) {
+        drives.sort(function(a,b){ return (b.quota&&b.quota.used||0)-(a.quota&&a.quota.used||0); });
         found = drives[0];
+        console.warn('[SP] fallback to largest drive:', found.name);
       }
       if (!found) throw new Error('找不到任何文件庫');
       spDriveId = found.id;
-      console.log('[SP] using drive:', found.name, spDriveId);
+      console.log('[SP] using drive:', found.name, '|', found.webUrl);
       return spDriveId;
     });
   });
