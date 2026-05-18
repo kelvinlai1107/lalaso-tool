@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Boter 甜點師排程工具</title>
     <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif; background: #f7f7f7; color: #333; }
@@ -390,14 +391,14 @@
                 ondragover="event.preventDefault();this.classList.add('drag-over')"
                 ondragleave="this.classList.remove('drag-over')"
                 ondrop="handleDrop(event)">
-                <input type="file" id="csv-input" accept=".csv,.txt" onchange="handleFile(this.files[0])">
+                <input type="file" id="csv-input" accept=".xlsx,.xls,.csv,.txt" onchange="handleFile(this.files[0])">
                 <div class="drop-icon">📄</div>
                 <div style="font-weight:700;margin-bottom:4px;">點擊選擇 CSV 檔案，或拖曳至此</div>
-                <div class="drop-hint">從 Cyberbiz 後台 → 訂單 → 匯出 CSV</div>
+                <div class="drop-hint">支援 .xlsx / .csv 格式</div>
             </div>
             <div style="margin-top:14px;background:#f0f4ff;border-radius:8px;padding:12px 14px;font-size:0.82rem;color:#3949ab;line-height:1.7;">
                 <strong>Cyberbiz 匯出步驟：</strong><br>
-                後台 → 訂單管理 → 右上角「匯出」→ 選擇日期範圍 → 下載 CSV
+                後台 → 訂單 → 訂單報表匯出 → 勾選欄位（至少需含：<strong>訂單編號、購買人名稱、出貨方式、指定配送日期、商品名稱、數量</strong>）→ 選日期範圍 → 匯出（檔案會寄到信箱）→ 下載 Excel 上傳此處
             </div>
         </div>
 
@@ -774,67 +775,59 @@ let parsedRows = [];
 
 // Cyberbiz column name aliases → our field names
 const COL_MAP = {
-    date:     ['預計出貨日','出貨日期','出貨日','shipping_date','出貨時間','預計配送日'],
+    date:        ['指定配送日期','預計出貨日','出貨日期','出貨日','shipping_date','預計配送日','指定日期'],
     orderNumber: ['訂單編號','單號','order_number','訂單號碼','編號'],
-    item:     ['商品名稱','品項','product_name','商品','品名','商品名'],
-    quantity: ['商品數量','數量','qty','quantity','件數'],
-    customer: ['收件人','訂購人','姓名','customer','收件人姓名','顧客姓名'],
-    phone:    ['電話','收件人電話','手機','phone','mobile','聯絡電話'],
-    notes:    ['備註','訂單備註','notes','訂購備註','客戶備註'],
-    shipping: ['運送方式','配送方式','shipping','出貨方式','取貨方式']
+    item:        ['商品名稱','品項','product_name','商品','品名','商品名'],
+    variant:     ['商品款式','款式','規格','variant'],
+    quantity:    ['數量','商品數量','qty','quantity','件數'],
+    customer:    ['購買人名稱','收件人','訂購人','姓名','customer','會員名稱','收件人姓名','顧客姓名'],
+    phone:       ['電話','收件人電話','手機','phone','mobile','聯絡電話','會員手機號碼'],
+    notes:       ['備註','訂單備註','notes','訂購備註','客戶備註'],
+    shipping:    ['出貨方式','運送方式','配送方式','shipping','取貨方式']
 };
 
 function detectCol(headers, aliases) {
     for (const a of aliases) {
-        const idx = headers.findIndex(h => h.trim().toLowerCase().includes(a.toLowerCase()));
+        const idx = headers.findIndex(h => h.trim().includes(a));
         if (idx >= 0) return idx;
     }
     return -1;
 }
 
-function parseCSV(text) {
-    // Detect delimiter
-    const firstLine = text.split('\n')[0];
-    const delim = firstLine.includes('\t') ? '\t' : ',';
-
-    const lines = text.split('\n').filter(l => l.trim());
-    if (lines.length < 2) return [];
-
-    const headers = lines[0].split(delim).map(h => h.replace(/^"|"$/g, '').trim());
-
+// Shared row parser — works on string[][] (headers + data rows)
+function parseRows(headers, dataRows) {
     const cols = {};
     for (const [field, aliases] of Object.entries(COL_MAP)) {
         cols[field] = detectCol(headers, aliases);
     }
+    const get = (row, idx) => idx >= 0 ? String(row[idx] || '').trim() : '';
 
-    const get = (row, idx) => idx >= 0 ? (row[idx] || '').replace(/^"|"$/g, '').trim() : '';
-
-    return lines.slice(1).map(line => {
-        // Handle quoted fields with commas inside
-        const row = delim === ',' ? splitCSVLine(line) : line.split('\t').map(c => c.replace(/^"|"$/g, '').trim());
+    return dataRows.map(row => {
         const rawDate = get(row, cols.date);
-        const date = normalizeDate(rawDate);
+        const date    = normalizeDate(rawDate);
         const shipping = get(row, cols.shipping);
-        const timeSlot = shipping.includes('宅') || shipping.includes('配送') ? '宅' : '';
-        const itemRaw = get(row, cols.item);
-        const type = itemRaw.includes('微光輕甜') ? 'lightsweet'
-                   : (itemRaw.includes('會員禮') || itemRaw.includes('攝影')) ? 'special'
-                   : 'normal';
-        const phone = get(row, cols.phone);
+        const timeSlot = (shipping.includes('宅') || shipping.includes('配送')) ? '宅' : '';
+        const itemBase = get(row, cols.item);
+        const variant  = get(row, cols.variant);
+        // Combine item + variant; Cyberbiz uses ｜ as separator inside name already
+        const itemRaw  = itemBase && variant && !itemBase.includes(variant)
+                       ? `${itemBase} ${variant}` : itemBase;
+        const item     = itemRaw.replace(/｜/g, ' ');  // replace ｜ for readability
+        const type     = item.includes('微光輕甜') ? 'lightsweet'
+                       : (item.includes('會員禮') || item.includes('攝影')) ? 'special'
+                       : 'normal';
         const customerName = get(row, cols.customer);
-        const customer = customerName && phone ? `${customerName}${phone}`
-                       : customerName || phone;
+        const phone        = get(row, cols.phone);
+        const customer     = customerName && phone ? `${customerName} ${phone}`
+                           : customerName || phone;
         return {
             date, rawDate,
             orderNumber: get(row, cols.orderNumber),
-            item: itemRaw,
-            quantity: parseInt(get(row, cols.quantity)) || 1,
-            customer,
-            notes: get(row, cols.notes),
-            timeSlot, type,
-            valid: !!date
+            item, quantity: parseInt(get(row, cols.quantity)) || 1,
+            customer, notes: get(row, cols.notes),
+            timeSlot, type, valid: !!date
         };
-    }).filter(r => r.item); // drop completely empty rows
+    }).filter(r => r.item);
 }
 
 function splitCSVLine(line) {
@@ -850,7 +843,6 @@ function splitCSVLine(line) {
 
 function normalizeDate(raw) {
     if (!raw) return '';
-    // Formats: 2026/05/20, 2026-05-20, 20260520, 05/20/2026
     const m = raw.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
     if (m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
     const m2 = raw.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
@@ -877,16 +869,39 @@ function handleDrop(e) {
     if (f) handleFile(f);
 }
 
-function handleFile(file) {
+async function handleFile(file) {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-        // Try UTF-8 first; Cyberbiz sometimes exports BIG5
-        let text = e.target.result;
-        parsedRows = parseCSV(text);
+    const ext = file.name.split('.').pop().toLowerCase();
+    try {
+        if (ext === 'xlsx' || ext === 'xls') {
+            // Excel — use SheetJS
+            const buffer = await file.arrayBuffer();
+            const wb = XLSX.read(buffer, { type: 'array', cellDates: false, raw: false });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const raw = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
+            if (raw.length < 2) { toast('Excel 檔案無資料', 'err'); return; }
+            const headers  = raw[0].map(c => String(c || '').trim());
+            const dataRows = raw.slice(1).map(r => r.map(c => String(c || '').trim()));
+            parsedRows = parseRows(headers, dataRows);
+        } else {
+            // CSV / TXT
+            const text = await file.text();
+            const firstLine = text.split('\n')[0];
+            const delim = firstLine.includes('\t') ? '\t' : ',';
+            const lines = text.split('\n').filter(l => l.trim());
+            if (lines.length < 2) { toast('CSV 檔案無資料', 'err'); return; }
+            const headers  = lines[0].split(delim).map(h => h.replace(/^"|"$/g, '').trim());
+            const dataRows = lines.slice(1).map(line =>
+                (delim === ',' ? splitCSVLine(line) : line.split('\t'))
+                    .map(c => c.replace(/^"|"$/g, '').trim())
+            );
+            parsedRows = parseRows(headers, dataRows);
+        }
         showPreview();
-    };
-    reader.readAsText(file, 'UTF-8');
+    } catch(e) {
+        toast('檔案解析失敗：' + e.message, 'err');
+        console.error(e);
+    }
 }
 
 function showPreview() {
