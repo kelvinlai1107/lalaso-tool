@@ -86,9 +86,8 @@
         .bdg-home  { background:#fff3e0; color:#e65100; }
         .bdg-store { background:#e8f5e9; color:#2e7d32; }
         .bdg-other { background:#f3f3f3; color:#777; }
-        .bdg-pickup-done    { background:#e8f5e9; color:#2e7d32; }
-        .bdg-pickup-pending { background:#f3f3f3; color:#999; }
         .badge-mod { display:inline-block; background:#e65100; color:#fff; font-size:0.68rem; padding:1px 4px; border-radius:3px; margin-left:3px; vertical-align:middle; font-weight:700; }
+        .pickup-sel { border:none; border-radius:8px; font-size:0.74rem; padding:2px 5px; cursor:pointer; font-family:inherit; outline:none; font-weight:600; }
 
         .btn-act { background:none; border:none; cursor:pointer; padding:3px 5px; border-radius:4px; font-size:0.82rem; color:#bbb; }
         .btn-act:hover { background:#f0f0f0; color:#333; }
@@ -253,7 +252,8 @@
                     <label class="lbl">取貨狀態</label>
                     <select class="ctrl" id="f-pickup">
                         <option value="未取貨">未取貨</option>
-                        <option value="已取貨">已取貨</option>
+                        <option value="已自取">已自取</option>
+                        <option value="已出貨">已出貨</option>
                     </select>
                 </div>
                 <div>
@@ -386,9 +386,37 @@ let cfg = JSON.parse(localStorage.getItem('boter_cfg') ||
    TWO-LEVEL PRODUCTS
    Structure: [{id, name (category), items:[{id, name}]}]
 ──────────────────────────────────────── */
+const DEFAULT_PRODUCTS = [
+    { id:'dp1', name:'無糖無麩質蛋糕‧暖暖系列', items:[
+        { id:'dp1a', name:'暖暖初食蛋糕｜蔬果原味' },
+        { id:'dp1b', name:'暖暖初食蛋糕｜火龍果香蕉' },
+        { id:'dp1c', name:'暖暖夾餡蛋糕｜田園' },
+        { id:'dp1d', name:'暖暖夾餡蛋糕｜果園' }
+    ]},
+    { id:'dp2', name:'輕甜無麩質蛋糕‧微光系列', items:[
+        { id:'dp2a', name:'微光輕甜裸蛋糕｜檸檬' },
+        { id:'dp2b', name:'微光輕甜裸蛋糕｜芝麻核桃' },
+        { id:'dp2c', name:'微光輕甜裸蛋糕｜藍莓可可' },
+        { id:'dp2d', name:'微光輕甜裸蛋糕｜芋頭' },
+        { id:'dp2e', name:'微光輕甜裸蛋糕｜水果' },
+        { id:'dp2f', name:'微光輕焙巴斯克｜紅烏龍莓果' }
+    ]},
+    { id:'dp3', name:'奶油餅乾‧童心分享', items:[
+        { id:'dp3a', name:'星光奶油餅乾分享袋｜Happy Birthday 粉綠款' },
+        { id:'dp3b', name:'星光奶油餅乾分享袋｜Happy Birthday 粉紅款' },
+        { id:'dp3c', name:'星光奶油餅乾分享袋｜Happy Every Day 粉綠款' },
+        { id:'dp3d', name:'星光奶油餅乾分享袋｜Happy Every Day 粉紅款' },
+        { id:'dp3e', name:'星光奶油餅乾分享罐' },
+        { id:'dp3f', name:'星光奶油餅乾禮盒｜大' },
+        { id:'dp3g', name:'星光奶油餅乾繪本禮盒｜大' },
+        { id:'dp3h', name:'星光奶油餅乾禮盒｜小' },
+        { id:'dp3i', name:'星光奶油餅乾繪本禮盒｜小' }
+    ]}
+];
+
 function getProducts() {
     const raw = localStorage.getItem('boter_products');
-    if (!raw) return [];
+    if (!raw) return DEFAULT_PRODUCTS;
     const arr = JSON.parse(raw);
     // Migrate old flat format [{id,name}] → [{id,name,items:[]}]
     if (arr.length && !('items' in arr[0])) {
@@ -661,7 +689,10 @@ function render() {
                            : dm.includes('門市') || dm.includes('取貨') ? 'bdg bdg-store'
                            : 'bdg bdg-other';
             const modBadge = o.modified ? '<span class="badge-mod">異動</span>' : '';
-            const pickupCls = o.pickup === '已取貨' ? 'bdg bdg-pickup-done' : 'bdg bdg-pickup-pending';
+            const pv = o.pickup || '未取貨';
+            const pbg = pv==='已自取' ? '#e8f5e9' : pv==='已出貨' ? '#e3f2fd' : '#f3f3f3';
+            const pco = pv==='已自取' ? '#2e7d32' : pv==='已出貨' ? '#1565c0' : '#999';
+            const pOpts = ['未取貨','已自取','已出貨'].map(v=>`<option value="${v}"${v===pv?' selected':''}>${v}</option>`).join('');
             return `<tr>
                 <td class="td-n" title="${esc(dm)}"><span class="${delivCls}">${esc(dm)}</span></td>
                 <td class="td-w">${esc(o.item||'')}</td>
@@ -670,7 +701,7 @@ function render() {
                 <td class="td-w">${esc(o.shopNotes||'')}</td>
                 <td class="td-n" title="${esc(o.customer||'')}">${esc(o.customer||'')}</td>
                 <td class="td-n" title="${esc(o.phone||'')}">${esc(o.phone||'')}</td>
-                <td class="td-n"><span class="${pickupCls}">${esc(o.pickup||'未取貨')}</span></td>
+                <td class="td-n"><select class="pickup-sel" style="background:${pbg};color:${pco}" onchange="quickPickup('${o.id}',this.value)">${pOpts}</select></td>
                 <td class="td-n">${esc(o.orderNumber||'')}${modBadge}</td>
                 <td class="td-n"><div style="display:flex;gap:2px">
                     <button class="btn-act" onclick="openEdit('${o.id}')">✏</button>
@@ -899,6 +930,12 @@ function saveProducts() {
         .map(c => ({ ...c, items: (c.items||[]).filter(it => it.name) }));
     setProducts(cleaned);
     closeOverlay('products-overlay'); render(); toast('品項清單已儲存', 'ok');
+}
+
+function quickPickup(id, val) {
+    const i = orders.findIndex(o => o.id === id); if (i < 0) return;
+    orders[i].pickup = val;
+    localSave(); render();
 }
 
 /* ── IMPORT ── */
