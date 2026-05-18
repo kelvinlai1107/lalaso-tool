@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boter 甜點師排程工具</title>
+    <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif; background: #f7f7f7; color: #333; }
+
+        /* ── Login ── */
+        #login-screen {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; height: 100vh;
+            background: linear-gradient(145deg, #fff5f7 0%, #ffe8ed 100%);
+        }
+        .login-brand { font-size: 2.8rem; font-weight: 900; color: #c94f6a; letter-spacing: 2px; }
+        .login-sub { color: #999; margin: 6px 0 44px; font-size: 1rem; }
+        .btn-ms {
+            background: #0078d4; color: #fff; border: none;
+            padding: 13px 32px; border-radius: 8px; font-size: 1rem;
+            cursor: pointer; display: flex; align-items: center; gap: 10px;
+            font-family: inherit; box-shadow: 0 2px 8px rgba(0,120,212,.25);
+        }
+        .btn-ms:hover { background: #006abf; }
+        .login-note { margin-top: 18px; color: #aaa; font-size: 0.82rem; }
+
+        /* ── App shell ── */
+        #app { display: none; min-height: 100vh; }
+
+        header {
+            background: #fff; padding: 0 24px;
+            box-shadow: 0 2px 6px rgba(0,0,0,.08);
+            position: sticky; top: 0; z-index: 200;
+            display: flex; align-items: center; height: 58px; gap: 16px;
+        }
+        .h-brand { font-weight: 900; color: #c94f6a; font-size: 1.15rem; white-space: nowrap; }
+        .h-divider { width: 1px; height: 24px; background: #e0e0e0; }
+
+        .week-nav { display: flex; align-items: center; gap: 6px; }
+        .btn-nav {
+            background: none; border: 1px solid #ddd; border-radius: 6px;
+            padding: 5px 11px; cursor: pointer; font-size: 1rem; line-height: 1;
+        }
+        .btn-nav:hover { background: #f5f5f5; }
+        .week-label { font-weight: 700; min-width: 190px; text-align: center; font-size: 0.95rem; }
+        .btn-today {
+            background: none; border: 1px solid #c94f6a; color: #c94f6a;
+            border-radius: 6px; padding: 5px 12px; cursor: pointer; font-size: 0.82rem; font-family: inherit;
+        }
+        .btn-today:hover { background: #fff0f3; }
+
+        .h-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+        .btn-primary {
+            background: #c94f6a; color: #fff; border: none;
+            padding: 7px 18px; border-radius: 7px; cursor: pointer;
+            font-size: 0.88rem; font-family: inherit; white-space: nowrap;
+        }
+        .btn-primary:hover { background: #b3435c; }
+        .btn-blue {
+            background: #0078d4; color: #fff; border: none;
+            padding: 7px 18px; border-radius: 7px; cursor: pointer;
+            font-size: 0.88rem; font-family: inherit; white-space: nowrap;
+        }
+        .btn-blue:hover { background: #006abf; }
+        .btn-icon-hd {
+            background: none; border: 1px solid #ddd; border-radius: 7px;
+            padding: 7px 10px; cursor: pointer; font-size: 1rem; line-height: 1;
+        }
+        .btn-icon-hd:hover { background: #f5f5f5; }
+        .avatar {
+            width: 34px; height: 34px; border-radius: 50%;
+            background: #c94f6a; color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.95rem; cursor: pointer;
+            user-select: none;
+        }
+
+        /* ── Schedule ── */
+        main { padding: 24px; max-width: 1280px; margin: 0 auto; }
+
+        .day-card {
+            background: #fff; border-radius: 10px; margin-bottom: 20px;
+            box-shadow: 0 1px 4px rgba(0,0,0,.07); overflow: hidden;
+        }
+        .day-card.today-card { box-shadow: 0 0 0 2px #c94f6a, 0 2px 8px rgba(201,79,106,.15); }
+
+        .day-hdr {
+            background: #fafafa; border-bottom: 1px solid #f0f0f0;
+            padding: 10px 16px; display: flex; align-items: center; gap: 10px;
+        }
+        .day-name { font-weight: 800; font-size: 0.95rem; }
+        .day-date-lbl { color: #777; font-size: 0.9rem; }
+        .today-badge {
+            background: #c94f6a; color: #fff; font-size: 0.72rem;
+            padding: 2px 8px; border-radius: 10px; font-weight: 700;
+        }
+        .order-count {
+            background: #f0f0f0; color: #555; font-size: 0.78rem;
+            padding: 2px 10px; border-radius: 10px;
+        }
+        .btn-add-day {
+            margin-left: auto; background: none; border: 1px solid #ddd;
+            border-radius: 6px; padding: 4px 12px; cursor: pointer;
+            font-size: 0.82rem; color: #555; font-family: inherit;
+        }
+        .btn-add-day:hover { background: #f5f5f5; }
+
+        .no-orders { padding: 18px 20px; color: #bbb; font-size: 0.88rem; text-align: center; }
+
+        .sched-table { width: 100%; border-collapse: collapse; }
+        .sched-table th {
+            background: #fafafa; padding: 8px 12px;
+            text-align: left; font-size: 0.8rem; color: #888;
+            font-weight: 600; border-bottom: 1px solid #f0f0f0;
+        }
+        .sched-table td {
+            padding: 9px 12px; border-bottom: 1px solid #f5f5f5;
+            font-size: 0.88rem; vertical-align: middle;
+        }
+        .sched-table tr:last-child td { border-bottom: none; }
+        .sched-table tr:hover td { background: #fdfcfc; }
+
+        /* Order type colors */
+        .t-normal { font-weight: 700; }
+        .t-special { color: #d4600a; font-weight: 700; }   /* orange – 會員禮/攝影合作 */
+        .t-lightsweet { color: #0078a8; font-weight: 700; } /* blue – 微光輕甜 */
+
+        .badge-delivery { background: #fff3e0; color: #e65100; padding: 2px 8px; border-radius: 10px; font-size: 0.78rem; }
+        .badge-pickup   { background: #e8f5e9; color: #2e7d32; padding: 2px 8px; border-radius: 10px; font-size: 0.78rem; }
+        .badge-pending  { background: #f3f3f3; color: #999;    padding: 2px 8px; border-radius: 10px; font-size: 0.78rem; }
+
+        .btn-row { display: flex; gap: 4px; }
+        .btn-act {
+            background: none; border: none; cursor: pointer;
+            padding: 4px 7px; border-radius: 5px; font-size: 0.88rem; color: #aaa;
+        }
+        .btn-act:hover { background: #f0f0f0; color: #333; }
+
+        /* ── Modal ── */
+        .overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,.45); z-index: 500;
+            align-items: center; justify-content: center;
+        }
+        .overlay.open { display: flex; }
+        .modal {
+            background: #fff; border-radius: 14px;
+            padding: 28px; width: 540px; max-width: 94vw;
+            max-height: 92vh; overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0,0,0,.18);
+        }
+        .modal-title { font-size: 1.15rem; font-weight: 800; color: #c94f6a; margin-bottom: 22px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .form-full { grid-column: 1 / -1; }
+        .lbl { display: block; font-size: 0.8rem; color: #777; margin-bottom: 4px; }
+        .ctrl {
+            width: 100%; padding: 9px 12px; border: 1px solid #ddd;
+            border-radius: 7px; font-size: 0.9rem; font-family: inherit;
+            background: #fff;
+        }
+        .ctrl:focus { outline: none; border-color: #c94f6a; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+        .btn-cancel-m {
+            padding: 8px 20px; border: 1px solid #ddd; background: #fff;
+            border-radius: 7px; cursor: pointer; font-family: inherit;
+        }
+        .btn-cancel-m:hover { background: #f5f5f5; }
+
+        /* ── Status toast ── */
+        .toast {
+            position: fixed; bottom: 24px; right: 24px;
+            background: #222; color: #fff; padding: 11px 22px;
+            border-radius: 9px; font-size: 0.88rem; z-index: 9999;
+            opacity: 0; transition: opacity .3s; pointer-events: none;
+        }
+        .toast.show { opacity: 1; }
+        .toast.ok   { background: #2e7d32; }
+        .toast.err  { background: #c62828; }
+
+        /* ── Loading ── */
+        .spinner {
+            display: inline-block; width: 18px; height: 18px;
+            border: 3px solid rgba(255,255,255,.4);
+            border-top-color: #fff; border-radius: 50%;
+            animation: spin .7s linear infinite; vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Print ── */
+        @media print {
+            header .h-right, .btn-act, .btn-add-day { display: none !important; }
+            .day-card { box-shadow: none; border: 1px solid #ddd; break-inside: avoid; }
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 700px) {
+            .col-notes, .col-customer { display: none; }
+            .week-label { min-width: 140px; font-size: 0.82rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════ LOGIN ═══════════ -->
+<div id="login-screen">
+    <div class="login-brand">Boter</div>
+    <div class="login-sub">甜點師排程管理工具</div>
+    <button class="btn-ms" onclick="doLogin()">
+        <svg width="20" height="20" viewBox="0 0 21 21">
+            <rect x="0" y="0" width="10" height="10" fill="#F25022"/>
+            <rect x="11" y="0" width="10" height="10" fill="#7FBA00"/>
+            <rect x="0" y="11" width="10" height="10" fill="#00A4EF"/>
+            <rect x="11" y="11" width="10" height="10" fill="#FFB900"/>
+        </svg>
+        使用 Microsoft 帳號登入
+    </button>
+    <div class="login-note">僅限公司 Microsoft 帳號</div>
+</div>
+
+<!-- ═══════════ APP ═══════════ -->
+<div id="app">
+    <header>
+        <span class="h-brand">🎂 Boter</span>
+        <div class="h-divider"></div>
+        <div class="week-nav">
+            <button class="btn-nav" onclick="prevWeek()">&#8249;</button>
+            <span class="week-label" id="week-label">載入中…</span>
+            <button class="btn-nav" onclick="nextWeek()">&#8250;</button>
+            <button class="btn-today" onclick="goToday()">今天</button>
+        </div>
+        <div class="h-right">
+            <button class="btn-primary" onclick="openAdd(null)">＋ 新增訂單</button>
+            <button class="btn-blue" id="btn-save" onclick="saveData()">☁ 儲存到 SharePoint</button>
+            <button class="btn-icon-hd" onclick="window.print()" title="列印">🖨</button>
+            <button class="btn-icon-hd" onclick="openSettings()" title="設定">⚙</button>
+            <div class="avatar" id="avatar" title="點擊登出">?</div>
+        </div>
+    </header>
+    <main id="schedule"></main>
+</div>
+
+<!-- ═══════════ ORDER MODAL ═══════════ -->
+<div class="overlay" id="order-overlay">
+    <div class="modal">
+        <div class="modal-title" id="order-modal-title">新增訂單</div>
+        <form id="order-form" onsubmit="return false">
+            <input type="hidden" id="f-id">
+            <div class="form-grid">
+                <div>
+                    <label class="lbl">出貨日期 *</label>
+                    <input class="ctrl" type="date" id="f-date" required>
+                </div>
+                <div>
+                    <label class="lbl">訂單編號</label>
+                    <input class="ctrl" type="text" id="f-no" placeholder="#1001">
+                </div>
+                <div>
+                    <label class="lbl">時間 / 取件方式</label>
+                    <input class="ctrl" type="text" id="f-time" placeholder="宅 / W / 14:00">
+                </div>
+                <div>
+                    <label class="lbl">數量</label>
+                    <input class="ctrl" type="number" id="f-qty" value="1" min="1">
+                </div>
+                <div class="form-full">
+                    <label class="lbl">品項 *</label>
+                    <input class="ctrl" type="text" id="f-item" required list="item-list"
+                        placeholder="例：寶寶蛋糕 火龍果">
+                    <datalist id="item-list">
+                        <option value="無糖無麩質 水果">
+                        <option value="無糖無麩質 田園">
+                        <option value="寶寶蛋糕 火龍果">
+                        <option value="寶寶蛋糕 水果">
+                        <option value="微光輕甜 水果">
+                        <option value="分享罐">
+                        <option value="分享袋">
+                        <option value="會員禮">
+                    </datalist>
+                </div>
+                <div>
+                    <label class="lbl">訂購人</label>
+                    <input class="ctrl" type="text" id="f-customer" placeholder="姓名 / 電話">
+                </div>
+                <div>
+                    <label class="lbl">取貨狀態</label>
+                    <select class="ctrl" id="f-pickup">
+                        <option value="">未取貨</option>
+                        <option value="V">V（已取貨）</option>
+                        <option value="v">v（已取貨）</option>
+                        <option value="發票">發票</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="lbl">訂單類型</label>
+                    <select class="ctrl" id="f-type">
+                        <option value="normal">一般訂單</option>
+                        <option value="special">特殊（會員禮 / 攝影合作）</option>
+                        <option value="lightsweet">微光輕甜</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="lbl">備註</label>
+                    <input class="ctrl" type="text" id="f-notes" placeholder="如：拉拉手旗">
+                </div>
+            </div>
+        </form>
+        <div class="modal-footer">
+            <button class="btn-cancel-m" onclick="closeOverlay('order-overlay')">取消</button>
+            <button class="btn-primary" onclick="submitOrder()">儲存訂單</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ SETTINGS MODAL ═══════════ -->
+<div class="overlay" id="settings-overlay">
+    <div class="modal">
+        <div class="modal-title">⚙ 設定</div>
+        <div style="display:flex; flex-direction:column; gap:14px;">
+            <div>
+                <label class="lbl">SharePoint 網站 URL</label>
+                <input class="ctrl" type="url" id="s-url"
+                    placeholder="https://yourcompany.sharepoint.com/sites/yoursite">
+                <div style="font-size:0.78rem;color:#aaa;margin-top:4px;">
+                    不填則儲存至個人 OneDrive（仍在 Microsoft 365 內）
+                </div>
+            </div>
+            <div>
+                <label class="lbl">資料夾名稱</label>
+                <input class="ctrl" type="text" id="s-folder" placeholder="甜點排程工具">
+            </div>
+            <div>
+                <label class="lbl">目前登入帳號</label>
+                <div class="ctrl" style="background:#f9f9f9;color:#555;" id="s-user">—</div>
+            </div>
+            <div style="background:#fff8e1;padding:12px 14px;border-radius:8px;font-size:0.82rem;color:#795548;line-height:1.6;">
+                <strong>首次使用提醒：</strong><br>
+                確認 Azure AD 應用程式已新增權限：<br>
+                <code>User.Read</code> &nbsp;
+                <code>Files.ReadWrite</code> &nbsp;
+                <code>Sites.ReadWrite.All</code>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel-m" onclick="closeOverlay('settings-overlay')">取消</button>
+            <button class="btn-primary" onclick="saveSettings()">儲存設定</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ TOAST ═══════════ -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ────────────────────────────────────────
+   CONFIG  –  已填入你的 Azure AD 資訊
+──────────────────────────────────────── */
+const MSAL_CFG = {
+    auth: {
+        clientId: 'a17de8a6-8573-43cc-b92f-f4fcca3d7ab8',
+        authority: 'https://login.microsoftonline.com/bde3feff-2c6c-4cb7-b2e4-789e237185a3',
+        redirectUri: window.location.origin + window.location.pathname
+    },
+    cache: { cacheLocation: 'sessionStorage' }
+};
+const SCOPES = ['User.Read', 'Files.ReadWrite', 'Sites.ReadWrite.All'];
+const FILE_NAME = 'orders.json';
+
+/* ────────────────────────────────────────
+   STATE
+──────────────────────────────────────── */
+let msal_app, account, orders = [];
+let weekStart = mondayOf(new Date());
+let cfg = JSON.parse(localStorage.getItem('boter_cfg') || '{"siteUrl":"","folder":"甜點排程工具"}');
+
+/* ────────────────────────────────────────
+   INIT
+──────────────────────────────────────── */
+async function init() {
+    msal_app = new msal.PublicClientApplication(MSAL_CFG);
+    await msal_app.initialize();
+    try {
+        const resp = await msal_app.handleRedirectPromise();
+        if (resp) account = resp.account;
+        else {
+            const all = msal_app.getAllAccounts();
+            if (all.length) account = all[0];
+        }
+    } catch (e) { console.error(e); }
+    if (account) showApp();
+}
+
+/* ────────────────────────────────────────
+   AUTH
+──────────────────────────────────────── */
+async function doLogin() { await msal_app.loginRedirect({ scopes: SCOPES }); }
+async function doLogout() {
+    if (!confirm(`登出 ${account?.username}？`)) return;
+    await msal_app.logoutRedirect({ account });
+}
+async function token() {
+    try {
+        return (await msal_app.acquireTokenSilent({ scopes: SCOPES, account })).accessToken;
+    } catch {
+        return (await msal_app.acquireTokenPopup({ scopes: SCOPES })).accessToken;
+    }
+}
+
+/* ────────────────────────────────────────
+   GRAPH / SHAREPOINT
+──────────────────────────────────────── */
+function filePath() { return `${cfg.folder || '甜點排程工具'}/${FILE_NAME}`; }
+
+async function siteId() {
+    const u = new URL(cfg.siteUrl);
+    const r = await fetch(
+        `https://graph.microsoft.com/v1.0/sites/${u.hostname}:${u.pathname}`,
+        { headers: { Authorization: `Bearer ${await token()}` } }
+    );
+    if (!r.ok) throw new Error(`無法存取 SharePoint 網站：${r.status}`);
+    return (await r.json()).id;
+}
+
+async function uploadUrl() {
+    if (cfg.siteUrl) {
+        const sid = await siteId();
+        return `https://graph.microsoft.com/v1.0/sites/${sid}/drive/root:/${filePath()}:/content`;
+    }
+    return `https://graph.microsoft.com/v1.0/me/drive/root:/${filePath()}:/content`;
+}
+
+async function saveData() {
+    const btn = document.getElementById('btn-save');
+    btn.innerHTML = '<span class="spinner"></span> 儲存中…';
+    btn.disabled = true;
+    try {
+        const url = await uploadUrl();
+        const resp = await fetch(url, {
+            method: 'PUT',
+            headers: {
+                Authorization: `Bearer ${await token()}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ orders, savedAt: new Date().toISOString() }, null, 2)
+        });
+        if (!resp.ok) throw new Error(resp.status);
+        toast('已儲存到 SharePoint ✓', 'ok');
+    } catch (e) {
+        toast('儲存失敗：' + e.message, 'err');
+    } finally {
+        btn.innerHTML = '☁ 儲存到 SharePoint';
+        btn.disabled = false;
+    }
+}
+
+async function loadData() {
+    try {
+        const url = await uploadUrl();
+        const resp = await fetch(url, {
+            headers: { Authorization: `Bearer ${await token()}` }
+        });
+        if (resp.status === 404) { orders = []; render(); return; }
+        if (!resp.ok) throw new Error(resp.status);
+        const data = await resp.json();
+        orders = data.orders || [];
+        render();
+        toast('資料已載入 ✓', 'ok');
+    } catch (e) {
+        toast('載入失敗，顯示本機暫存資料', 'err');
+        orders = JSON.parse(localStorage.getItem('boter_orders') || '[]');
+        render();
+    }
+}
+
+/* ────────────────────────────────────────
+   ORDERS CRUD
+──────────────────────────────────────── */
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+function addOrder(d)    { orders.push({ id: uid(), ...d }); localSave(); render(); }
+function editOrder(id, d) {
+    const i = orders.findIndex(o => o.id === id);
+    if (i >= 0) { orders[i] = { ...orders[i], ...d }; localSave(); render(); }
+}
+function delOrder(id) {
+    if (!confirm('確定刪除這筆訂單？')) return;
+    orders = orders.filter(o => o.id !== id);
+    localSave(); render();
+}
+function localSave() {
+    localStorage.setItem('boter_orders', JSON.stringify(orders));
+}
+
+/* ────────────────────────────────────────
+   WEEK HELPERS
+──────────────────────────────────────── */
+function mondayOf(d) {
+    const c = new Date(d); c.setHours(0,0,0,0);
+    const day = c.getDay();
+    c.setDate(c.getDate() - (day === 0 ? 6 : day - 1));
+    return c;
+}
+function weekDays(mon) {
+    return Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(mon); d.setDate(d.getDate() + i); return d;
+    });
+}
+function fmtDate(d) { return d.toISOString().slice(0, 10); }
+function prevWeek() { weekStart = new Date(weekStart); weekStart.setDate(weekStart.getDate() - 7); render(); }
+function nextWeek() { weekStart = new Date(weekStart); weekStart.setDate(weekStart.getDate() + 7); render(); }
+function goToday()  { weekStart = mondayOf(new Date()); render(); }
+
+const DAY_ZH = ['日','一','二','三','四','五','六'];
+
+/* ────────────────────────────────────────
+   RENDER
+──────────────────────────────────────── */
+function render() {
+    const days = weekDays(weekStart);
+    const e = days[6];
+    const lbl = d => `${d.getMonth()+1}月${d.getDate()}日`;
+    document.getElementById('week-label').textContent = `${lbl(days[0])} ～ ${lbl(e)}`;
+
+    const todayStr = fmtDate(new Date());
+    const container = document.getElementById('schedule');
+    container.innerHTML = '';
+
+    days.forEach(day => {
+        const ds = fmtDate(day);
+        const dayOrders = orders
+            .filter(o => o.date === ds)
+            .sort((a, b) => (a.timeSlot || '').localeCompare(b.timeSlot || ''));
+        const isToday = ds === todayStr;
+
+        const card = document.createElement('div');
+        card.className = 'day-card' + (isToday ? ' today-card' : '');
+        card.innerHTML = `
+            <div class="day-hdr">
+                <span class="day-name">星期${DAY_ZH[day.getDay()]}</span>
+                <span class="day-date-lbl">${day.getMonth()+1}月${day.getDate()}日</span>
+                ${isToday ? '<span class="today-badge">今天</span>' : ''}
+                ${dayOrders.length ? `<span class="order-count">${dayOrders.length} 筆</span>` : ''}
+                <button class="btn-add-day" onclick="openAdd('${ds}')">＋ 新增</button>
+            </div>
+            ${dayOrders.length === 0
+                ? '<div class="no-orders">— 無訂單 —</div>'
+                : `<table class="sched-table">
+                    <thead><tr>
+                        <th>時間</th>
+                        <th>品項</th>
+                        <th>數量</th>
+                        <th class="col-notes">備註</th>
+                        <th class="col-customer">訂購人</th>
+                        <th>訂單編號</th>
+                        <th>取貨</th>
+                        <th></th>
+                    </tr></thead>
+                    <tbody>${dayOrders.map(orderRow).join('')}</tbody>
+                </table>`
+            }`;
+        container.appendChild(card);
+    });
+}
+
+function orderRow(o) {
+    const cls = { special:'t-special', lightsweet:'t-lightsweet', normal:'t-normal' }[o.type] || 't-normal';
+    const time = o.timeSlot === '宅'
+        ? '<span class="badge-delivery">宅配</span>'
+        : h(o.timeSlot || '');
+    const pk = o.pickup
+        ? `<span class="badge-pickup">${h(o.pickup)}</span>`
+        : '<span class="badge-pending">未取</span>';
+    return `<tr>
+        <td>${time}</td>
+        <td class="${cls}">${h(o.item||'')}</td>
+        <td>${o.quantity||1}</td>
+        <td class="col-notes">${h(o.notes||'')}</td>
+        <td class="col-customer">${h(o.customer||'')}</td>
+        <td>${h(o.orderNumber||'')}</td>
+        <td>${pk}</td>
+        <td><div class="btn-row">
+            <button class="btn-act" onclick="openEdit('${o.id}')">✏</button>
+            <button class="btn-act" onclick="delOrder('${o.id}')">🗑</button>
+        </div></td>
+    </tr>`;
+}
+
+function h(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ────────────────────────────────────────
+   MODALS
+──────────────────────────────────────── */
+function openAdd(dateStr) {
+    document.getElementById('order-modal-title').textContent = '新增訂單';
+    document.getElementById('order-form').reset();
+    document.getElementById('f-id').value = '';
+    document.getElementById('f-date').value = dateStr || fmtDate(new Date());
+    document.getElementById('f-qty').value = '1';
+    openOverlay('order-overlay');
+}
+function openEdit(id) {
+    const o = orders.find(x => x.id === id); if (!o) return;
+    document.getElementById('order-modal-title').textContent = '編輯訂單';
+    document.getElementById('f-id').value       = o.id;
+    document.getElementById('f-date').value     = o.date || '';
+    document.getElementById('f-no').value       = o.orderNumber || '';
+    document.getElementById('f-time').value     = o.timeSlot || '';
+    document.getElementById('f-qty').value      = o.quantity || 1;
+    document.getElementById('f-item').value     = o.item || '';
+    document.getElementById('f-customer').value = o.customer || '';
+    document.getElementById('f-pickup').value   = o.pickup || '';
+    document.getElementById('f-type').value     = o.type || 'normal';
+    document.getElementById('f-notes').value    = o.notes || '';
+    openOverlay('order-overlay');
+}
+function submitOrder() {
+    const form = document.getElementById('order-form');
+    if (!form.checkValidity()) { form.reportValidity(); return; }
+    const d = {
+        date:        document.getElementById('f-date').value,
+        orderNumber: document.getElementById('f-no').value,
+        timeSlot:    document.getElementById('f-time').value,
+        quantity:    parseInt(document.getElementById('f-qty').value) || 1,
+        item:        document.getElementById('f-item').value,
+        customer:    document.getElementById('f-customer').value,
+        pickup:      document.getElementById('f-pickup').value,
+        type:        document.getElementById('f-type').value,
+        notes:       document.getElementById('f-notes').value
+    };
+    const id = document.getElementById('f-id').value;
+    id ? editOrder(id, d) : addOrder(d);
+    closeOverlay('order-overlay');
+}
+
+function openSettings() {
+    document.getElementById('s-url').value    = cfg.siteUrl || '';
+    document.getElementById('s-folder').value = cfg.folder  || '甜點排程工具';
+    document.getElementById('s-user').textContent = account
+        ? `${account.name}（${account.username}）` : '—';
+    openOverlay('settings-overlay');
+}
+function saveSettings() {
+    cfg.siteUrl = document.getElementById('s-url').value.trim();
+    cfg.folder  = document.getElementById('s-folder').value.trim() || '甜點排程工具';
+    localStorage.setItem('boter_cfg', JSON.stringify(cfg));
+    closeOverlay('settings-overlay');
+    toast('設定已儲存', 'ok');
+}
+
+function openOverlay(id)  { document.getElementById(id).classList.add('open'); }
+function closeOverlay(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.overlay').forEach(el =>
+    el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); })
+);
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') document.querySelectorAll('.overlay.open').forEach(el => el.classList.remove('open'));
+});
+
+/* ────────────────────────────────────────
+   TOAST
+──────────────────────────────────────── */
+let _tt;
+function toast(msg, type = '') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `toast show ${type}`;
+    clearTimeout(_tt);
+    _tt = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+/* ────────────────────────────────────────
+   SHOW APP
+──────────────────────────────────────── */
+function showApp() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    const name = account.name || account.username;
+    const av = document.getElementById('avatar');
+    av.textContent = name.charAt(0).toUpperCase();
+    av.title = `${name} — 點擊登出`;
+    av.onclick = doLogout;
+    render();
+    loadData();
+}
+
+/* ────────────────────────────────────────
+   START
+──────────────────────────────────────── */
+init();
+</script>
+</body>
+</html>
