@@ -479,21 +479,25 @@ function onItemSel() {
     }
 }
 
+// Normalize for comparison: replace ｜ with space, collapse whitespace
+function normItem(s) { return String(s||'').replace(/｜/g,' ').replace(/\s+/g,' ').trim(); }
+
 // Compute sort order: categoryIndex * 1000 + itemIndex
+// Handles both form-added items ("CategoryName ItemName｜Variant")
+// and Cyberbiz-imported items ("ItemName Variant", ｜ already replaced)
 function productOrder(item) {
     if (!item) return 999999;
+    const ni = normItem(item);
     const cats = getProducts();
     for (let ci = 0; ci < cats.length; ci++) {
         const cat = cats[ci];
-        for (let ii = 0; ii < (cat.items || []).length; ii++) {
-            const full = cat.name + ' ' + cat.items[ii].name;
-            if (item === full || (item.includes(cat.name) && item.includes(cat.items[ii].name))) {
-                return ci * 1000 + ii;
-            }
+        for (let ii = 0; ii < (cat.items||[]).length; ii++) {
+            const nFull = normItem(cat.name + ' ' + cat.items[ii].name);
+            const nIt   = normItem(cat.items[ii].name);
+            if (ni === nFull || ni === nIt) return ci * 1000 + ii;
         }
-        if (item === cat.name || item.startsWith(cat.name + ' ') || item.startsWith(cat.name + '　')) {
-            return ci * 1000 + 500;
-        }
+        const nCat = normItem(cat.name);
+        if (ni === nCat || ni.startsWith(nCat + ' ')) return ci * 1000 + 500;
     }
     return 999999;
 }
