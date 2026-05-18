@@ -695,7 +695,7 @@ function render() {
             const pOpts = ['未取貨','已自取','已出貨'].map(v=>`<option value="${v}"${v===pv?' selected':''}>${v}</option>`).join('');
             return `<tr>
                 <td class="td-n" title="${esc(dm)}"><span class="${delivCls}">${esc(dm)}</span></td>
-                <td class="td-w">${esc(o.item||'')}</td>
+                <td class="td-w">${esc(displayItem(o.item||''))}</td>
                 <td class="td-n" style="text-align:center">${o.quantity||1}</td>
                 <td class="td-w">${esc(o.orderNotes||'')}</td>
                 <td class="td-w">${esc(o.shopNotes||'')}</td>
@@ -746,6 +746,15 @@ function render() {
 
 function esc(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+// Strip category prefix for display (e.g. "奶油餅乾‧童心分享 星光…" → "星光…")
+function displayItem(item) {
+    if (!item) return '';
+    const cats = getProducts();
+    for (const cat of cats) {
+        if (item.startsWith(cat.name + ' ')) return item.slice(cat.name.length + 1);
+    }
+    return item;
 }
 
 /* ── ORDER FORM ── */
