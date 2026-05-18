@@ -7,233 +7,143 @@
     <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif; background: #f7f7f7; color: #333; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Microsoft JhengHei','PingFang TC',sans-serif; background:#f0f0f0; color:#333; font-size:14px; }
 
-        /* ── Login ── */
-        #login-screen {
-            display: flex; flex-direction: column; align-items: center;
-            justify-content: center; height: 100vh;
-            background: linear-gradient(145deg, #fff5f7 0%, #ffe8ed 100%);
-        }
-        .login-brand { font-size: 2.8rem; font-weight: 900; color: #c94f6a; letter-spacing: 2px; }
-        .login-sub { color: #999; margin: 6px 0 44px; font-size: 1rem; }
-        .btn-ms {
-            background: #0078d4; color: #fff; border: none;
-            padding: 13px 32px; border-radius: 8px; font-size: 1rem;
-            cursor: pointer; display: flex; align-items: center; gap: 10px;
-            font-family: inherit; box-shadow: 0 2px 8px rgba(0,120,212,.25);
-        }
-        .btn-ms:hover { background: #006abf; }
-        .login-note { margin-top: 18px; color: #aaa; font-size: 0.82rem; }
+        /* LOGIN */
+        #login-screen { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background:linear-gradient(145deg,#fff5f7,#ffe8ed); }
+        .login-brand { font-size:2.8rem; font-weight:900; color:#c94f6a; letter-spacing:2px; }
+        .login-sub { color:#999; margin:6px 0 44px; }
+        .btn-ms { background:#0078d4; color:#fff; border:none; padding:13px 32px; border-radius:8px; font-size:1rem; cursor:pointer; display:flex; align-items:center; gap:10px; font-family:inherit; }
+        .btn-ms:hover { background:#006abf; }
 
-        /* ── App shell ── */
-        #app { display: none; min-height: 100vh; }
+        /* APP */
+        #app { display:none; min-height:100vh; }
 
-        header {
-            background: #fff; padding: 0 24px;
-            box-shadow: 0 2px 6px rgba(0,0,0,.08);
-            position: sticky; top: 0; z-index: 200;
-            display: flex; align-items: center; height: 58px; gap: 16px;
-        }
-        .h-brand { font-weight: 900; color: #c94f6a; font-size: 1.15rem; white-space: nowrap; }
-        .h-divider { width: 1px; height: 24px; background: #e0e0e0; }
+        /* HEADER */
+        header { background:#fff; padding:0 20px; height:54px; box-shadow:0 2px 6px rgba(0,0,0,.08); position:sticky; top:0; z-index:200; display:flex; align-items:center; gap:10px; }
+        .h-brand { font-weight:900; color:#c94f6a; font-size:1.1rem; white-space:nowrap; }
+        .h-div { width:1px; height:24px; background:#e0e0e0; flex-shrink:0; }
 
-        .week-nav { display: flex; align-items: center; gap: 6px; }
-        .btn-nav {
-            background: none; border: 1px solid #ddd; border-radius: 6px;
-            padding: 5px 11px; cursor: pointer; font-size: 1rem; line-height: 1;
-        }
-        .btn-nav:hover { background: #f5f5f5; }
-        .week-label { font-weight: 700; min-width: 190px; text-align: center; font-size: 0.95rem; }
-        .btn-today {
-            background: none; border: 1px solid #c94f6a; color: #c94f6a;
-            border-radius: 6px; padding: 5px 12px; cursor: pointer; font-size: 0.82rem; font-family: inherit;
-        }
-        .btn-today:hover { background: #fff0f3; }
+        /* CALENDAR TRIGGER */
+        .cal-wrap { position:relative; }
+        .cal-trigger { display:flex; align-items:center; gap:6px; cursor:pointer; padding:5px 12px; border:1px solid #ddd; border-radius:7px; font-size:0.88rem; font-weight:600; white-space:nowrap; background:#fff; user-select:none; }
+        .cal-trigger:hover { background:#f9f9f9; }
+        .cal-popup { display:none; position:absolute; top:calc(100% + 8px); left:0; background:#fff; border:1px solid #e0e0e0; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.15); padding:14px; z-index:500; width:268px; }
+        .cal-popup.open { display:block; }
+        .cal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+        .cal-head span { font-weight:700; font-size:0.9rem; }
+        .cal-nav { background:none; border:none; cursor:pointer; padding:4px 10px; border-radius:5px; font-size:1.1rem; }
+        .cal-nav:hover { background:#f5f5f5; }
+        .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+        .cal-dow { text-align:center; font-size:0.7rem; color:#999; padding:3px 0; font-weight:600; }
+        .cal-day { text-align:center; padding:5px 2px; border-radius:5px; cursor:pointer; font-size:0.82rem; }
+        .cal-day:hover { background:#ffe0e8; }
+        .cal-day.today { font-weight:700; color:#c94f6a; }
+        .cal-day.in-week { background:#fce8ed; border-radius:0; }
+        .cal-day.week-start { border-radius:5px 0 0 5px; }
+        .cal-day.week-end { border-radius:0 5px 5px 0; }
+        .cal-day.other-month { color:#ccc; }
+        .cal-day.empty { cursor:default; pointer-events:none; }
 
-        .h-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-        .btn-primary {
-            background: #c94f6a; color: #fff; border: none;
-            padding: 7px 18px; border-radius: 7px; cursor: pointer;
-            font-size: 0.88rem; font-family: inherit; white-space: nowrap;
-        }
-        .btn-primary:hover { background: #b3435c; }
-        .btn-blue {
-            background: #0078d4; color: #fff; border: none;
-            padding: 7px 18px; border-radius: 7px; cursor: pointer;
-            font-size: 0.88rem; font-family: inherit; white-space: nowrap;
-        }
-        .btn-blue:hover { background: #006abf; }
-        .btn-icon-hd {
-            background: none; border: 1px solid #ddd; border-radius: 7px;
-            padding: 7px 10px; cursor: pointer; font-size: 1rem; line-height: 1;
-        }
-        .btn-icon-hd:hover { background: #f5f5f5; }
-        .avatar {
-            width: 34px; height: 34px; border-radius: 50%;
-            background: #c94f6a; color: #fff;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: 700; font-size: 0.95rem; cursor: pointer;
-            user-select: none;
-        }
+        .btn-today { background:none; border:1px solid #c94f6a; color:#c94f6a; border-radius:6px; padding:5px 10px; cursor:pointer; font-size:0.82rem; font-family:inherit; white-space:nowrap; }
+        .btn-today:hover { background:#fff0f3; }
 
-        /* ── Schedule ── */
-        main { padding: 24px; max-width: 1280px; margin: 0 auto; }
+        .h-right { margin-left:auto; display:flex; align-items:center; gap:8px; }
+        .btn-p { background:#c94f6a; color:#fff; border:none; padding:7px 14px; border-radius:7px; cursor:pointer; font-size:0.83rem; font-family:inherit; white-space:nowrap; }
+        .btn-p:hover { background:#b3435c; }
+        .btn-b { background:#0078d4; color:#fff; border:none; padding:7px 14px; border-radius:7px; cursor:pointer; font-size:0.83rem; font-family:inherit; white-space:nowrap; }
+        .btn-b:hover { background:#006abf; }
+        .btn-g { background:#2e7d32; color:#fff; border:none; padding:7px 14px; border-radius:7px; cursor:pointer; font-size:0.83rem; font-family:inherit; white-space:nowrap; }
+        .btn-g:hover { background:#256427; }
+        .btn-ic { background:none; border:1px solid #ddd; border-radius:7px; padding:6px 9px; cursor:pointer; font-size:0.95rem; line-height:1; }
+        .btn-ic:hover { background:#f5f5f5; }
+        .avatar { width:32px; height:32px; border-radius:50%; background:#c94f6a; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.9rem; cursor:pointer; flex-shrink:0; }
 
-        .day-card {
-            background: #fff; border-radius: 10px; margin-bottom: 20px;
-            box-shadow: 0 1px 4px rgba(0,0,0,.07); overflow: hidden;
-        }
-        .day-card.today-card { box-shadow: 0 0 0 2px #c94f6a, 0 2px 8px rgba(201,79,106,.15); }
+        /* SCHEDULE */
+        main { padding:14px 20px; max-width:1500px; margin:0 auto; }
+        .week-bar { font-size:0.82rem; color:#888; margin-bottom:10px; padding-left:2px; }
+        .day-card { background:#fff; border-radius:10px; margin-bottom:14px; box-shadow:0 1px 4px rgba(0,0,0,.07); overflow:hidden; }
+        .day-card.today-card { box-shadow:0 0 0 2px #c94f6a,0 2px 8px rgba(201,79,106,.15); }
+        .day-hdr { background:#fafafa; border-bottom:1px solid #f0f0f0; padding:8px 14px; display:flex; align-items:center; gap:8px; }
+        .day-name { font-weight:800; font-size:0.9rem; }
+        .day-date-lbl { color:#777; font-size:0.86rem; }
+        .today-badge { background:#c94f6a; color:#fff; font-size:0.7rem; padding:2px 7px; border-radius:10px; font-weight:700; }
+        .order-count { background:#f0f0f0; color:#555; font-size:0.75rem; padding:2px 8px; border-radius:10px; }
+        .no-orders { padding:14px; text-align:center; color:#bbb; font-size:0.84rem; }
 
-        .day-hdr {
-            background: #fafafa; border-bottom: 1px solid #f0f0f0;
-            padding: 10px 16px; display: flex; align-items: center; gap: 10px;
-        }
-        .day-name { font-weight: 800; font-size: 0.95rem; }
-        .day-date-lbl { color: #777; font-size: 0.9rem; }
-        .today-badge {
-            background: #c94f6a; color: #fff; font-size: 0.72rem;
-            padding: 2px 8px; border-radius: 10px; font-weight: 700;
-        }
-        .order-count {
-            background: #f0f0f0; color: #555; font-size: 0.78rem;
-            padding: 2px 10px; border-radius: 10px;
-        }
-        .btn-add-day {
-            margin-left: auto; background: none; border: 1px solid #ddd;
-            border-radius: 6px; padding: 4px 12px; cursor: pointer;
-            font-size: 0.82rem; color: #555; font-family: inherit;
-        }
-        .btn-add-day:hover { background: #f5f5f5; }
+        /* TABLE — fixed layout, all cols fit page */
+        .sched-table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:0.81rem; }
+        .sched-table th { background:#fafafa; padding:6px 7px; text-align:left; font-size:0.74rem; color:#888; font-weight:600; border-bottom:1px solid #efefef; overflow:hidden; white-space:nowrap; }
+        .sched-table td { padding:6px 7px; border-bottom:1px solid #f5f5f5; vertical-align:middle; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .sched-table tr:last-child td { border-bottom:none; }
+        .sched-table tr:hover td { background:#fdf9fa; }
 
-        .no-orders { padding: 18px 20px; color: #bbb; font-size: 0.88rem; text-align: center; }
+        .bdg { display:inline-block; padding:1px 6px; border-radius:8px; font-size:0.74rem; white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis; }
+        .bdg-home  { background:#fff3e0; color:#e65100; }
+        .bdg-store { background:#e8f5e9; color:#2e7d32; }
+        .bdg-other { background:#f3f3f3; color:#777; }
+        .badge-mod { display:inline-block; background:#e65100; color:#fff; font-size:0.68rem; padding:1px 4px; border-radius:3px; margin-left:3px; vertical-align:middle; font-weight:700; }
 
-        .sched-table { width: 100%; border-collapse: collapse; }
-        .sched-table th {
-            background: #fafafa; padding: 8px 12px;
-            text-align: left; font-size: 0.8rem; color: #888;
-            font-weight: 600; border-bottom: 1px solid #f0f0f0;
-        }
-        .sched-table td {
-            padding: 9px 12px; border-bottom: 1px solid #f5f5f5;
-            font-size: 0.88rem; vertical-align: middle;
-        }
-        .sched-table tr:last-child td { border-bottom: none; }
-        .sched-table tr:hover td { background: #fdfcfc; }
+        .btn-act { background:none; border:none; cursor:pointer; padding:3px 5px; border-radius:4px; font-size:0.82rem; color:#bbb; }
+        .btn-act:hover { background:#f0f0f0; color:#333; }
 
-        /* Order type colors */
-        .t-normal { font-weight: 700; }
-        .t-special { color: #d4600a; font-weight: 700; }   /* orange – 會員禮/攝影合作 */
-        .t-lightsweet { color: #0078a8; font-weight: 700; } /* blue – 微光輕甜 */
+        /* MODAL */
+        .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500; align-items:center; justify-content:center; }
+        .overlay.open { display:flex; }
+        .modal { background:#fff; border-radius:14px; padding:24px; width:520px; max-width:94vw; max-height:92vh; overflow-y:auto; box-shadow:0 8px 32px rgba(0,0,0,.18); }
+        .modal-lg { width:680px; }
+        .modal-title { font-size:1.05rem; font-weight:800; color:#c94f6a; margin-bottom:18px; }
+        .fg { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+        .ff { grid-column:1/-1; }
+        .lbl { display:block; font-size:0.77rem; color:#777; margin-bottom:3px; }
+        .ctrl { width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:7px; font-size:0.87rem; font-family:inherit; background:#fff; }
+        .ctrl:focus { outline:none; border-color:#c94f6a; }
+        .mf { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
+        .btn-cx { padding:7px 16px; border:1px solid #ddd; background:#fff; border-radius:7px; cursor:pointer; font-family:inherit; }
+        .btn-cx:hover { background:#f5f5f5; }
 
-        .badge-delivery { background: #fff3e0; color: #e65100; padding: 2px 8px; border-radius: 10px; font-size: 0.78rem; }
-        .badge-pickup   { background: #e8f5e9; color: #2e7d32; padding: 2px 8px; border-radius: 10px; font-size: 0.78rem; }
-        .badge-pending  { background: #f3f3f3; color: #999;    padding: 2px 8px; border-radius: 10px; font-size: 0.78rem; }
+        /* PRODUCTS */
+        .prod-list { display:flex; flex-direction:column; gap:5px; max-height:320px; overflow-y:auto; }
+        .prod-item { display:flex; align-items:center; gap:6px; padding:6px 10px; background:#fafafa; border:1px solid #eee; border-radius:7px; }
+        .prod-inp { flex:1; border:none; background:transparent; font-size:0.86rem; font-family:inherit; outline:none; }
+        .prod-inp:focus { border-bottom:1px solid #c94f6a; }
+        .prod-btn { background:none; border:none; cursor:pointer; padding:3px 6px; border-radius:4px; font-size:0.86rem; color:#aaa; }
+        .prod-btn:hover { background:#f0f0f0; color:#333; }
+        .prod-btn:disabled { opacity:0.3; cursor:default; }
+        .prod-add { display:flex; gap:8px; margin-top:10px; }
 
-        .btn-row { display: flex; gap: 4px; }
-        .btn-act {
-            background: none; border: none; cursor: pointer;
-            padding: 4px 7px; border-radius: 5px; font-size: 0.88rem; color: #aaa;
-        }
-        .btn-act:hover { background: #f0f0f0; color: #333; }
+        /* IMPORT */
+        .drop-zone { border:2px dashed #ddd; border-radius:10px; padding:28px; text-align:center; cursor:pointer; transition:border-color .2s,background .2s; }
+        .drop-zone:hover,.drop-zone.drag-over { border-color:#c94f6a; background:#fff5f7; }
+        .drop-zone input { display:none; }
+        .preview-wrap { margin-top:12px; overflow-x:auto; max-height:260px; overflow-y:auto; border:1px solid #eee; border-radius:8px; }
+        .preview-table { width:100%; border-collapse:collapse; font-size:0.79rem; }
+        .preview-table th { background:#f5f5f5; padding:5px 8px; text-align:left; position:sticky; top:0; border-bottom:1px solid #ddd; white-space:nowrap; }
+        .preview-table td { padding:5px 8px; border-bottom:1px solid #f5f5f5; max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .row-ok  td:first-child { border-left:3px solid #2e7d32; }
+        .row-warn td:first-child { border-left:3px solid #f57f17; }
+        .imp-sum { background:#e8f5e9; border-radius:8px; padding:9px 13px; font-size:0.84rem; color:#2e7d32; }
+        .imp-sum.warn { background:#fff8e1; color:#795548; }
 
-        /* ── Modal ── */
-        .overlay {
-            display: none; position: fixed; inset: 0;
-            background: rgba(0,0,0,.45); z-index: 500;
-            align-items: center; justify-content: center;
-        }
-        .overlay.open { display: flex; }
-        .modal {
-            background: #fff; border-radius: 14px;
-            padding: 28px; width: 540px; max-width: 94vw;
-            max-height: 92vh; overflow-y: auto;
-            box-shadow: 0 8px 32px rgba(0,0,0,.18);
-        }
-        .modal-title { font-size: 1.15rem; font-weight: 800; color: #c94f6a; margin-bottom: 22px; }
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-        .form-full { grid-column: 1 / -1; }
-        .lbl { display: block; font-size: 0.8rem; color: #777; margin-bottom: 4px; }
-        .ctrl {
-            width: 100%; padding: 9px 12px; border: 1px solid #ddd;
-            border-radius: 7px; font-size: 0.9rem; font-family: inherit;
-            background: #fff;
-        }
-        .ctrl:focus { outline: none; border-color: #c94f6a; }
-        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
-        .btn-cancel-m {
-            padding: 8px 20px; border: 1px solid #ddd; background: #fff;
-            border-radius: 7px; cursor: pointer; font-family: inherit;
-        }
-        .btn-cancel-m:hover { background: #f5f5f5; }
+        /* TOAST */
+        .toast { position:fixed; bottom:22px; right:22px; background:#222; color:#fff; padding:10px 20px; border-radius:9px; font-size:0.83rem; z-index:9999; opacity:0; transition:opacity .3s; pointer-events:none; }
+        .toast.show { opacity:1; }
+        .toast.ok  { background:#2e7d32; }
+        .toast.err { background:#c62828; }
+        .spinner { display:inline-block; width:15px; height:15px; border:3px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; }
+        @keyframes spin { to { transform:rotate(360deg); } }
 
-        /* ── Status toast ── */
-        .toast {
-            position: fixed; bottom: 24px; right: 24px;
-            background: #222; color: #fff; padding: 11px 22px;
-            border-radius: 9px; font-size: 0.88rem; z-index: 9999;
-            opacity: 0; transition: opacity .3s; pointer-events: none;
-        }
-        .toast.show { opacity: 1; }
-        .toast.ok   { background: #2e7d32; }
-        .toast.err  { background: #c62828; }
-
-        /* ── Loading ── */
-        .spinner {
-            display: inline-block; width: 18px; height: 18px;
-            border: 3px solid rgba(255,255,255,.4);
-            border-top-color: #fff; border-radius: 50%;
-            animation: spin .7s linear infinite; vertical-align: middle;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* ── Import ── */
-        .btn-green {
-            background: #2e7d32; color: #fff; border: none;
-            padding: 7px 18px; border-radius: 7px; cursor: pointer;
-            font-size: 0.88rem; font-family: inherit; white-space: nowrap;
-        }
-        .btn-green:hover { background: #256427; }
-
-        .import-drop {
-            border: 2px dashed #ddd; border-radius: 10px;
-            padding: 32px; text-align: center; cursor: pointer;
-            transition: border-color .2s, background .2s;
-        }
-        .import-drop:hover, .import-drop.drag-over { border-color: #c94f6a; background: #fff5f7; }
-        .import-drop input { display: none; }
-        .drop-icon { font-size: 2rem; margin-bottom: 8px; }
-        .drop-hint { color: #888; font-size: 0.88rem; }
-
-        .preview-wrap { margin-top: 16px; overflow-x: auto; max-height: 300px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; }
-        .preview-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-        .preview-table th { background: #f5f5f5; padding: 6px 10px; text-align: left; position: sticky; top: 0; border-bottom: 1px solid #ddd; }
-        .preview-table td { padding: 5px 10px; border-bottom: 1px solid #f5f5f5; }
-        .preview-table tr:last-child td { border-bottom: none; }
-        .row-ok td:first-child { border-left: 3px solid #2e7d32; }
-        .row-warn td:first-child { border-left: 3px solid #f57f17; }
-
-        .import-summary { background: #e8f5e9; border-radius: 8px; padding: 10px 14px; font-size: 0.88rem; color: #2e7d32; margin-top: 12px; }
-        .import-summary.warn { background: #fff8e1; color: #795548; }
-
-        /* ── Print ── */
         @media print {
-            header .h-right, .btn-act, .btn-add-day { display: none !important; }
-            .day-card { box-shadow: none; border: 1px solid #ddd; break-inside: avoid; }
-        }
-
-        /* ── Responsive ── */
-        @media (max-width: 700px) {
-            .col-notes, .col-customer { display: none; }
-            .week-label { min-width: 140px; font-size: 0.82rem; }
+            header .h-right { display:none!important; }
+            .btn-act { display:none!important; }
+            .day-card { box-shadow:none; border:1px solid #ddd; break-inside:avoid; }
         }
     </style>
 </head>
 <body>
 
-<!-- ═══════════ LOGIN ═══════════ -->
+<!-- LOGIN -->
 <div id="login-screen">
     <div class="login-brand">Boter</div>
     <div class="login-sub">甜點師排程管理工具</div>
@@ -246,39 +156,52 @@
         </svg>
         使用 Microsoft 帳號登入
     </button>
-    <div class="login-note">僅限公司 Microsoft 帳號</div>
+    <div style="margin-top:14px;color:#aaa;font-size:0.8rem;">僅限公司 Microsoft 帳號</div>
 </div>
 
-<!-- ═══════════ APP ═══════════ -->
+<!-- APP -->
 <div id="app">
     <header>
         <span class="h-brand">🎂 Boter</span>
-        <div class="h-divider"></div>
-        <div class="week-nav">
-            <button class="btn-nav" onclick="prevWeek()">&#8249;</button>
-            <span class="week-label" id="week-label">載入中…</span>
-            <button class="btn-nav" onclick="nextWeek()">&#8250;</button>
-            <button class="btn-today" onclick="goToday()">今天</button>
+        <div class="h-div"></div>
+        <!-- Calendar trigger -->
+        <div class="cal-wrap">
+            <div class="cal-trigger" id="cal-trigger" onclick="toggleCal(event)">
+                📅 <span id="cal-label">載入中…</span>
+            </div>
+            <div class="cal-popup" id="cal-popup" onclick="event.stopPropagation()">
+                <div class="cal-head">
+                    <button class="cal-nav" onclick="calMove(-1)">‹</button>
+                    <span id="cal-month"></span>
+                    <button class="cal-nav" onclick="calMove(1)">›</button>
+                </div>
+                <div class="cal-grid" id="cal-grid"></div>
+            </div>
         </div>
+        <button class="btn-today" onclick="goToday()">今天</button>
         <div class="h-right">
-            <button class="btn-green" onclick="openImport()">📥 匯入 Cyberbiz CSV</button>
-            <button class="btn-primary" onclick="openAdd(null)">＋ 新增訂單</button>
-            <button class="btn-blue" id="btn-save" onclick="saveData()">☁ 儲存到 SharePoint</button>
-            <button class="btn-icon-hd" onclick="window.print()" title="列印">🖨</button>
-            <button class="btn-icon-hd" onclick="openSettings()" title="設定">⚙</button>
-            <div class="avatar" id="avatar" title="點擊登出">?</div>
+            <button class="btn-g" onclick="openImport()">📥 匯入 Cyberbiz</button>
+            <button class="btn-p" onclick="openAdd()">＋ 新增訂單</button>
+            <button class="btn-b" id="btn-save" onclick="saveData()">☁ 儲存</button>
+            <button class="btn-ic" onclick="window.print()" title="列印">🖨</button>
+            <button class="btn-ic" onclick="openProducts()" title="品項清單">📋</button>
+            <button class="btn-ic" onclick="openSettings()" title="設定">⚙</button>
+            <div class="avatar" id="avatar">K</div>
         </div>
     </header>
-    <main id="schedule"></main>
+    <main>
+        <div class="week-bar" id="week-bar"></div>
+        <div id="schedule"></div>
+    </main>
 </div>
 
-<!-- ═══════════ ORDER MODAL ═══════════ -->
+<!-- ORDER MODAL -->
 <div class="overlay" id="order-overlay">
     <div class="modal">
         <div class="modal-title" id="order-modal-title">新增訂單</div>
         <form id="order-form" onsubmit="return false">
             <input type="hidden" id="f-id">
-            <div class="form-grid">
+            <div class="fg">
                 <div>
                     <label class="lbl">出貨日期 *</label>
                     <input class="ctrl" type="date" id="f-date" required>
@@ -287,75 +210,114 @@
                     <label class="lbl">訂單編號</label>
                     <input class="ctrl" type="text" id="f-no" placeholder="#1001">
                 </div>
-                <div>
-                    <label class="lbl">時間 / 取件方式</label>
-                    <input class="ctrl" type="text" id="f-time" placeholder="宅 / W / 14:00">
+                <div class="ff">
+                    <label class="lbl">配送方式</label>
+                    <select class="ctrl" id="f-delivery" onchange="onDeliveryChange()">
+                        <option value="門市取貨 (Caker Lab)">門市取貨 (Caker Lab)</option>
+                        <option value="黑貓冷凍宅配">黑貓冷凍宅配</option>
+                        <option value="其他">其他…</option>
+                    </select>
+                    <input class="ctrl" type="text" id="f-delivery-other" placeholder="請輸入配送方式" style="display:none;margin-top:6px">
+                </div>
+                <div class="ff">
+                    <label class="lbl">品項 *</label>
+                    <input class="ctrl" type="text" id="f-item" required placeholder="例：暖暖初食蛋糕 火龍果香蕉" list="item-list">
+                    <datalist id="item-list"></datalist>
                 </div>
                 <div>
                     <label class="lbl">數量</label>
                     <input class="ctrl" type="number" id="f-qty" value="1" min="1">
                 </div>
-                <div class="form-full">
-                    <label class="lbl">品項 *</label>
-                    <input class="ctrl" type="text" id="f-item" required list="item-list"
-                        placeholder="例：寶寶蛋糕 火龍果">
-                    <datalist id="item-list">
-                        <option value="無糖無麩質 水果">
-                        <option value="無糖無麩質 田園">
-                        <option value="寶寶蛋糕 火龍果">
-                        <option value="寶寶蛋糕 水果">
-                        <option value="微光輕甜 水果">
-                        <option value="分享罐">
-                        <option value="分享袋">
-                        <option value="會員禮">
-                    </datalist>
-                </div>
-                <div>
-                    <label class="lbl">訂購人</label>
-                    <input class="ctrl" type="text" id="f-customer" placeholder="姓名 / 電話">
-                </div>
                 <div>
                     <label class="lbl">取貨狀態</label>
                     <select class="ctrl" id="f-pickup">
-                        <option value="">未取貨</option>
-                        <option value="V">V（已取貨）</option>
-                        <option value="v">v（已取貨）</option>
-                        <option value="發票">發票</option>
+                        <option value="未取貨">未取貨</option>
+                        <option value="已取貨">已取貨</option>
                     </select>
                 </div>
                 <div>
-                    <label class="lbl">訂單類型</label>
-                    <select class="ctrl" id="f-type">
-                        <option value="normal">一般訂單</option>
-                        <option value="special">特殊（會員禮 / 攝影合作）</option>
-                        <option value="lightsweet">微光輕甜</option>
-                    </select>
+                    <label class="lbl">購買人</label>
+                    <input class="ctrl" type="text" id="f-customer" placeholder="姓名">
                 </div>
                 <div>
-                    <label class="lbl">備註</label>
-                    <input class="ctrl" type="text" id="f-notes" placeholder="如：拉拉手旗">
+                    <label class="lbl">購買人電話</label>
+                    <input class="ctrl" type="text" id="f-phone" placeholder="0912345678">
+                </div>
+                <div class="ff">
+                    <label class="lbl">訂單備註</label>
+                    <input class="ctrl" type="text" id="f-onotes" placeholder="來自 Cyberbiz 的備註">
+                </div>
+                <div class="ff">
+                    <label class="lbl">商家備註</label>
+                    <input class="ctrl" type="text" id="f-snotes" placeholder="店內自用備註">
                 </div>
             </div>
         </form>
-        <div class="modal-footer">
-            <button class="btn-cancel-m" onclick="closeOverlay('order-overlay')">取消</button>
-            <button class="btn-primary" onclick="submitOrder()">儲存訂單</button>
+        <div class="mf">
+            <button class="btn-cx" onclick="closeOverlay('order-overlay')">取消</button>
+            <button class="btn-p" onclick="submitOrder()">儲存訂單</button>
         </div>
     </div>
 </div>
 
-<!-- ═══════════ SETTINGS MODAL ═══════════ -->
+<!-- PRODUCTS MODAL -->
+<div class="overlay" id="products-overlay">
+    <div class="modal">
+        <div class="modal-title">📋 品項清單管理</div>
+        <div style="font-size:0.79rem;color:#888;margin-bottom:12px;">排序決定每日訂單的顯示順序。使用 ↑↓ 調整，直接點名稱可編輯。</div>
+        <div class="prod-list" id="prod-list"></div>
+        <div class="prod-add">
+            <input class="ctrl" type="text" id="prod-new" placeholder="輸入新品項名稱…" style="flex:1"
+                onkeydown="if(event.key==='Enter')addProduct()">
+            <button class="btn-p" onclick="addProduct()">新增</button>
+        </div>
+        <div class="mf">
+            <button class="btn-cx" onclick="closeOverlay('products-overlay')">取消</button>
+            <button class="btn-p" onclick="saveProducts()">儲存</button>
+        </div>
+    </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="overlay" id="import-overlay">
+    <div class="modal modal-lg">
+        <div class="modal-title">📥 匯入 Cyberbiz 訂單</div>
+        <div id="import-step1">
+            <div class="drop-zone" id="drop-zone"
+                onclick="document.getElementById('file-input').click()"
+                ondragover="event.preventDefault();this.classList.add('drag-over')"
+                ondragleave="this.classList.remove('drag-over')"
+                ondrop="handleDrop(event)">
+                <input type="file" id="file-input" accept=".xlsx,.xls,.csv,.txt" onchange="handleFile(this.files[0])">
+                <div style="font-size:2rem;margin-bottom:6px;">📄</div>
+                <div style="font-weight:700;margin-bottom:4px;">點擊選擇檔案，或拖曳至此</div>
+                <div style="color:#888;font-size:0.83rem;">支援 .xlsx / .csv</div>
+            </div>
+            <div style="margin-top:12px;background:#f0f4ff;border-radius:8px;padding:10px 13px;font-size:0.79rem;color:#3949ab;line-height:1.7;">
+                <strong>Cyberbiz 匯出路徑：</strong> 後台 → 訂單 → 訂單報表匯出<br>
+                建議勾選欄位：<strong>訂單編號、購買人名稱、出貨方式、指定配送日期、商品名稱、商品款式、數量、備註</strong>
+            </div>
+        </div>
+        <div id="import-step2" style="display:none">
+            <div id="import-summary" class="imp-sum"></div>
+            <div class="preview-wrap" id="preview-wrap"></div>
+            <div style="margin-top:8px;font-size:0.77rem;color:#888;">綠色 = 可匯入　橘色 = 缺出貨日期，略過</div>
+        </div>
+        <div class="mf">
+            <button class="btn-cx" onclick="resetImport()">取消</button>
+            <button class="btn-g" id="btn-do-import" style="display:none" onclick="doImport()">確認匯入</button>
+        </div>
+    </div>
+</div>
+
+<!-- SETTINGS MODAL -->
 <div class="overlay" id="settings-overlay">
     <div class="modal">
         <div class="modal-title">⚙ 設定</div>
-        <div style="display:flex; flex-direction:column; gap:14px;">
+        <div style="display:flex;flex-direction:column;gap:12px;">
             <div>
                 <label class="lbl">SharePoint 網站 URL</label>
-                <input class="ctrl" type="url" id="s-url"
-                    placeholder="https://yourcompany.sharepoint.com/sites/yoursite">
-                <div style="font-size:0.78rem;color:#aaa;margin-top:4px;">
-                    不填則儲存至個人 OneDrive（仍在 Microsoft 365 內）
-                </div>
+                <input class="ctrl" type="url" id="s-url" placeholder="https://yourcompany.sharepoint.com/sites/yoursite">
             </div>
             <div>
                 <label class="lbl">資料夾名稱</label>
@@ -365,66 +327,18 @@
                 <label class="lbl">目前登入帳號</label>
                 <div class="ctrl" style="background:#f9f9f9;color:#555;" id="s-user">—</div>
             </div>
-            <div style="background:#fff8e1;padding:12px 14px;border-radius:8px;font-size:0.82rem;color:#795548;line-height:1.6;">
-                <strong>首次使用提醒：</strong><br>
-                確認 Azure AD 應用程式已新增權限：<br>
-                <code>User.Read</code> &nbsp;
-                <code>Files.ReadWrite</code> &nbsp;
-                <code>Sites.ReadWrite.All</code>
-            </div>
         </div>
-        <div class="modal-footer">
-            <button class="btn-cancel-m" onclick="closeOverlay('settings-overlay')">取消</button>
-            <button class="btn-primary" onclick="saveSettings()">儲存設定</button>
+        <div class="mf">
+            <button class="btn-cx" onclick="closeOverlay('settings-overlay')">取消</button>
+            <button class="btn-p" onclick="saveSettings()">儲存</button>
         </div>
     </div>
 </div>
 
-<!-- ═══════════ IMPORT MODAL ═══════════ -->
-<div class="overlay" id="import-overlay">
-    <div class="modal" style="width:680px">
-        <div class="modal-title">📥 匯入 Cyberbiz 訂單 CSV</div>
-
-        <!-- Step 1: Upload -->
-        <div id="import-step1">
-            <div class="import-drop" id="drop-zone" onclick="document.getElementById('csv-input').click()"
-                ondragover="event.preventDefault();this.classList.add('drag-over')"
-                ondragleave="this.classList.remove('drag-over')"
-                ondrop="handleDrop(event)">
-                <input type="file" id="csv-input" accept=".xlsx,.xls,.csv,.txt" onchange="handleFile(this.files[0])">
-                <div class="drop-icon">📄</div>
-                <div style="font-weight:700;margin-bottom:4px;">點擊選擇 CSV 檔案，或拖曳至此</div>
-                <div class="drop-hint">支援 .xlsx / .csv 格式</div>
-            </div>
-            <div style="margin-top:14px;background:#f0f4ff;border-radius:8px;padding:12px 14px;font-size:0.82rem;color:#3949ab;line-height:1.7;">
-                <strong>Cyberbiz 匯出步驟：</strong><br>
-                後台 → 訂單 → 訂單報表匯出 → 勾選欄位（至少需含：<strong>訂單編號、購買人名稱、出貨方式、指定配送日期、商品名稱、數量</strong>）→ 選日期範圍 → 匯出（檔案會寄到信箱）→ 下載 Excel 上傳此處
-            </div>
-        </div>
-
-        <!-- Step 2: Preview -->
-        <div id="import-step2" style="display:none">
-            <div id="import-summary" class="import-summary"></div>
-            <div class="preview-wrap" id="preview-wrap"></div>
-            <div style="margin-top:12px;font-size:0.8rem;color:#888;">
-                綠色邊框 = 資料完整可匯入　橘色邊框 = 缺少出貨日期，將略過
-            </div>
-        </div>
-
-        <div class="modal-footer">
-            <button class="btn-cancel-m" onclick="resetImport()">取消</button>
-            <button class="btn-green" id="btn-do-import" style="display:none" onclick="doImport()">確認匯入</button>
-        </div>
-    </div>
-</div>
-
-<!-- ═══════════ TOAST ═══════════ -->
 <div class="toast" id="toast"></div>
 
 <script>
-/* ────────────────────────────────────────
-   CONFIG  –  已填入你的 Azure AD 資訊
-──────────────────────────────────────── */
+/* ── CONFIG ── */
 const MSAL_CFG = {
     auth: {
         clientId: 'a17de8a6-8573-43cc-b92f-f4fcca3d7ab8',
@@ -436,19 +350,38 @@ const MSAL_CFG = {
 const SCOPES = ['User.Read', 'Files.ReadWrite', 'Sites.ReadWrite.All'];
 const FILE_NAME = 'orders.json';
 
-/* ────────────────────────────────────────
-   STATE
-──────────────────────────────────────── */
+/* ── STATE ── */
 let msal_app, account, orders = [];
 let weekStart = mondayOf(new Date());
-let cfg = JSON.parse(localStorage.getItem('boter_cfg') || '{"siteUrl":"https://lalaso.sharepoint.com/sites/BOTERCAKER2","folder":"甜點排程工具"}');
+let calViewDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+let cfg = JSON.parse(localStorage.getItem('boter_cfg') ||
+    '{"siteUrl":"https://lalaso.sharepoint.com/sites/BOTERCAKER2","folder":"甜點排程工具"}');
 
-/* ────────────────────────────────────────
-   INIT
-──────────────────────────────────────── */
+/* ── PRODUCTS ── */
+function getProducts() {
+    return JSON.parse(localStorage.getItem('boter_products') || '[]');
+}
+function setProducts(arr) {
+    localStorage.setItem('boter_products', JSON.stringify(arr));
+    refreshDatalist();
+}
+function refreshDatalist() {
+    const dl = document.getElementById('item-list');
+    if (!dl) return;
+    dl.innerHTML = getProducts().map(p => `<option value="${esc(p.name)}">`).join('');
+}
+function productOrder(item) {
+    if (!item) return 9999;
+    const ps = getProducts();
+    let i = ps.findIndex(p => p.name === item);
+    if (i < 0) i = ps.findIndex(p => item.includes(p.name) || p.name.includes(item));
+    return i >= 0 ? i : 9999;
+}
+
+/* ── INIT ── */
 async function init() {
-    if (typeof msal === "undefined") {
-        document.querySelector(".login-sub").textContent = "❌ 無法載入 Microsoft 登入套件，請確認網路連線";
+    if (typeof msal === 'undefined') {
+        document.querySelector('.login-sub').textContent = '❌ 無法載入登入套件，請重新整理';
         return;
     }
     msal_app = new msal.PublicClientApplication(MSAL_CFG);
@@ -456,231 +389,251 @@ async function init() {
     try {
         const resp = await msal_app.handleRedirectPromise();
         if (resp) account = resp.account;
-        else {
-            const all = msal_app.getAllAccounts();
-            if (all.length) account = all[0];
-        }
-    } catch (e) { console.error(e); }
+        else { const all = msal_app.getAllAccounts(); if (all.length) account = all[0]; }
+    } catch(e) { console.error(e); }
     if (account) showApp();
 }
 
-/* ────────────────────────────────────────
-   AUTH
-──────────────────────────────────────── */
+/* ── AUTH ── */
 async function doLogin() {
-    if (!msal_app) { alert("工具尚未初始化，請重新整理頁面"); return; }
-    try {
-        await msal_app.loginRedirect({ scopes: SCOPES });
-    } catch(e) {
-        alert("登入錯誤：" + e.message);
-        console.error(e);
-    }
+    if (!msal_app) { alert('初始化中，請稍後再試'); return; }
+    try { await msal_app.loginRedirect({ scopes: SCOPES }); }
+    catch(e) { alert('登入錯誤：' + e.message); }
 }
 async function doLogout() {
     if (!confirm(`登出 ${account?.username}？`)) return;
     await msal_app.logoutRedirect({ account });
 }
-async function token() {
-    try {
-        return (await msal_app.acquireTokenSilent({ scopes: SCOPES, account })).accessToken;
-    } catch {
-        return (await msal_app.acquireTokenPopup({ scopes: SCOPES })).accessToken;
-    }
+async function getToken() {
+    try { return (await msal_app.acquireTokenSilent({ scopes: SCOPES, account })).accessToken; }
+    catch { return (await msal_app.acquireTokenPopup({ scopes: SCOPES })).accessToken; }
 }
 
-/* ────────────────────────────────────────
-   GRAPH / SHAREPOINT
-──────────────────────────────────────── */
+/* ── SHAREPOINT ── */
 function filePath() { return `${cfg.folder || '甜點排程工具'}/${FILE_NAME}`; }
-
 async function siteId() {
     const u = new URL(cfg.siteUrl);
-    const r = await fetch(
-        `https://graph.microsoft.com/v1.0/sites/${u.hostname}:${u.pathname}`,
-        { headers: { Authorization: `Bearer ${await token()}` } }
-    );
-    if (!r.ok) throw new Error(`無法存取 SharePoint 網站：${r.status}`);
+    const r = await fetch(`https://graph.microsoft.com/v1.0/sites/${u.hostname}:${u.pathname}`,
+        { headers: { Authorization: `Bearer ${await getToken()}` } });
+    if (!r.ok) throw new Error(`SharePoint 存取失敗：${r.status}`);
     return (await r.json()).id;
 }
-
-async function uploadUrl() {
+async function getUploadUrl() {
     if (cfg.siteUrl) {
         const sid = await siteId();
         return `https://graph.microsoft.com/v1.0/sites/${sid}/drive/root:/${filePath()}:/content`;
     }
     return `https://graph.microsoft.com/v1.0/me/drive/root:/${filePath()}:/content`;
 }
-
 async function saveData() {
     const btn = document.getElementById('btn-save');
-    btn.innerHTML = '<span class="spinner"></span> 儲存中…';
-    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>'; btn.disabled = true;
     try {
-        const url = await uploadUrl();
-        const resp = await fetch(url, {
+        const url = await getUploadUrl();
+        const r = await fetch(url, {
             method: 'PUT',
-            headers: {
-                Authorization: `Bearer ${await token()}`,
-                'Content-Type': 'application/json'
-            },
+            headers: { Authorization: `Bearer ${await getToken()}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ orders, savedAt: new Date().toISOString() }, null, 2)
         });
-        if (!resp.ok) throw new Error(resp.status);
+        if (!r.ok) throw new Error(r.status);
         toast('已儲存到 SharePoint ✓', 'ok');
-    } catch (e) {
-        toast('儲存失敗：' + e.message, 'err');
-    } finally {
-        btn.innerHTML = '☁ 儲存到 SharePoint';
-        btn.disabled = false;
-    }
+    } catch(e) { toast('儲存失敗：' + e.message, 'err'); }
+    finally { btn.innerHTML = '☁ 儲存'; btn.disabled = false; }
 }
-
 async function loadData() {
     try {
-        const url = await uploadUrl();
-        const resp = await fetch(url, {
-            headers: { Authorization: `Bearer ${await token()}` }
-        });
-        if (resp.status === 404) { orders = []; render(); return; }
-        if (!resp.ok) throw new Error(resp.status);
-        const data = await resp.json();
+        const url = await getUploadUrl();
+        const r = await fetch(url, { headers: { Authorization: `Bearer ${await getToken()}` } });
+        if (r.status === 404) { orders = []; render(); return; }
+        if (!r.ok) throw new Error(r.status);
+        const data = await r.json();
         orders = data.orders || [];
-        render();
-        toast('資料已載入 ✓', 'ok');
-    } catch (e) {
-        toast('載入失敗，顯示本機暫存資料', 'err');
+        localSave(); render(); toast('資料已載入 ✓', 'ok');
+    } catch(e) {
         orders = JSON.parse(localStorage.getItem('boter_orders') || '[]');
-        render();
+        render(); toast('使用本機暫存資料', '');
     }
 }
 
-/* ────────────────────────────────────────
-   ORDERS CRUD
-──────────────────────────────────────── */
+/* ── ORDERS CRUD ── */
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
-
-function addOrder(d)    { orders.push({ id: uid(), ...d }); localSave(); render(); }
+function addOrder(d) { orders.push({ id: uid(), source: 'manual', modified: false, ...d }); localSave(); render(); }
 function editOrder(id, d) {
-    const i = orders.findIndex(o => o.id === id);
-    if (i >= 0) { orders[i] = { ...orders[i], ...d }; localSave(); render(); }
-}
-function delOrder(id) {
-    if (!confirm('確定刪除這筆訂單？')) return;
-    orders = orders.filter(o => o.id !== id);
+    const i = orders.findIndex(o => o.id === id); if (i < 0) return;
+    const wasImported = orders[i].source === 'import';
+    orders[i] = { ...orders[i], ...d, modified: wasImported ? true : orders[i].modified };
     localSave(); render();
 }
-function localSave() {
-    localStorage.setItem('boter_orders', JSON.stringify(orders));
+function delOrder(id) {
+    if (!confirm('確定刪除？')) return;
+    orders = orders.filter(o => o.id !== id); localSave(); render();
 }
+function localSave() { localStorage.setItem('boter_orders', JSON.stringify(orders)); }
 
-/* ────────────────────────────────────────
-   WEEK HELPERS
-──────────────────────────────────────── */
+/* ── DATE HELPERS (local-time safe) ── */
+function fmtDate(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 function mondayOf(d) {
-    const c = new Date(d); c.setHours(0,0,0,0);
-    const day = c.getDay();
-    c.setDate(c.getDate() - (day === 0 ? 6 : day - 1));
+    const c = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const dow = c.getDay();
+    c.setDate(c.getDate() - (dow === 0 ? 6 : dow - 1));
     return c;
 }
 function weekDays(mon) {
-    return Array.from({ length: 7 }, (_, i) => {
-        const d = new Date(mon); d.setDate(d.getDate() + i); return d;
-    });
+    return Array.from({length:7}, (_,i) => new Date(mon.getFullYear(), mon.getMonth(), mon.getDate()+i));
 }
-function fmtDate(d) { return d.toISOString().slice(0, 10); }
-function prevWeek() { weekStart = new Date(weekStart); weekStart.setDate(weekStart.getDate() - 7); render(); }
-function nextWeek() { weekStart = new Date(weekStart); weekStart.setDate(weekStart.getDate() + 7); render(); }
-function goToday()  { weekStart = mondayOf(new Date()); render(); }
-
+function goToday() {
+    const t = new Date();
+    weekStart = mondayOf(new Date(t.getFullYear(), t.getMonth(), t.getDate()));
+    calViewDate = new Date(t.getFullYear(), t.getMonth(), 1);
+    render(); renderCalGrid();
+}
 const DAY_ZH = ['日','一','二','三','四','五','六'];
 
-/* ────────────────────────────────────────
-   RENDER
-──────────────────────────────────────── */
+/* ── CALENDAR ── */
+function toggleCal(e) {
+    e.stopPropagation();
+    const p = document.getElementById('cal-popup');
+    if (!p.classList.contains('open')) {
+        calViewDate = new Date(weekStart.getFullYear(), weekStart.getMonth(), 1);
+        renderCalGrid();
+    }
+    p.classList.toggle('open');
+}
+document.addEventListener('click', () => document.getElementById('cal-popup')?.classList.remove('open'));
+
+function calMove(dir) {
+    calViewDate = new Date(calViewDate.getFullYear(), calViewDate.getMonth() + dir, 1);
+    renderCalGrid();
+}
+function renderCalGrid() {
+    const y = calViewDate.getFullYear(), m = calViewDate.getMonth();
+    document.getElementById('cal-month').textContent = `${y}年${m+1}月`;
+    const todayStr = fmtDate(new Date());
+    const wDates = new Set(weekDays(weekStart).map(fmtDate));
+    const wArr = weekDays(weekStart).map(fmtDate);
+    const wStart = wArr[0], wEnd = wArr[6];
+
+    let html = ['一','二','三','四','五','六','日'].map(d => `<div class="cal-dow">${d}</div>`).join('');
+    const firstDow = new Date(y, m, 1).getDay();
+    const blanks = firstDow === 0 ? 6 : firstDow - 1;
+    for (let i = 0; i < blanks; i++) html += `<div class="cal-day empty"></div>`;
+
+    const daysInMonth = new Date(y, m+1, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d++) {
+        const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const cls = ['cal-day',
+            ds === todayStr ? 'today' : '',
+            wDates.has(ds) ? 'in-week' : '',
+            ds === wStart && wDates.has(ds) ? 'week-start' : '',
+            ds === wEnd   && wDates.has(ds) ? 'week-end'   : ''
+        ].filter(Boolean).join(' ');
+        html += `<div class="${cls}" onclick="pickDay('${ds}')">${d}</div>`;
+    }
+    document.getElementById('cal-grid').innerHTML = html;
+}
+function pickDay(ds) {
+    weekStart = mondayOf(new Date(ds + 'T00:00:00'));
+    document.getElementById('cal-popup').classList.remove('open');
+    render();
+}
+
+/* ── RENDER ── */
 function render() {
     const days = weekDays(weekStart);
-    const e = days[6];
-    const lbl = d => `${d.getMonth()+1}月${d.getDate()}日`;
-    document.getElementById('week-label').textContent = `${lbl(days[0])} ～ ${lbl(e)}`;
-
     const todayStr = fmtDate(new Date());
-    const container = document.getElementById('schedule');
-    container.innerHTML = '';
+    const lbl = d => `${d.getMonth()+1}月${d.getDate()}日`;
+    document.getElementById('cal-label').textContent = `${lbl(days[0])} ～ ${lbl(days[6])}`;
+    document.getElementById('week-bar').textContent =
+        `${days[0].getFullYear()}年　${lbl(days[0])}（${DAY_ZH[days[0].getDay()]}）～ ${lbl(days[6])}（${DAY_ZH[days[6].getDay()]}）`;
+
+    const wrap = document.getElementById('schedule');
+    wrap.innerHTML = '';
 
     days.forEach(day => {
         const ds = fmtDate(day);
-        const dayOrders = orders
-            .filter(o => o.date === ds)
-            .sort((a, b) => (a.timeSlot || '').localeCompare(b.timeSlot || ''));
+        const dayOrders = orders.filter(o => o.date === ds).sort((a,b) => {
+            const oa = productOrder(a.item), ob = productOrder(b.item);
+            return oa !== ob ? oa - ob : (a.orderNumber||'').localeCompare(b.orderNumber||'');
+        });
         const isToday = ds === todayStr;
 
         const card = document.createElement('div');
         card.className = 'day-card' + (isToday ? ' today-card' : '');
+
+        const rows = dayOrders.map(o => {
+            const dm = o.deliveryMethod || o.timeSlot || '';
+            const delivCls = dm.includes('宅') || dm.includes('冷凍') ? 'bdg bdg-home'
+                           : dm.includes('門市') || dm.includes('取貨') ? 'bdg bdg-store'
+                           : 'bdg bdg-other';
+            const modBadge = o.modified ? '<span class="badge-mod">異動</span>' : '';
+            return `<tr>
+                <td title="${esc(dm)}"><span class="${delivCls}">${esc(dm)}</span></td>
+                <td title="${esc(o.item||'')}">${esc(o.item||'')}</td>
+                <td style="text-align:center">${o.quantity||1}</td>
+                <td title="${esc(o.orderNotes||'')}">${esc(o.orderNotes||'')}</td>
+                <td title="${esc(o.shopNotes||'')}">${esc(o.shopNotes||'')}</td>
+                <td title="${esc(o.customer||'')}">${esc(o.customer||'')}</td>
+                <td title="${esc(o.phone||'')}">${esc(o.phone||'')}</td>
+                <td>${esc(o.orderNumber||'')}${modBadge}</td>
+                <td><div style="display:flex;gap:2px">
+                    <button class="btn-act" onclick="openEdit('${o.id}')">✏</button>
+                    <button class="btn-act" onclick="delOrder('${o.id}')">🗑</button>
+                </div></td>
+            </tr>`;
+        }).join('');
+
         card.innerHTML = `
             <div class="day-hdr">
                 <span class="day-name">星期${DAY_ZH[day.getDay()]}</span>
                 <span class="day-date-lbl">${day.getMonth()+1}月${day.getDate()}日</span>
                 ${isToday ? '<span class="today-badge">今天</span>' : ''}
                 ${dayOrders.length ? `<span class="order-count">${dayOrders.length} 筆</span>` : ''}
-                <button class="btn-add-day" onclick="openAdd('${ds}')">＋ 新增</button>
             </div>
-            ${dayOrders.length === 0
-                ? '<div class="no-orders">— 無訂單 —</div>'
-                : `<table class="sched-table">
-                    <thead><tr>
-                        <th>時間</th>
-                        <th>品項</th>
-                        <th>數量</th>
-                        <th class="col-notes">備註</th>
-                        <th class="col-customer">訂購人</th>
-                        <th>訂單編號</th>
-                        <th>取貨</th>
-                        <th></th>
-                    </tr></thead>
-                    <tbody>${dayOrders.map(orderRow).join('')}</tbody>
-                </table>`
-            }`;
-        container.appendChild(card);
+            ${dayOrders.length === 0 ? '<div class="no-orders">— 無訂單 —</div>'
+            : `<table class="sched-table">
+                <colgroup>
+                    <col style="width:118px"><col>
+                    <col style="width:38px"><col style="width:120px"><col style="width:120px">
+                    <col style="width:78px"><col style="width:105px">
+                    <col style="width:115px"><col style="width:52px">
+                </colgroup>
+                <thead><tr>
+                    <th>配送方式</th><th>品項</th><th>量</th>
+                    <th>訂單備註</th><th>商家備註</th>
+                    <th>購買人</th><th>購買人電話</th>
+                    <th>訂單編號</th><th></th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>`}`;
+        wrap.appendChild(card);
     });
 }
 
-function orderRow(o) {
-    const cls = { special:'t-special', lightsweet:'t-lightsweet', normal:'t-normal' }[o.type] || 't-normal';
-    const time = o.timeSlot === '宅'
-        ? '<span class="badge-delivery">宅配</span>'
-        : h(o.timeSlot || '');
-    const pk = o.pickup
-        ? `<span class="badge-pickup">${h(o.pickup)}</span>`
-        : '<span class="badge-pending">未取</span>';
-    return `<tr>
-        <td>${time}</td>
-        <td class="${cls}">${h(o.item||'')}</td>
-        <td>${o.quantity||1}</td>
-        <td class="col-notes">${h(o.notes||'')}</td>
-        <td class="col-customer">${h(o.customer||'')}</td>
-        <td>${h(o.orderNumber||'')}</td>
-        <td>${pk}</td>
-        <td><div class="btn-row">
-            <button class="btn-act" onclick="openEdit('${o.id}')">✏</button>
-            <button class="btn-act" onclick="delOrder('${o.id}')">🗑</button>
-        </div></td>
-    </tr>`;
-}
-
-function h(s) {
+function esc(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* ────────────────────────────────────────
-   MODALS
-──────────────────────────────────────── */
-function openAdd(dateStr) {
+/* ── ORDER FORM ── */
+function onDeliveryChange() {
+    const v = document.getElementById('f-delivery').value;
+    const o = document.getElementById('f-delivery-other');
+    o.style.display = v === '其他' ? '' : 'none';
+    if (v !== '其他') o.value = '';
+}
+const KNOWN_DM = ['門市取貨 (Caker Lab)', '黑貓冷凍宅配'];
+
+function openAdd() {
     document.getElementById('order-modal-title').textContent = '新增訂單';
     document.getElementById('order-form').reset();
     document.getElementById('f-id').value = '';
-    document.getElementById('f-date').value = dateStr || fmtDate(new Date());
+    document.getElementById('f-date').value = fmtDate(new Date());
     document.getElementById('f-qty').value = '1';
-    openOverlay('order-overlay');
+    document.getElementById('f-pickup').value = '未取貨';
+    document.getElementById('f-delivery').value = '門市取貨 (Caker Lab)';
+    document.getElementById('f-delivery-other').style.display = 'none';
+    refreshDatalist(); openOverlay('order-overlay');
 }
 function openEdit(id) {
     const o = orders.find(x => x.id === id); if (!o) return;
@@ -688,159 +641,136 @@ function openEdit(id) {
     document.getElementById('f-id').value       = o.id;
     document.getElementById('f-date').value     = o.date || '';
     document.getElementById('f-no').value       = o.orderNumber || '';
-    document.getElementById('f-time').value     = o.timeSlot || '';
     document.getElementById('f-qty').value      = o.quantity || 1;
     document.getElementById('f-item').value     = o.item || '';
     document.getElementById('f-customer').value = o.customer || '';
-    document.getElementById('f-pickup').value   = o.pickup || '';
-    document.getElementById('f-type').value     = o.type || 'normal';
-    document.getElementById('f-notes').value    = o.notes || '';
-    openOverlay('order-overlay');
+    document.getElementById('f-phone').value    = o.phone || '';
+    document.getElementById('f-pickup').value   = o.pickup || '未取貨';
+    document.getElementById('f-onotes').value   = o.orderNotes || '';
+    document.getElementById('f-snotes').value   = o.shopNotes || '';
+    const dm = o.deliveryMethod || o.timeSlot || '';
+    if (KNOWN_DM.includes(dm)) {
+        document.getElementById('f-delivery').value = dm;
+        document.getElementById('f-delivery-other').style.display = 'none';
+    } else {
+        document.getElementById('f-delivery').value = '其他';
+        document.getElementById('f-delivery-other').value = dm;
+        document.getElementById('f-delivery-other').style.display = dm ? '' : 'none';
+    }
+    refreshDatalist(); openOverlay('order-overlay');
 }
 function submitOrder() {
     const form = document.getElementById('order-form');
     if (!form.checkValidity()) { form.reportValidity(); return; }
+    const sel = document.getElementById('f-delivery').value;
+    const other = document.getElementById('f-delivery-other').value.trim();
+    const deliveryMethod = sel === '其他' ? (other || '其他') : sel;
     const d = {
-        date:        document.getElementById('f-date').value,
-        orderNumber: document.getElementById('f-no').value,
-        timeSlot:    document.getElementById('f-time').value,
-        quantity:    parseInt(document.getElementById('f-qty').value) || 1,
-        item:        document.getElementById('f-item').value,
-        customer:    document.getElementById('f-customer').value,
-        pickup:      document.getElementById('f-pickup').value,
-        type:        document.getElementById('f-type').value,
-        notes:       document.getElementById('f-notes').value
+        date:          document.getElementById('f-date').value,
+        orderNumber:   document.getElementById('f-no').value,
+        deliveryMethod,
+        item:          document.getElementById('f-item').value,
+        quantity:      parseInt(document.getElementById('f-qty').value) || 1,
+        customer:      document.getElementById('f-customer').value,
+        phone:         document.getElementById('f-phone').value,
+        pickup:        document.getElementById('f-pickup').value,
+        orderNotes:    document.getElementById('f-onotes').value,
+        shopNotes:     document.getElementById('f-snotes').value
     };
     const id = document.getElementById('f-id').value;
     id ? editOrder(id, d) : addOrder(d);
     closeOverlay('order-overlay');
 }
 
-function openSettings() {
-    document.getElementById('s-url').value    = cfg.siteUrl || '';
-    document.getElementById('s-folder').value = cfg.folder  || '甜點排程工具';
-    document.getElementById('s-user').textContent = account
-        ? `${account.name}（${account.username}）` : '—';
-    openOverlay('settings-overlay');
+/* ── PRODUCT MANAGEMENT ── */
+let tempProds = [];
+function openProducts() {
+    tempProds = JSON.parse(JSON.stringify(getProducts()));
+    renderProdList(); openOverlay('products-overlay');
 }
-function saveSettings() {
-    cfg.siteUrl = document.getElementById('s-url').value.trim();
-    cfg.folder  = document.getElementById('s-folder').value.trim() || '甜點排程工具';
-    localStorage.setItem('boter_cfg', JSON.stringify(cfg));
-    closeOverlay('settings-overlay');
-    toast('設定已儲存', 'ok');
+function renderProdList() {
+    const el = document.getElementById('prod-list');
+    if (!tempProds.length) {
+        el.innerHTML = '<div style="color:#aaa;font-size:0.84rem;text-align:center;padding:10px">尚無品項</div>';
+        return;
+    }
+    el.innerHTML = tempProds.map((p, i) => `
+        <div class="prod-item">
+            <input class="prod-inp" value="${esc(p.name)}" onchange="tempProds[${i}].name=this.value.trim()">
+            <button class="prod-btn" onclick="moveProd(${i},-1)" ${i===0?'disabled':''}>↑</button>
+            <button class="prod-btn" onclick="moveProd(${i},1)" ${i===tempProds.length-1?'disabled':''}>↓</button>
+            <button class="prod-btn" onclick="delProd(${i})" style="color:#e57373">✕</button>
+        </div>`).join('');
 }
-
-function openOverlay(id)  { document.getElementById(id).classList.add('open'); }
-function closeOverlay(id) { document.getElementById(id).classList.remove('open'); }
-
-document.querySelectorAll('.overlay').forEach(el =>
-    el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); })
-);
-document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') document.querySelectorAll('.overlay.open').forEach(el => el.classList.remove('open'));
-});
-
-/* ────────────────────────────────────────
-   TOAST
-──────────────────────────────────────── */
-let _tt;
-function toast(msg, type = '') {
-    const el = document.getElementById('toast');
-    el.textContent = msg;
-    el.className = `toast show ${type}`;
-    clearTimeout(_tt);
-    _tt = setTimeout(() => el.classList.remove('show'), 3200);
+function addProduct() {
+    const inp = document.getElementById('prod-new');
+    const name = inp.value.trim(); if (!name) return;
+    tempProds.push({ id: uid(), name }); inp.value = ''; renderProdList();
 }
-
-/* ────────────────────────────────────────
-   SHOW APP
-──────────────────────────────────────── */
-function showApp() {
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    const name = account.name || account.username;
-    const av = document.getElementById('avatar');
-    av.textContent = name.charAt(0).toUpperCase();
-    av.title = `${name} — 點擊登出`;
-    av.onclick = doLogout;
-    render();
-    loadData();
+function moveProd(i, dir) {
+    const j = i + dir;
+    if (j < 0 || j >= tempProds.length) return;
+    [tempProds[i], tempProds[j]] = [tempProds[j], tempProds[i]]; renderProdList();
+}
+function delProd(i) {
+    if (!confirm(`刪除「${tempProds[i].name}」？`)) return;
+    tempProds.splice(i, 1); renderProdList();
+}
+function saveProducts() {
+    document.querySelectorAll('.prod-inp').forEach((inp, i) => {
+        if (tempProds[i]) tempProds[i].name = inp.value.trim();
+    });
+    setProducts(tempProds.filter(p => p.name));
+    closeOverlay('products-overlay'); render(); toast('品項清單已儲存', 'ok');
 }
 
-/* ────────────────────────────────────────
-   CSV IMPORT
-──────────────────────────────────────── */
+/* ── IMPORT ── */
 let parsedRows = [];
-
-// Cyberbiz column name aliases → our field names
 const COL_MAP = {
-    date:        ['指定配送日期','預計出貨日','出貨日期','出貨日','shipping_date','預計配送日','指定日期'],
-    orderNumber: ['訂單編號','單號','order_number','訂單號碼','編號'],
-    item:        ['商品名稱','品項','product_name','商品','品名','商品名'],
-    variant:     ['商品款式','款式','規格','variant'],
-    quantity:    ['數量','商品數量','qty','quantity','件數'],
-    customer:    ['購買人名稱','收件人','訂購人','姓名','customer','會員名稱','收件人姓名','顧客姓名'],
-    phone:       ['電話','收件人電話','手機','phone','mobile','聯絡電話','會員手機號碼'],
-    notes:       ['備註','訂單備註','notes','訂購備註','客戶備註'],
-    shipping:    ['出貨方式','運送方式','配送方式','shipping','取貨方式']
+    date:           ['指定配送日期','預計出貨日','出貨日期','出貨日'],
+    orderNumber:    ['訂單編號','單號'],
+    item:           ['商品名稱','品項','商品','品名'],
+    variant:        ['商品款式','款式','規格'],
+    quantity:       ['數量','商品數量','件數'],
+    customer:       ['購買人名稱','收件人','訂購人','購買人','會員名稱'],
+    phone:          ['會員手機號碼','電話','收件人電話','手機'],
+    orderNotes:     ['備註','訂單備註'],
+    deliveryMethod: ['出貨方式','運送方式','配送方式']
 };
-
 function detectCol(headers, aliases) {
     for (const a of aliases) {
-        const idx = headers.findIndex(h => h.trim().includes(a));
-        if (idx >= 0) return idx;
+        const i = headers.findIndex(h => h.includes(a)); if (i >= 0) return i;
     }
     return -1;
 }
-
-// Shared row parser — works on string[][] (headers + data rows)
 function parseRows(headers, dataRows) {
     const cols = {};
-    for (const [field, aliases] of Object.entries(COL_MAP)) {
-        cols[field] = detectCol(headers, aliases);
-    }
-    const get = (row, idx) => idx >= 0 ? String(row[idx] || '').trim() : '';
-
+    for (const [f, al] of Object.entries(COL_MAP)) cols[f] = detectCol(headers, al);
+    const get = (row, idx) => idx >= 0 ? String(row[idx]||'').trim() : '';
     return dataRows.map(row => {
         const rawDate = get(row, cols.date);
         const date    = normalizeDate(rawDate);
-        const shipping = get(row, cols.shipping);
-        const timeSlot = (shipping.includes('宅') || shipping.includes('配送')) ? '宅' : '';
-        const itemBase = get(row, cols.item);
-        const variant  = get(row, cols.variant);
-        // Combine item + variant; Cyberbiz uses ｜ as separator inside name already
-        const itemRaw  = itemBase && variant && !itemBase.includes(variant)
-                       ? `${itemBase} ${variant}` : itemBase;
-        const item     = itemRaw.replace(/｜/g, ' ');  // replace ｜ for readability
-        const type     = item.includes('微光輕甜') ? 'lightsweet'
-                       : (item.includes('會員禮') || item.includes('攝影')) ? 'special'
-                       : 'normal';
-        const customerName = get(row, cols.customer);
-        const phone        = get(row, cols.phone);
-        const customer     = customerName && phone ? `${customerName} ${phone}`
-                           : customerName || phone;
+        const base    = get(row, cols.item);
+        const variant = get(row, cols.variant);
+        const item    = (base && variant && !base.includes(variant) ? `${base} ${variant}` : base).replace(/｜/g,' ');
         return {
             date, rawDate,
-            orderNumber: get(row, cols.orderNumber),
-            item, quantity: parseInt(get(row, cols.quantity)) || 1,
-            customer, notes: get(row, cols.notes),
-            timeSlot, type, valid: !!date
+            orderNumber:    get(row, cols.orderNumber),
+            item,
+            quantity:       parseInt(get(row, cols.quantity)) || 1,
+            customer:       get(row, cols.customer),
+            phone:          get(row, cols.phone),
+            orderNotes:     get(row, cols.orderNotes),
+            deliveryMethod: get(row, cols.deliveryMethod),
+            valid: !!date
         };
     }).filter(r => r.item);
 }
-
-function splitCSVLine(line) {
-    const result = []; let cur = ''; let inQ = false;
-    for (const ch of line) {
-        if (ch === '"') { inQ = !inQ; }
-        else if (ch === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
-        else cur += ch;
-    }
-    result.push(cur.trim());
-    return result;
+function splitCSV(line) {
+    const res=[]; let cur=''; let inQ=false;
+    for(const ch of line){ if(ch==='"'){inQ=!inQ;} else if(ch===','&&!inQ){res.push(cur.trim());cur='';} else cur+=ch; }
+    res.push(cur.trim()); return res;
 }
-
 function normalizeDate(raw) {
     if (!raw) return '';
     const m = raw.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
@@ -849,126 +779,126 @@ function normalizeDate(raw) {
     if (m2) return `${m2[3]}-${m2[1].padStart(2,'0')}-${m2[2].padStart(2,'0')}`;
     return '';
 }
-
 function openImport() { openOverlay('import-overlay'); }
-
 function resetImport() {
     parsedRows = [];
     document.getElementById('import-step1').style.display = '';
     document.getElementById('import-step2').style.display = 'none';
     document.getElementById('btn-do-import').style.display = 'none';
-    document.getElementById('csv-input').value = '';
-    document.getElementById('drop-zone').classList.remove('drag-over');
+    document.getElementById('file-input').value = '';
     closeOverlay('import-overlay');
 }
-
 function handleDrop(e) {
-    e.preventDefault();
-    document.getElementById('drop-zone').classList.remove('drag-over');
-    const f = e.dataTransfer.files[0];
-    if (f) handleFile(f);
+    e.preventDefault(); document.getElementById('drop-zone').classList.remove('drag-over');
+    const f = e.dataTransfer.files[0]; if(f) handleFile(f);
 }
-
 async function handleFile(file) {
     if (!file) return;
     const ext = file.name.split('.').pop().toLowerCase();
     try {
+        let headers, dataRows;
         if (ext === 'xlsx' || ext === 'xls') {
-            // Excel — use SheetJS
-            const buffer = await file.arrayBuffer();
-            const wb = XLSX.read(buffer, { type: 'array', cellDates: false, raw: false });
-            const ws = wb.Sheets[wb.SheetNames[0]];
-            const raw = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
-            if (raw.length < 2) { toast('Excel 檔案無資料', 'err'); return; }
-            const headers  = raw[0].map(c => String(c || '').trim());
-            const dataRows = raw.slice(1).map(r => r.map(c => String(c || '').trim()));
-            parsedRows = parseRows(headers, dataRows);
+            const buf = await file.arrayBuffer();
+            const wb  = XLSX.read(buf, { type:'array', cellDates:false, raw:false });
+            const raw = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header:1, raw:false, defval:'' });
+            if (raw.length < 2) { toast('Excel 無資料','err'); return; }
+            headers  = raw[0].map(c => String(c||'').trim());
+            dataRows = raw.slice(1).map(r => r.map(c => String(c||'').trim()));
         } else {
-            // CSV / TXT
-            const text = await file.text();
-            const firstLine = text.split('\n')[0];
-            const delim = firstLine.includes('\t') ? '\t' : ',';
-            const lines = text.split('\n').filter(l => l.trim());
-            if (lines.length < 2) { toast('CSV 檔案無資料', 'err'); return; }
-            const headers  = lines[0].split(delim).map(h => h.replace(/^"|"$/g, '').trim());
-            const dataRows = lines.slice(1).map(line =>
-                (delim === ',' ? splitCSVLine(line) : line.split('\t'))
-                    .map(c => c.replace(/^"|"$/g, '').trim())
-            );
-            parsedRows = parseRows(headers, dataRows);
+            const text  = await file.text();
+            const fl    = text.split('\n')[0];
+            const delim = fl.includes('\t') ? '\t' : ',';
+            const lines = text.split('\n').filter(l=>l.trim());
+            if (lines.length < 2) { toast('CSV 無資料','err'); return; }
+            headers  = lines[0].split(delim).map(h=>h.replace(/^"|"$/g,'').trim());
+            dataRows = lines.slice(1).map(l=>(delim===','?splitCSV(l):l.split('\t')).map(c=>c.replace(/^"|"$/g,'').trim()));
         }
+        parsedRows = parseRows(headers, dataRows);
         showPreview();
-    } catch(e) {
-        toast('檔案解析失敗：' + e.message, 'err');
-        console.error(e);
-    }
+    } catch(e) { toast('解析失敗：'+e.message,'err'); console.error(e); }
 }
-
 function showPreview() {
-    const ok = parsedRows.filter(r => r.valid);
-    const skip = parsedRows.filter(r => !r.valid);
-    const dup = ok.filter(r => orders.some(o => o.orderNumber && o.orderNumber === r.orderNumber));
-
-    const sumEl = document.getElementById('import-summary');
-    sumEl.className = 'import-summary' + (skip.length ? ' warn' : '');
-    sumEl.innerHTML = `共 <strong>${parsedRows.length}</strong> 筆　可匯入 <strong>${ok.length}</strong> 筆` +
-        (skip.length ? `　⚠ 略過 <strong>${skip.length}</strong> 筆（缺出貨日期）` : '') +
-        (dup.length ? `　⚠ <strong>${dup.length}</strong> 筆訂單編號已存在（將跳過重複）` : '');
-
-    const rows = parsedRows.map(r => `
-        <tr class="${r.valid ? 'row-ok' : 'row-warn'}">
-            <td>${r.date || '<span style="color:#e65100">缺日期</span>'}</td>
-            <td>${h(r.orderNumber)}</td>
-            <td>${h(r.item)}</td>
-            <td>${r.quantity}</td>
-            <td>${h(r.customer)}</td>
-            <td>${h(r.notes)}</td>
-            <td>${r.timeSlot === '宅' ? '宅配' : '自取'}</td>
-        </tr>`).join('');
-
+    const ok=parsedRows.filter(r=>r.valid), skip=parsedRows.filter(r=>!r.valid);
+    const dup=ok.filter(r=>orders.some(o=>o.orderNumber&&o.orderNumber===r.orderNumber));
+    const sum = document.getElementById('import-summary');
+    sum.className = 'imp-sum' + (skip.length ? ' warn' : '');
+    sum.innerHTML = `共 <strong>${parsedRows.length}</strong> 筆　可匯入 <strong>${ok.length}</strong> 筆`
+        + (skip.length ? `　⚠ 略過 <strong>${skip.length}</strong> 筆（缺出貨日期）` : '')
+        + (dup.length  ? `　⚠ <strong>${dup.length}</strong> 筆已存在（跳過重複）` : '');
     document.getElementById('preview-wrap').innerHTML = `
         <table class="preview-table">
-            <thead><tr>
-                <th>出貨日</th><th>訂單編號</th><th>品項</th>
-                <th>數量</th><th>訂購人</th><th>備註</th><th>取件</th>
-            </tr></thead>
-            <tbody>${rows}</tbody>
+            <thead><tr><th>出貨日</th><th>訂單編號</th><th>品項</th><th>量</th><th>購買人</th><th>配送方式</th></tr></thead>
+            <tbody>${parsedRows.map(r=>`
+                <tr class="${r.valid?'row-ok':'row-warn'}">
+                    <td>${r.date||'<span style="color:#e65100">缺日期</span>'}</td>
+                    <td>${esc(r.orderNumber)}</td><td>${esc(r.item)}</td>
+                    <td>${r.quantity}</td><td>${esc(r.customer)}</td><td>${esc(r.deliveryMethod)}</td>
+                </tr>`).join('')}
+            </tbody>
         </table>`;
-
     document.getElementById('import-step1').style.display = 'none';
     document.getElementById('import-step2').style.display = '';
-    if (ok.length > 0) document.getElementById('btn-do-import').style.display = '';
+    if (ok.length) document.getElementById('btn-do-import').style.display = '';
 }
-
 function doImport() {
-    const existing = new Set(orders.map(o => o.orderNumber).filter(Boolean));
+    const existing = new Set(orders.map(o=>o.orderNumber).filter(Boolean));
     let added = 0;
-    parsedRows.filter(r => r.valid).forEach(r => {
+    parsedRows.filter(r=>r.valid).forEach(r => {
         if (r.orderNumber && existing.has(r.orderNumber)) return;
-        orders.push({
-            id: uid(),
-            date: r.date, orderNumber: r.orderNumber,
-            item: r.item, quantity: r.quantity,
-            customer: r.customer, notes: r.notes,
-            timeSlot: r.timeSlot, type: r.type,
-            pickup: ''
-        });
+        orders.push({ id:uid(), source:'import', modified:false, pickup:'未取貨',
+            date:r.date, orderNumber:r.orderNumber, deliveryMethod:r.deliveryMethod,
+            item:r.item, quantity:r.quantity, customer:r.customer, phone:r.phone,
+            orderNotes:r.orderNotes, shopNotes:'' });
         added++;
     });
     localSave();
-    render();
-    resetImport();
-    toast(`已匯入 ${added} 筆訂單 ✓`, 'ok');
-    // Navigate to first imported date
-    if (parsedRows.length > 0) {
-        const firstDate = parsedRows.filter(r => r.valid)[0]?.date;
-        if (firstDate) { weekStart = mondayOf(new Date(firstDate)); render(); }
-    }
+    const first = parsedRows.find(r=>r.valid)?.date;
+    if (first) weekStart = mondayOf(new Date(first+'T00:00:00'));
+    render(); resetImport(); toast(`已匯入 ${added} 筆訂單 ✓`,'ok');
 }
 
-/* ────────────────────────────────────────
-   START
-──────────────────────────────────────── */
+/* ── SETTINGS ── */
+function openSettings() {
+    document.getElementById('s-url').value    = cfg.siteUrl || '';
+    document.getElementById('s-folder').value = cfg.folder  || '甜點排程工具';
+    document.getElementById('s-user').textContent = account ? `${account.name}（${account.username}）` : '—';
+    openOverlay('settings-overlay');
+}
+function saveSettings() {
+    cfg.siteUrl = document.getElementById('s-url').value.trim();
+    cfg.folder  = document.getElementById('s-folder').value.trim() || '甜點排程工具';
+    localStorage.setItem('boter_cfg', JSON.stringify(cfg));
+    closeOverlay('settings-overlay'); toast('設定已儲存','ok');
+}
+
+/* ── OVERLAYS ── */
+function openOverlay(id)  { document.getElementById(id).classList.add('open'); }
+function closeOverlay(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.overlay').forEach(el =>
+    el.addEventListener('click', e => { if(e.target===el) el.classList.remove('open'); }));
+document.addEventListener('keydown', e => {
+    if(e.key==='Escape') document.querySelectorAll('.overlay.open').forEach(el=>el.classList.remove('open'));
+});
+
+/* ── TOAST ── */
+let _tt;
+function toast(msg, type='') {
+    const el = document.getElementById('toast');
+    el.textContent = msg; el.className = `toast show ${type}`;
+    clearTimeout(_tt); _tt = setTimeout(()=>el.classList.remove('show'), 3200);
+}
+
+/* ── SHOW APP ── */
+function showApp() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    const name = account.name || account.username;
+    const av = document.getElementById('avatar');
+    av.textContent = name.charAt(0).toUpperCase();
+    av.title = `${name} — 點擊登出`; av.onclick = doLogout;
+    render(); loadData();
+}
+
 init();
 </script>
 </body>
