@@ -86,6 +86,8 @@
         .bdg-home  { background:#fff3e0; color:#e65100; }
         .bdg-store { background:#e8f5e9; color:#2e7d32; }
         .bdg-other { background:#f3f3f3; color:#777; }
+        .bdg-pickup-done    { background:#e8f5e9; color:#2e7d32; }
+        .bdg-pickup-pending { background:#f3f3f3; color:#999; }
         .badge-mod { display:inline-block; background:#e65100; color:#fff; font-size:0.68rem; padding:1px 4px; border-radius:3px; margin-left:3px; vertical-align:middle; font-weight:700; }
 
         .btn-act { background:none; border:none; cursor:pointer; padding:3px 5px; border-radius:4px; font-size:0.82rem; color:#bbb; }
@@ -551,7 +553,12 @@ function addOrder(d) { orders.push({ id: uid(), source: 'manual', modified: fals
 function editOrder(id, d) {
     const i = orders.findIndex(o => o.id === id); if (i < 0) return;
     const wasImported = orders[i].source === 'import';
-    orders[i] = { ...orders[i], ...d, modified: wasImported ? true : orders[i].modified };
+    let newModified = orders[i].modified;
+    if (wasImported && !newModified) {
+        const trackFields = ['date','orderNumber','deliveryMethod','item','quantity','customer','phone','orderNotes','shopNotes'];
+        newModified = trackFields.some(f => d[f] !== undefined && String(d[f]) !== String(orders[i][f] ?? ''));
+    }
+    orders[i] = { ...orders[i], ...d, modified: newModified };
     localSave(); render();
 }
 function delOrder(id) {
@@ -654,14 +661,16 @@ function render() {
                            : dm.includes('門市') || dm.includes('取貨') ? 'bdg bdg-store'
                            : 'bdg bdg-other';
             const modBadge = o.modified ? '<span class="badge-mod">異動</span>' : '';
+            const pickupCls = o.pickup === '已取貨' ? 'bdg bdg-pickup-done' : 'bdg bdg-pickup-pending';
             return `<tr>
                 <td class="td-n" title="${esc(dm)}"><span class="${delivCls}">${esc(dm)}</span></td>
-                <td class="td-n" title="${esc(o.item||'')}">${esc(o.item||'')}</td>
+                <td class="td-w">${esc(o.item||'')}</td>
                 <td class="td-n" style="text-align:center">${o.quantity||1}</td>
                 <td class="td-w">${esc(o.orderNotes||'')}</td>
                 <td class="td-w">${esc(o.shopNotes||'')}</td>
                 <td class="td-n" title="${esc(o.customer||'')}">${esc(o.customer||'')}</td>
                 <td class="td-n" title="${esc(o.phone||'')}">${esc(o.phone||'')}</td>
+                <td class="td-n"><span class="${pickupCls}">${esc(o.pickup||'未取貨')}</span></td>
                 <td class="td-n">${esc(o.orderNumber||'')}${modBadge}</td>
                 <td class="td-n"><div style="display:flex;gap:2px">
                     <button class="btn-act" onclick="openEdit('${o.id}')">✏</button>
@@ -682,12 +691,13 @@ function render() {
             : `<table class="sched-table">
                 <colgroup>
                     <col style="width:118px">
-                    <col style="width:90px">
-                    <col style="width:36px">
-                    <col style="width:160px">
                     <col style="width:130px">
-                    <col style="width:75px">
+                    <col style="width:36px">
+                    <col style="width:150px">
+                    <col style="width:120px">
+                    <col style="width:70px">
                     <col style="width:103px">
+                    <col style="width:68px">
                     <col style="width:88px">
                     <col style="width:50px">
                 </colgroup>
@@ -695,7 +705,7 @@ function render() {
                     <th>配送方式</th><th>品項</th><th>量</th>
                     <th>訂單備註</th><th>商家備註</th>
                     <th>購買人</th><th>購買人電話</th>
-                    <th>訂單編號</th><th></th>
+                    <th>取貨狀態</th><th>訂單編號</th><th></th>
                 </tr></thead>
                 <tbody>${rows}</tbody>
             </table>`}`;
