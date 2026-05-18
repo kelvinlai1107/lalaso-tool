@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Boter 甜點師排程工具</title>
-    <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif; background: #f7f7f7; color: #333; }
@@ -360,7 +360,7 @@ const MSAL_CFG = {
     auth: {
         clientId: 'a17de8a6-8573-43cc-b92f-f4fcca3d7ab8',
         authority: 'https://login.microsoftonline.com/bde3feff-2c6c-4cb7-b2e4-789e237185a3',
-        redirectUri: window.location.origin + window.location.pathname
+        redirectUri: 'https://kelvinlai1107.github.io/lalaso-tool/boter_schedule/'
     },
     cache: { cacheLocation: 'sessionStorage' }
 };
@@ -372,12 +372,16 @@ const FILE_NAME = 'orders.json';
 ──────────────────────────────────────── */
 let msal_app, account, orders = [];
 let weekStart = mondayOf(new Date());
-let cfg = JSON.parse(localStorage.getItem('boter_cfg') || '{"siteUrl":"","folder":"甜點排程工具"}');
+let cfg = JSON.parse(localStorage.getItem('boter_cfg') || '{"siteUrl":"https://lalaso.sharepoint.com/sites/BOTERCAKER2","folder":"甜點排程工具"}');
 
 /* ────────────────────────────────────────
    INIT
 ──────────────────────────────────────── */
 async function init() {
+    if (typeof msal === "undefined") {
+        document.querySelector(".login-sub").textContent = "❌ 無法載入 Microsoft 登入套件，請確認網路連線";
+        return;
+    }
     msal_app = new msal.PublicClientApplication(MSAL_CFG);
     await msal_app.initialize();
     try {
@@ -394,7 +398,15 @@ async function init() {
 /* ────────────────────────────────────────
    AUTH
 ──────────────────────────────────────── */
-async function doLogin() { await msal_app.loginRedirect({ scopes: SCOPES }); }
+async function doLogin() {
+    if (!msal_app) { alert("工具尚未初始化，請重新整理頁面"); return; }
+    try {
+        await msal_app.loginRedirect({ scopes: SCOPES });
+    } catch(e) {
+        alert("登入錯誤：" + e.message);
+        console.error(e);
+    }
+}
 async function doLogout() {
     if (!confirm(`登出 ${account?.username}？`)) return;
     await msal_app.logoutRedirect({ account });
