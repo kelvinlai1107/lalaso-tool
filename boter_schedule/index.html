@@ -25,7 +25,7 @@
         .h-brand { font-weight:900; color:#c94f6a; font-size:1.1rem; white-space:nowrap; }
         .h-div { width:1px; height:24px; background:#e0e0e0; flex-shrink:0; }
 
-        /* CALENDAR TRIGGER */
+        /* CALENDAR */
         .cal-wrap { position:relative; }
         .cal-trigger { display:flex; align-items:center; gap:6px; cursor:pointer; padding:5px 12px; border:1px solid #ddd; border-radius:7px; font-size:0.88rem; font-weight:600; white-space:nowrap; background:#fff; user-select:none; }
         .cal-trigger:hover { background:#f9f9f9; }
@@ -44,11 +44,10 @@
         .cal-day.week-start { border-radius:5px 0 0 5px; }
         .cal-day.week-end { border-radius:0 5px 5px 0; }
         .cal-day.other-month { color:#ccc; }
-        .cal-day.empty { cursor:default; pointer-events:none; }
+        .cal-day.empty { pointer-events:none; }
 
         .btn-today { background:none; border:1px solid #c94f6a; color:#c94f6a; border-radius:6px; padding:5px 10px; cursor:pointer; font-size:0.82rem; font-family:inherit; white-space:nowrap; }
         .btn-today:hover { background:#fff0f3; }
-
         .h-right { margin-left:auto; display:flex; align-items:center; gap:8px; }
         .btn-p { background:#c94f6a; color:#fff; border:none; padding:7px 14px; border-radius:7px; cursor:pointer; font-size:0.83rem; font-family:inherit; white-space:nowrap; }
         .btn-p:hover { background:#b3435c; }
@@ -72,14 +71,18 @@
         .order-count { background:#f0f0f0; color:#555; font-size:0.75rem; padding:2px 8px; border-radius:10px; }
         .no-orders { padding:14px; text-align:center; color:#bbb; font-size:0.84rem; }
 
-        /* TABLE — fixed layout, all cols fit page */
+        /* TABLE */
         .sched-table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:0.81rem; }
-        .sched-table th { background:#fafafa; padding:6px 7px; text-align:left; font-size:0.74rem; color:#888; font-weight:600; border-bottom:1px solid #efefef; overflow:hidden; white-space:nowrap; }
-        .sched-table td { padding:6px 7px; border-bottom:1px solid #f5f5f5; vertical-align:middle; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .sched-table th { background:#fafafa; padding:6px 7px; text-align:left; font-size:0.74rem; color:#888; font-weight:600; border-bottom:1px solid #efefef; white-space:nowrap; overflow:hidden; }
+        .sched-table td { padding:6px 7px; border-bottom:1px solid #f5f5f5; vertical-align:top; }
         .sched-table tr:last-child td { border-bottom:none; }
         .sched-table tr:hover td { background:#fdf9fa; }
+        /* Nowrap cells */
+        .td-n { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        /* Wrap cells (notes) */
+        .td-w { white-space:normal; word-break:break-all; overflow:visible; }
 
-        .bdg { display:inline-block; padding:1px 6px; border-radius:8px; font-size:0.74rem; white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis; }
+        .bdg { display:inline-block; padding:1px 6px; border-radius:8px; font-size:0.74rem; white-space:nowrap; }
         .bdg-home  { background:#fff3e0; color:#e65100; }
         .bdg-store { background:#e8f5e9; color:#2e7d32; }
         .bdg-other { background:#f3f3f3; color:#777; }
@@ -92,7 +95,7 @@
         .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500; align-items:center; justify-content:center; }
         .overlay.open { display:flex; }
         .modal { background:#fff; border-radius:14px; padding:24px; width:520px; max-width:94vw; max-height:92vh; overflow-y:auto; box-shadow:0 8px 32px rgba(0,0,0,.18); }
-        .modal-lg { width:680px; }
+        .modal-lg { width:700px; }
         .modal-title { font-size:1.05rem; font-weight:800; color:#c94f6a; margin-bottom:18px; }
         .fg { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
         .ff { grid-column:1/-1; }
@@ -103,15 +106,23 @@
         .btn-cx { padding:7px 16px; border:1px solid #ddd; background:#fff; border-radius:7px; cursor:pointer; font-family:inherit; }
         .btn-cx:hover { background:#f5f5f5; }
 
-        /* PRODUCTS */
-        .prod-list { display:flex; flex-direction:column; gap:5px; max-height:320px; overflow-y:auto; }
-        .prod-item { display:flex; align-items:center; gap:6px; padding:6px 10px; background:#fafafa; border:1px solid #eee; border-radius:7px; }
-        .prod-inp { flex:1; border:none; background:transparent; font-size:0.86rem; font-family:inherit; outline:none; }
-        .prod-inp:focus { border-bottom:1px solid #c94f6a; }
-        .prod-btn { background:none; border:none; cursor:pointer; padding:3px 6px; border-radius:4px; font-size:0.86rem; color:#aaa; }
+        /* TWO-LEVEL PRODUCT MANAGEMENT */
+        .prod-scroll { max-height:380px; overflow-y:auto; margin-bottom:12px; }
+        .cat-block { border:1px solid #e8e8e8; border-radius:9px; margin-bottom:8px; overflow:hidden; }
+        .cat-row { display:flex; align-items:center; gap:6px; padding:8px 10px; background:#fafafa; border-bottom:1px solid #f0f0f0; }
+        .cat-label { font-size:0.72rem; color:#888; font-weight:600; margin-right:2px; }
+        .cat-inp { flex:1; border:none; background:transparent; font-size:0.9rem; font-weight:700; font-family:inherit; outline:none; color:#333; }
+        .cat-inp:focus { border-bottom:1px solid #c94f6a; }
+        .item-rows { padding:6px 10px 6px 20px; display:flex; flex-direction:column; gap:4px; }
+        .item-row { display:flex; align-items:center; gap:6px; }
+        .item-inp { flex:1; border:none; background:transparent; font-size:0.86rem; font-family:inherit; outline:none; color:#555; }
+        .item-inp:focus { border-bottom:1px solid #c94f6a; }
+        .item-add-row { padding:4px 10px 8px 20px; }
+        .prod-btn { background:none; border:none; cursor:pointer; padding:2px 6px; border-radius:4px; font-size:0.82rem; color:#bbb; }
         .prod-btn:hover { background:#f0f0f0; color:#333; }
-        .prod-btn:disabled { opacity:0.3; cursor:default; }
-        .prod-add { display:flex; gap:8px; margin-top:10px; }
+        .prod-btn:disabled { opacity:0.25; cursor:default; }
+        .prod-btn.del:hover { color:#e53935; }
+        .cat-add-row { margin-top:4px; }
 
         /* IMPORT */
         .drop-zone { border:2px dashed #ddd; border-radius:10px; padding:28px; text-align:center; cursor:pointer; transition:border-color .2s,background .2s; }
@@ -164,7 +175,6 @@
     <header>
         <span class="h-brand">🎂 Boter</span>
         <div class="h-div"></div>
-        <!-- Calendar trigger -->
         <div class="cal-wrap">
             <div class="cal-trigger" id="cal-trigger" onclick="toggleCal(event)">
                 📅 <span id="cal-label">載入中…</span>
@@ -219,9 +229,18 @@
                     </select>
                     <input class="ctrl" type="text" id="f-delivery-other" placeholder="請輸入配送方式" style="display:none;margin-top:6px">
                 </div>
+                <!-- Two-level item selection -->
                 <div class="ff">
                     <label class="lbl">品項 *</label>
-                    <input class="ctrl" type="text" id="f-item" required placeholder="例：暖暖初食蛋糕 火龍果香蕉" list="item-list">
+                    <div style="display:flex;gap:8px;margin-bottom:6px">
+                        <select class="ctrl" id="f-cat" onchange="onCatChange()" style="flex:1">
+                            <option value="">— 選商品類別 —</option>
+                        </select>
+                        <select class="ctrl" id="f-item-sel" onchange="onItemSel()" style="flex:1">
+                            <option value="">— 選商品名稱 —</option>
+                        </select>
+                    </div>
+                    <input class="ctrl" type="text" id="f-item" required placeholder="或直接輸入品項名稱" list="item-list">
                     <datalist id="item-list"></datalist>
                 </div>
                 <div>
@@ -262,14 +281,18 @@
 
 <!-- PRODUCTS MODAL -->
 <div class="overlay" id="products-overlay">
-    <div class="modal">
+    <div class="modal modal-lg">
         <div class="modal-title">📋 品項清單管理</div>
-        <div style="font-size:0.79rem;color:#888;margin-bottom:12px;">排序決定每日訂單的顯示順序。使用 ↑↓ 調整，直接點名稱可編輯。</div>
-        <div class="prod-list" id="prod-list"></div>
-        <div class="prod-add">
-            <input class="ctrl" type="text" id="prod-new" placeholder="輸入新品項名稱…" style="flex:1"
-                onkeydown="if(event.key==='Enter')addProduct()">
-            <button class="btn-p" onclick="addProduct()">新增</button>
+        <div style="font-size:0.79rem;color:#888;margin-bottom:12px;">
+            <strong>商品類別</strong>（第一層）可包含多個 <strong>商品名稱</strong>（第二層）。排序決定訂單顯示順序。
+        </div>
+        <div class="prod-scroll" id="prod-tree"></div>
+        <div class="cat-add-row">
+            <div style="display:flex;gap:8px">
+                <input class="ctrl" type="text" id="cat-new" placeholder="新增商品類別…" style="flex:1"
+                    onkeydown="if(event.key==='Enter')addCat()">
+                <button class="btn-p" onclick="addCat()">＋ 新增類別</button>
+            </div>
         </div>
         <div class="mf">
             <button class="btn-cx" onclick="closeOverlay('products-overlay')">取消</button>
@@ -357,25 +380,92 @@ let calViewDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let cfg = JSON.parse(localStorage.getItem('boter_cfg') ||
     '{"siteUrl":"https://lalaso.sharepoint.com/sites/BOTERCAKER2","folder":"甜點排程工具"}');
 
-/* ── PRODUCTS ── */
+/* ────────────────────────────────────────
+   TWO-LEVEL PRODUCTS
+   Structure: [{id, name (category), items:[{id, name}]}]
+──────────────────────────────────────── */
 function getProducts() {
-    return JSON.parse(localStorage.getItem('boter_products') || '[]');
+    const raw = localStorage.getItem('boter_products');
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    // Migrate old flat format [{id,name}] → [{id,name,items:[]}]
+    if (arr.length && !('items' in arr[0])) {
+        return arr.map(p => ({ id: p.id, name: p.name, items: [] }));
+    }
+    return arr;
 }
 function setProducts(arr) {
     localStorage.setItem('boter_products', JSON.stringify(arr));
     refreshDatalist();
+    refreshCatDropdown();
 }
+
+// Populate datalist with all "catName itemName" combinations
 function refreshDatalist() {
     const dl = document.getElementById('item-list');
     if (!dl) return;
-    dl.innerHTML = getProducts().map(p => `<option value="${esc(p.name)}">`).join('');
+    const cats = getProducts();
+    let opts = '';
+    cats.forEach(cat => {
+        (cat.items || []).forEach(it => {
+            opts += `<option value="${esc(cat.name + ' ' + it.name)}">`;
+        });
+        if (!(cat.items && cat.items.length)) {
+            opts += `<option value="${esc(cat.name)}">`;
+        }
+    });
+    dl.innerHTML = opts;
 }
+
+// Populate category dropdown in order form
+function refreshCatDropdown() {
+    const sel = document.getElementById('f-cat');
+    if (!sel) return;
+    const cats = getProducts();
+    sel.innerHTML = '<option value="">— 選商品類別 —</option>' +
+        cats.map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
+    document.getElementById('f-item-sel').innerHTML = '<option value="">— 選商品名稱 —</option>';
+}
+
+// When category changes, repopulate item dropdown
+function onCatChange() {
+    const catName = document.getElementById('f-cat').value;
+    const sel = document.getElementById('f-item-sel');
+    if (!catName) { sel.innerHTML = '<option value="">— 選商品名稱 —</option>'; return; }
+    const cats = getProducts();
+    const cat = cats.find(c => c.name === catName);
+    sel.innerHTML = '<option value="">— 選商品名稱 —</option>' +
+        (cat ? (cat.items || []).map(it => `<option value="${esc(it.name)}">${esc(it.name)}</option>`).join('') : '');
+}
+
+// When item selected from dropdown, fill text input
+function onItemSel() {
+    const catName  = document.getElementById('f-cat').value;
+    const itemName = document.getElementById('f-item-sel').value;
+    if (catName && itemName) {
+        document.getElementById('f-item').value = catName + ' ' + itemName;
+    } else if (catName) {
+        document.getElementById('f-item').value = catName;
+    }
+}
+
+// Compute sort order: categoryIndex * 1000 + itemIndex
 function productOrder(item) {
-    if (!item) return 9999;
-    const ps = getProducts();
-    let i = ps.findIndex(p => p.name === item);
-    if (i < 0) i = ps.findIndex(p => item.includes(p.name) || p.name.includes(item));
-    return i >= 0 ? i : 9999;
+    if (!item) return 999999;
+    const cats = getProducts();
+    for (let ci = 0; ci < cats.length; ci++) {
+        const cat = cats[ci];
+        for (let ii = 0; ii < (cat.items || []).length; ii++) {
+            const full = cat.name + ' ' + cat.items[ii].name;
+            if (item === full || (item.includes(cat.name) && item.includes(cat.items[ii].name))) {
+                return ci * 1000 + ii;
+            }
+        }
+        if (item === cat.name || item.startsWith(cat.name + ' ') || item.startsWith(cat.name + '　')) {
+            return ci * 1000 + 500;
+        }
+    }
+    return 999999;
 }
 
 /* ── INIT ── */
@@ -470,7 +560,7 @@ function delOrder(id) {
 }
 function localSave() { localStorage.setItem('boter_orders', JSON.stringify(orders)); }
 
-/* ── DATE HELPERS (local-time safe) ── */
+/* ── DATE HELPERS ── */
 function fmtDate(d) {
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
@@ -511,23 +601,20 @@ function renderCalGrid() {
     const y = calViewDate.getFullYear(), m = calViewDate.getMonth();
     document.getElementById('cal-month').textContent = `${y}年${m+1}月`;
     const todayStr = fmtDate(new Date());
-    const wDates = new Set(weekDays(weekStart).map(fmtDate));
     const wArr = weekDays(weekStart).map(fmtDate);
-    const wStart = wArr[0], wEnd = wArr[6];
-
+    const wSet = new Set(wArr);
     let html = ['一','二','三','四','五','六','日'].map(d => `<div class="cal-dow">${d}</div>`).join('');
     const firstDow = new Date(y, m, 1).getDay();
     const blanks = firstDow === 0 ? 6 : firstDow - 1;
     for (let i = 0; i < blanks; i++) html += `<div class="cal-day empty"></div>`;
-
-    const daysInMonth = new Date(y, m+1, 0).getDate();
-    for (let d = 1; d <= daysInMonth; d++) {
+    const dim = new Date(y, m+1, 0).getDate();
+    for (let d = 1; d <= dim; d++) {
         const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         const cls = ['cal-day',
             ds === todayStr ? 'today' : '',
-            wDates.has(ds) ? 'in-week' : '',
-            ds === wStart && wDates.has(ds) ? 'week-start' : '',
-            ds === wEnd   && wDates.has(ds) ? 'week-end'   : ''
+            wSet.has(ds) ? 'in-week' : '',
+            ds === wArr[0] ? 'week-start' : '',
+            ds === wArr[6] ? 'week-end'   : ''
         ].filter(Boolean).join(' ');
         html += `<div class="${cls}" onclick="pickDay('${ds}')">${d}</div>`;
     }
@@ -558,7 +645,6 @@ function render() {
             return oa !== ob ? oa - ob : (a.orderNumber||'').localeCompare(b.orderNumber||'');
         });
         const isToday = ds === todayStr;
-
         const card = document.createElement('div');
         card.className = 'day-card' + (isToday ? ' today-card' : '');
 
@@ -569,21 +655,22 @@ function render() {
                            : 'bdg bdg-other';
             const modBadge = o.modified ? '<span class="badge-mod">異動</span>' : '';
             return `<tr>
-                <td title="${esc(dm)}"><span class="${delivCls}">${esc(dm)}</span></td>
-                <td title="${esc(o.item||'')}">${esc(o.item||'')}</td>
-                <td style="text-align:center">${o.quantity||1}</td>
-                <td title="${esc(o.orderNotes||'')}">${esc(o.orderNotes||'')}</td>
-                <td title="${esc(o.shopNotes||'')}">${esc(o.shopNotes||'')}</td>
-                <td title="${esc(o.customer||'')}">${esc(o.customer||'')}</td>
-                <td title="${esc(o.phone||'')}">${esc(o.phone||'')}</td>
-                <td>${esc(o.orderNumber||'')}${modBadge}</td>
-                <td><div style="display:flex;gap:2px">
+                <td class="td-n" title="${esc(dm)}"><span class="${delivCls}">${esc(dm)}</span></td>
+                <td class="td-n" title="${esc(o.item||'')}">${esc(o.item||'')}</td>
+                <td class="td-n" style="text-align:center">${o.quantity||1}</td>
+                <td class="td-w">${esc(o.orderNotes||'')}</td>
+                <td class="td-w">${esc(o.shopNotes||'')}</td>
+                <td class="td-n" title="${esc(o.customer||'')}">${esc(o.customer||'')}</td>
+                <td class="td-n" title="${esc(o.phone||'')}">${esc(o.phone||'')}</td>
+                <td class="td-n">${esc(o.orderNumber||'')}${modBadge}</td>
+                <td class="td-n"><div style="display:flex;gap:2px">
                     <button class="btn-act" onclick="openEdit('${o.id}')">✏</button>
                     <button class="btn-act" onclick="delOrder('${o.id}')">🗑</button>
                 </div></td>
             </tr>`;
         }).join('');
 
+        // Column widths — 品項 shorter, 訂單備註 wider, 訂單編號 compact
         card.innerHTML = `
             <div class="day-hdr">
                 <span class="day-name">星期${DAY_ZH[day.getDay()]}</span>
@@ -594,10 +681,15 @@ function render() {
             ${dayOrders.length === 0 ? '<div class="no-orders">— 無訂單 —</div>'
             : `<table class="sched-table">
                 <colgroup>
-                    <col style="width:118px"><col>
-                    <col style="width:38px"><col style="width:120px"><col style="width:120px">
-                    <col style="width:78px"><col style="width:105px">
-                    <col style="width:115px"><col style="width:52px">
+                    <col style="width:118px">
+                    <col style="width:90px">
+                    <col style="width:36px">
+                    <col style="width:160px">
+                    <col style="width:130px">
+                    <col style="width:75px">
+                    <col style="width:103px">
+                    <col style="width:88px">
+                    <col style="width:50px">
                 </colgroup>
                 <thead><tr>
                     <th>配送方式</th><th>品項</th><th>量</th>
@@ -633,7 +725,8 @@ function openAdd() {
     document.getElementById('f-pickup').value = '未取貨';
     document.getElementById('f-delivery').value = '門市取貨 (Caker Lab)';
     document.getElementById('f-delivery-other').style.display = 'none';
-    refreshDatalist(); openOverlay('order-overlay');
+    refreshDatalist(); refreshCatDropdown();
+    openOverlay('order-overlay');
 }
 function openEdit(id) {
     const o = orders.find(x => x.id === id); if (!o) return;
@@ -657,7 +750,20 @@ function openEdit(id) {
         document.getElementById('f-delivery-other').value = dm;
         document.getElementById('f-delivery-other').style.display = dm ? '' : 'none';
     }
-    refreshDatalist(); openOverlay('order-overlay');
+    // Pre-fill cascading dropdowns
+    refreshDatalist(); refreshCatDropdown();
+    const cats = getProducts();
+    const item = o.item || '';
+    for (const cat of cats) {
+        if (item.startsWith(cat.name)) {
+            document.getElementById('f-cat').value = cat.name;
+            onCatChange();
+            const found = (cat.items||[]).find(it => item.includes(it.name));
+            if (found) document.getElementById('f-item-sel').value = found.name;
+            break;
+        }
+    }
+    openOverlay('order-overlay');
 }
 function submitOrder() {
     const form = document.getElementById('order-form');
@@ -682,45 +788,106 @@ function submitOrder() {
     closeOverlay('order-overlay');
 }
 
-/* ── PRODUCT MANAGEMENT ── */
+/* ────────────────────────────────────────
+   TWO-LEVEL PRODUCT MANAGEMENT
+──────────────────────────────────────── */
 let tempProds = [];
+
 function openProducts() {
     tempProds = JSON.parse(JSON.stringify(getProducts()));
-    renderProdList(); openOverlay('products-overlay');
+    renderProdTree(); openOverlay('products-overlay');
 }
-function renderProdList() {
-    const el = document.getElementById('prod-list');
+
+function renderProdTree() {
+    const el = document.getElementById('prod-tree');
     if (!tempProds.length) {
-        el.innerHTML = '<div style="color:#aaa;font-size:0.84rem;text-align:center;padding:10px">尚無品項</div>';
+        el.innerHTML = '<div style="color:#aaa;font-size:0.84rem;text-align:center;padding:12px">尚無類別，請新增</div>';
         return;
     }
-    el.innerHTML = tempProds.map((p, i) => `
-        <div class="prod-item">
-            <input class="prod-inp" value="${esc(p.name)}" onchange="tempProds[${i}].name=this.value.trim()">
-            <button class="prod-btn" onclick="moveProd(${i},-1)" ${i===0?'disabled':''}>↑</button>
-            <button class="prod-btn" onclick="moveProd(${i},1)" ${i===tempProds.length-1?'disabled':''}>↓</button>
-            <button class="prod-btn" onclick="delProd(${i})" style="color:#e57373">✕</button>
+    el.innerHTML = tempProds.map((cat, ci) => `
+        <div class="cat-block">
+            <div class="cat-row">
+                <span class="cat-label">類別</span>
+                <input class="cat-inp" value="${esc(cat.name)}"
+                    onchange="tempProds[${ci}].name=this.value.trim()" placeholder="商品類別名稱">
+                <button class="prod-btn" onclick="moveCat(${ci},-1)" ${ci===0?'disabled':''}>↑</button>
+                <button class="prod-btn" onclick="moveCat(${ci},1)" ${ci===tempProds.length-1?'disabled':''}>↓</button>
+                <button class="prod-btn del" onclick="delCat(${ci})" title="刪除類別">✕</button>
+            </div>
+            <div class="item-rows" id="items-${ci}">
+                ${(cat.items||[]).map((it, ii) => `
+                    <div class="item-row">
+                        <span style="color:#bbb;font-size:0.78rem;width:16px;flex-shrink:0">└</span>
+                        <input class="item-inp" value="${esc(it.name)}"
+                            onchange="tempProds[${ci}].items[${ii}].name=this.value.trim()" placeholder="商品名稱">
+                        <button class="prod-btn" onclick="moveItem(${ci},${ii},-1)" ${ii===0?'disabled':''}>↑</button>
+                        <button class="prod-btn" onclick="moveItem(${ci},${ii},1)" ${ii===(cat.items||[]).length-1?'disabled':''}>↓</button>
+                        <button class="prod-btn del" onclick="delItem(${ci},${ii})" title="刪除品名">✕</button>
+                    </div>`).join('')}
+            </div>
+            <div class="item-add-row">
+                <div style="display:flex;gap:6px">
+                    <input class="ctrl" type="text" id="item-new-${ci}" placeholder="新增商品名稱…"
+                        style="flex:1;padding:5px 8px;font-size:0.83rem"
+                        onkeydown="if(event.key==='Enter')addItem(${ci})">
+                    <button class="btn-p" onclick="addItem(${ci})"
+                        style="padding:5px 10px;font-size:0.8rem">＋ 新增品名</button>
+                </div>
+            </div>
         </div>`).join('');
 }
-function addProduct() {
-    const inp = document.getElementById('prod-new');
+
+function addCat() {
+    const inp = document.getElementById('cat-new');
     const name = inp.value.trim(); if (!name) return;
-    tempProds.push({ id: uid(), name }); inp.value = ''; renderProdList();
+    tempProds.push({ id: uid(), name, items: [] }); inp.value = ''; renderProdTree();
 }
-function moveProd(i, dir) {
-    const j = i + dir;
-    if (j < 0 || j >= tempProds.length) return;
-    [tempProds[i], tempProds[j]] = [tempProds[j], tempProds[i]]; renderProdList();
+function moveCat(i, dir) {
+    const j = i + dir; if (j < 0 || j >= tempProds.length) return;
+    [tempProds[i], tempProds[j]] = [tempProds[j], tempProds[i]]; renderProdTree();
 }
-function delProd(i) {
-    if (!confirm(`刪除「${tempProds[i].name}」？`)) return;
-    tempProds.splice(i, 1); renderProdList();
+function delCat(i) {
+    if (!confirm(`刪除類別「${tempProds[i].name}」及其所有品名？`)) return;
+    tempProds.splice(i, 1); renderProdTree();
+}
+function addItem(ci) {
+    const inp = document.getElementById(`item-new-${ci}`);
+    const name = inp.value.trim(); if (!name) return;
+    // Sync current input values before modifying
+    syncProdInputs();
+    if (!tempProds[ci].items) tempProds[ci].items = [];
+    tempProds[ci].items.push({ id: uid(), name }); inp.value = ''; renderProdTree();
+}
+function moveItem(ci, ii, dir) {
+    const items = tempProds[ci].items; const j = ii + dir;
+    if (j < 0 || j >= items.length) return;
+    [items[ii], items[j]] = [items[j], items[ii]]; renderProdTree();
+}
+function delItem(ci, ii) {
+    if (!confirm(`刪除品名「${tempProds[ci].items[ii].name}」？`)) return;
+    tempProds[ci].items.splice(ii, 1); renderProdTree();
+}
+function syncProdInputs() {
+    // Sync text input changes back to tempProds before re-rendering
+    document.querySelectorAll('.cat-inp').forEach((inp, ci) => {
+        if (tempProds[ci]) tempProds[ci].name = inp.value.trim();
+    });
+    document.querySelectorAll('.item-inp').forEach(inp => {
+        const ci = parseInt(inp.dataset.ci); const ii = parseInt(inp.dataset.ii);
+        if (!isNaN(ci) && !isNaN(ii) && tempProds[ci]?.items?.[ii]) {
+            tempProds[ci].items[ii].name = inp.value.trim();
+        }
+    });
 }
 function saveProducts() {
-    document.querySelectorAll('.prod-inp').forEach((inp, i) => {
-        if (tempProds[i]) tempProds[i].name = inp.value.trim();
+    // Read latest input values
+    document.querySelectorAll('.cat-inp').forEach((inp, ci) => {
+        if (tempProds[ci]) tempProds[ci].name = inp.value.trim();
     });
-    setProducts(tempProds.filter(p => p.name));
+    const cleaned = tempProds
+        .filter(c => c.name)
+        .map(c => ({ ...c, items: (c.items||[]).filter(it => it.name) }));
+    setProducts(cleaned);
     closeOverlay('products-overlay'); render(); toast('品項清單已儲存', 'ok');
 }
 
@@ -738,9 +905,7 @@ const COL_MAP = {
     deliveryMethod: ['出貨方式','運送方式','配送方式']
 };
 function detectCol(headers, aliases) {
-    for (const a of aliases) {
-        const i = headers.findIndex(h => h.includes(a)); if (i >= 0) return i;
-    }
+    for (const a of aliases) { const i = headers.findIndex(h => h.includes(a)); if (i >= 0) return i; }
     return -1;
 }
 function parseRows(headers, dataRows) {
@@ -756,8 +921,7 @@ function parseRows(headers, dataRows) {
         return {
             date, rawDate,
             orderNumber:    get(row, cols.orderNumber),
-            item,
-            quantity:       parseInt(get(row, cols.quantity)) || 1,
+            item, quantity: parseInt(get(row, cols.quantity)) || 1,
             customer:       get(row, cols.customer),
             phone:          get(row, cols.phone),
             orderNotes:     get(row, cols.orderNotes),
@@ -768,7 +932,7 @@ function parseRows(headers, dataRows) {
 }
 function splitCSV(line) {
     const res=[]; let cur=''; let inQ=false;
-    for(const ch of line){ if(ch==='"'){inQ=!inQ;} else if(ch===','&&!inQ){res.push(cur.trim());cur='';} else cur+=ch; }
+    for(const ch of line){if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){res.push(cur.trim());cur='';}else cur+=ch;}
     res.push(cur.trim()); return res;
 }
 function normalizeDate(raw) {
