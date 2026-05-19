@@ -88,6 +88,13 @@
         .bdg-other { background:#f3f3f3; color:#777; }
         .badge-mod { display:inline-block; background:#e65100; color:#fff; font-size:0.68rem; padding:1px 4px; border-radius:3px; margin-left:3px; vertical-align:middle; font-weight:700; }
         .pickup-sel { border:none; border-radius:8px; font-size:0.74rem; padding:2px 5px; cursor:pointer; font-family:inherit; outline:none; font-weight:600; }
+        /* New-order red dot */
+        .dot-new { position:absolute; top:3px; left:3px; width:7px; height:7px; background:#e53935; border-radius:50%; flex-shrink:0; }
+        /* Calendar new-order dot */
+        .cal-dot { display:block; width:5px; height:5px; background:#e53935; border-radius:50%; margin:1px auto 0; }
+        /* Duplicate row in import preview */
+        .row-dup td:first-child { border-left:3px solid #9e9e9e; }
+        .row-dup td { color:#aaa; }
 
         .btn-act { background:none; border:none; cursor:pointer; padding:3px 5px; border-radius:4px; font-size:0.82rem; color:#bbb; }
         .btn-act:hover { background:#f0f0f0; color:#333; }
@@ -581,7 +588,10 @@ async function loadData() {
 
 /* ── ORDERS CRUD ── */
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
-function addOrder(d) { orders.push({ id: uid(), source: 'manual', modified: false, ...d }); localSave(); render(); }
+function addOrder(d) {
+    orders.push({ id: uid(), source: 'manual', modified: false, createdDate: fmtDate(new Date()), ...d });
+    localSave(); render(); scheduleAutoSave();
+}
 function editOrder(id, d) {
     const i = orders.findIndex(o => o.id === id); if (i < 0) return;
     const wasImported = orders[i].source === 'import';
@@ -591,13 +601,24 @@ function editOrder(id, d) {
         newModified = trackFields.some(f => d[f] !== undefined && String(d[f]) !== String(orders[i][f] ?? ''));
     }
     orders[i] = { ...orders[i], ...d, modified: newModified };
-    localSave(); render();
+    localSave(); render(); scheduleAutoSave();
 }
 function delOrder(id) {
     if (!confirm('確定刪除？')) return;
-    orders = orders.filter(o => o.id !== id); localSave(); render();
+    orders = orders.filter(o => o.id !== id); localSave(); render(); scheduleAutoSave();
 }
 function localSave() { localStorage.setItem('boter_orders', JSON.stringify(orders)); }
+
+/* Auto-save: debounce 2s after any change */
+let _autoSaveTimer;
+function scheduleAutoSave() {
+    clearTimeout(_autoSaveTimer);
+    const btn = document.getElementById('btn-save');
+    if (btn) { btn.innerHTML = '☁ 儲存中…'; btn.disabled = true; }
+    _autoSaveTimer = setTimeout(async () => {
+        await saveData();
+    }, 2000);
+}
 
 /* ── DATE HELPERS ── */
 function fmtDate(d) {
@@ -647,6 +668,7 @@ function renderCalGrid() {
     const blanks = firstDow === 0 ? 6 : firstDow - 1;
     for (let i = 0; i < blanks; i++) html += `<div class="cal-day empty"></div>`;
     const dim = new Date(y, m+1, 0).getDate();
+    const newDates = new Set(orders.filter(o => o.createdDate === todayStr).map(o => o.date));
     for (let d = 1; d <= dim; d++) {
         const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         const cls = ['cal-day',
@@ -655,7 +677,7 @@ function renderCalGrid() {
             ds === wArr[0] ? 'week-start' : '',
             ds === wArr[6] ? 'week-end'   : ''
         ].filter(Boolean).join(' ');
-        html += `<div class="${cls}" onclick="pickDay('${ds}')">${d}</div>`;
+        html += `<div class="${cls}" onclick="pickDay('${ds}')">${d}${newDates.has(ds) ? '<span class="cal-dot"></span>' : ''}</div>`;
     }
     document.getElementById('cal-grid').innerHTML = html;
 }
@@ -706,7 +728,7 @@ function render() {
                 <td class="td-n" title="${esc(o.customer||'')}">${esc(o.customer||'')}</td>
                 <td class="td-n" title="${esc(o.phone||'')}">${esc(o.phone||'')}</td>
                 <td class="td-n"><select class="pickup-sel" style="background:${pbg};color:${pco}" onchange="quickPickup('${o.id}',this.value)">${pOpts}</select></td>
-                <td class="td-n">${esc(o.orderNumber||'')}${modBadge}</td>
+                <td class="td-n" style="position:relative;padding-left:${o.createdDate===todayStr?'14px':'7px'}">${o.createdDate===todayStr?'<span class="dot-new"></span>':''}${esc(o.orderNumber||'')}${modBadge}</td>
                 <td class="td-n"><div style="display:flex;gap:2px">
                     <button class="btn-act" onclick="openEdit('${o.id}')">✏</button>
                     <button class="btn-act" onclick="delOrder('${o.id}')">🗑</button>
@@ -948,7 +970,7 @@ function saveProducts() {
 function quickPickup(id, val) {
     const i = orders.findIndex(o => o.id === id); if (i < 0) return;
     orders[i].pickup = val;
-    localSave(); render();
+    localSave(); render(); scheduleAutoSave();
 }
 
 /* ── IMPORT ── */
@@ -1049,15 +1071,20 @@ function showPreview() {
     sum.innerHTML = `共 <strong>${parsedRows.length}</strong> 筆　可匯入 <strong>${ok.length}</strong> 筆`
         + (skip.length ? `　⚠ 略過 <strong>${skip.length}</strong> 筆（缺出貨日期）` : '')
         + (dup.length  ? `　⚠ <strong>${dup.length}</strong> 筆已存在（跳過重複）` : '');
+    const dupNums = new Set(dup.map(r=>r.orderNumber));
     document.getElementById('preview-wrap').innerHTML = `
         <table class="preview-table">
             <thead><tr><th>出貨日</th><th>訂單編號</th><th>品項</th><th>量</th><th>購買人</th><th>配送方式</th></tr></thead>
-            <tbody>${parsedRows.map(r=>`
-                <tr class="${r.valid?'row-ok':'row-warn'}">
+            <tbody>${parsedRows.map(r=>{
+                const isDup = r.orderNumber && dupNums.has(r.orderNumber);
+                const rowCls = isDup ? 'row-dup' : r.valid ? 'row-ok' : 'row-warn';
+                return `<tr class="${rowCls}">
                     <td>${r.date||'<span style="color:#e65100">缺日期</span>'}</td>
-                    <td>${esc(r.orderNumber)}</td><td>${esc(r.item)}</td>
+                    <td>${esc(r.orderNumber)}${isDup?' <span style="color:#aaa;font-size:0.75rem">已存在</span>':''}</td>
+                    <td>${esc(r.item)}</td>
                     <td>${r.quantity}</td><td>${esc(r.customer)}</td><td>${esc(r.deliveryMethod)}</td>
-                </tr>`).join('')}
+                </tr>`;
+            }).join('')}
             </tbody>
         </table>`;
     document.getElementById('import-step1').style.display = 'none';
@@ -1070,6 +1097,7 @@ function doImport() {
     parsedRows.filter(r=>r.valid).forEach(r => {
         if (r.orderNumber && existing.has(r.orderNumber)) return;
         orders.push({ id:uid(), source:'import', modified:false, pickup:'未取貨',
+            createdDate: fmtDate(new Date()),
             date:r.date, orderNumber:r.orderNumber, deliveryMethod:r.deliveryMethod,
             item:r.item, quantity:r.quantity, customer:r.customer, phone:r.phone,
             orderNotes:r.orderNotes, shopNotes:'' });
