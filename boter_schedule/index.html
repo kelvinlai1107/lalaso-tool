@@ -476,12 +476,19 @@ function refreshCatDropdown() {
 function onCatChange() {
     const catName = document.getElementById('f-cat').value;
     const sel = document.getElementById('f-item-sel');
-    if (!catName) { sel.innerHTML = '<option value="">— 選商品名稱 —</option>'; return; }
-    if (catName === '__OTHER__') {
+    const itemInp = document.getElementById('f-item');
+    if (!catName) {
         sel.innerHTML = '<option value="">— 選商品名稱 —</option>';
-        document.getElementById('f-item').value = '其他';
+        itemInp.readOnly = false; itemInp.style.background = '';
         return;
     }
+    if (catName === '__OTHER__') {
+        sel.innerHTML = '<option value="">— 選商品名稱 —</option>';
+        itemInp.value = '其他';
+        itemInp.readOnly = true; itemInp.style.background = '#f5f5f5';
+        return;
+    }
+    itemInp.readOnly = false; itemInp.style.background = '';
     const cat = getProducts().find(c => c.name === catName);
     sel.innerHTML = '<option value="">— 選商品名稱 —</option>' +
         (cat ? (cat.items||[]).map(it=>`<option value="${esc(it.name)}">${esc(it.name)}</option>`).join('') : '');
@@ -639,6 +646,12 @@ function goToday() {
     currentMonth = new Date(t.getFullYear(), t.getMonth(), 1);
     calViewDate  = new Date(t.getFullYear(), t.getMonth(), 1);
     render(); renderCalGrid();
+    // Scroll to today's card after render
+    const todayStr = fmtDate(t);
+    requestAnimationFrame(() => {
+        const el = document.querySelector(`.day-card[data-date="${todayStr}"]`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
 }
 function changeMonth(dir) {
     currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth()+dir, 1);
@@ -708,6 +721,7 @@ function render() {
         const isToday = ds === todayStr;
         const card = document.createElement('div');
         card.className = 'day-card'+(isToday?' today-card':'');
+        card.dataset.date = ds;
 
         const rows = dayOrders.map(o => {
             const dm = o.deliveryMethod||o.timeSlot||'';
@@ -801,6 +815,9 @@ function openAdd() {
     // Hide import-only fields
     document.getElementById('f-no-wrap').style.display = 'none';
     document.getElementById('f-onotes-wrap').style.display = 'none';
+    // Reset item input state
+    const itemInp = document.getElementById('f-item');
+    itemInp.readOnly = false; itemInp.style.background = '';
     refreshDatalist(); refreshCatDropdown();
     openOverlay('order-overlay');
 }
