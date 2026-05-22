@@ -21,9 +21,11 @@
         #app { display:none; min-height:100vh; }
 
         /* HEADER */
-        header { background:#fff; padding:0 20px; height:54px; box-shadow:0 2px 6px rgba(0,0,0,.08); position:sticky; top:0; z-index:200; display:flex; align-items:center; gap:10px; }
+        header { background:#fff; padding:0 20px; height:54px; box-shadow:0 2px 6px rgba(0,0,0,.08); position:sticky; top:0; z-index:200; display:flex; align-items:center; gap:8px; }
         .h-brand { font-weight:900; color:#c94f6a; font-size:1.1rem; white-space:nowrap; }
         .h-div { width:1px; height:24px; background:#e0e0e0; flex-shrink:0; }
+        .btn-nav { background:none; border:1px solid #ddd; border-radius:6px; padding:4px 10px; cursor:pointer; font-size:1rem; line-height:1; color:#555; }
+        .btn-nav:hover { background:#f5f5f5; }
 
         /* CALENDAR */
         .cal-wrap { position:relative; }
@@ -40,9 +42,7 @@
         .cal-day { text-align:center; padding:5px 2px; border-radius:5px; cursor:pointer; font-size:0.82rem; }
         .cal-day:hover { background:#ffe0e8; }
         .cal-day.today { font-weight:700; color:#c94f6a; }
-        .cal-day.in-week { background:#fce8ed; border-radius:0; }
-        .cal-day.week-start { border-radius:5px 0 0 5px; }
-        .cal-day.week-end { border-radius:0 5px 5px 0; }
+        .cal-day.in-month { background:#fce8ed; border-radius:5px; }
         .cal-day.other-month { color:#ccc; }
         .cal-day.empty { pointer-events:none; }
 
@@ -61,7 +61,7 @@
 
         /* SCHEDULE */
         main { padding:14px 20px; max-width:1500px; margin:0 auto; }
-        .week-bar { font-size:0.82rem; color:#888; margin-bottom:10px; padding-left:2px; }
+        .month-bar { font-size:0.82rem; color:#888; margin-bottom:10px; padding-left:2px; }
         .day-card { background:#fff; border-radius:10px; margin-bottom:14px; box-shadow:0 1px 4px rgba(0,0,0,.07); overflow:hidden; }
         .day-card.today-card { box-shadow:0 0 0 2px #c94f6a,0 2px 8px rgba(201,79,106,.15); }
         .day-hdr { background:#fafafa; border-bottom:1px solid #f0f0f0; padding:8px 14px; display:flex; align-items:center; gap:8px; }
@@ -77,9 +77,7 @@
         .sched-table td { padding:6px 7px; border-bottom:1px solid #f5f5f5; vertical-align:top; }
         .sched-table tr:last-child td { border-bottom:none; }
         .sched-table tr:hover td { background:#fdf9fa; }
-        /* Nowrap cells */
         .td-n { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        /* Wrap cells (notes) */
         .td-w { white-space:normal; word-break:break-all; overflow:visible; }
 
         .bdg { display:inline-block; padding:1px 6px; border-radius:8px; font-size:0.74rem; white-space:nowrap; }
@@ -88,11 +86,8 @@
         .bdg-other { background:#f3f3f3; color:#777; }
         .badge-mod { display:inline-block; background:#e65100; color:#fff; font-size:0.68rem; padding:1px 4px; border-radius:3px; margin-left:3px; vertical-align:middle; font-weight:700; }
         .pickup-sel { border:none; border-radius:8px; font-size:0.74rem; padding:2px 5px; cursor:pointer; font-family:inherit; outline:none; font-weight:600; }
-        /* New-order red dot */
-        .dot-new { position:absolute; top:3px; left:3px; width:7px; height:7px; background:#e53935; border-radius:50%; flex-shrink:0; }
-        /* Calendar new-order dot */
+        .dot-new { position:absolute; top:3px; left:3px; width:7px; height:7px; background:#e53935; border-radius:50%; }
         .cal-dot { display:block; width:5px; height:5px; background:#e53935; border-radius:50%; margin:1px auto 0; }
-        /* Duplicate row in import preview */
         .row-dup td:first-child { border-left:3px solid #9e9e9e; }
         .row-dup td { color:#aaa; }
 
@@ -154,9 +149,10 @@
         @keyframes spin { to { transform:rotate(360deg); } }
 
         @media print {
-            header .h-right { display:none!important; }
-            .btn-act { display:none!important; }
-            .day-card { box-shadow:none; border:1px solid #ddd; break-inside:avoid; }
+            header, .h-right, .btn-act, .pickup-sel, .no-orders { display:none!important; }
+            body { background:#fff; }
+            main { padding:0; max-width:100%; }
+            .day-card { box-shadow:none; border:1px solid #ddd; break-inside:avoid; margin-bottom:8px; }
         }
     </style>
 </head>
@@ -183,6 +179,7 @@
     <header>
         <span class="h-brand">🎂 Boter</span>
         <div class="h-div"></div>
+        <button class="btn-nav" onclick="changeMonth(-1)">‹</button>
         <div class="cal-wrap">
             <div class="cal-trigger" id="cal-trigger" onclick="toggleCal(event)">
                 📅 <span id="cal-label">載入中…</span>
@@ -196,19 +193,20 @@
                 <div class="cal-grid" id="cal-grid"></div>
             </div>
         </div>
+        <button class="btn-nav" onclick="changeMonth(1)">›</button>
         <button class="btn-today" onclick="goToday()">今天</button>
         <div class="h-right">
             <button class="btn-g" onclick="openImport()">📥 匯入 Cyberbiz</button>
             <button class="btn-p" onclick="openAdd()">＋ 新增訂單</button>
             <button class="btn-b" id="btn-save" onclick="saveData()">☁ 儲存</button>
-            <button class="btn-ic" onclick="window.print()" title="列印">🖨</button>
+            <button class="btn-ic" onclick="openPrintModal()" title="列印">🖨</button>
             <button class="btn-ic" onclick="openProducts()" title="品項清單">📋</button>
             <button class="btn-ic" onclick="openSettings()" title="設定">⚙</button>
             <div class="avatar" id="avatar">K</div>
         </div>
     </header>
     <main>
-        <div class="week-bar" id="week-bar"></div>
+        <div class="month-bar" id="month-bar"></div>
         <div id="schedule"></div>
     </main>
 </div>
@@ -224,7 +222,8 @@
                     <label class="lbl">出貨日期 *</label>
                     <input class="ctrl" type="date" id="f-date" required>
                 </div>
-                <div>
+                <!-- import-only: 訂單編號 -->
+                <div id="f-no-wrap">
                     <label class="lbl">訂單編號</label>
                     <input class="ctrl" type="text" id="f-no" placeholder="#1001">
                 </div>
@@ -264,14 +263,15 @@
                     </select>
                 </div>
                 <div>
-                    <label class="lbl">購買人</label>
+                    <label class="lbl">收件人</label>
                     <input class="ctrl" type="text" id="f-customer" placeholder="姓名">
                 </div>
                 <div>
-                    <label class="lbl">購買人電話</label>
+                    <label class="lbl">收件人電話</label>
                     <input class="ctrl" type="text" id="f-phone" placeholder="0912345678">
                 </div>
-                <div class="ff">
+                <!-- import-only: 訂單備註 -->
+                <div class="ff" id="f-onotes-wrap">
                     <label class="lbl">訂單備註</label>
                     <input class="ctrl" type="text" id="f-onotes" placeholder="來自 Cyberbiz 的備註">
                 </div>
@@ -327,17 +327,38 @@
             </div>
             <div style="margin-top:12px;background:#f0f4ff;border-radius:8px;padding:10px 13px;font-size:0.79rem;color:#3949ab;line-height:1.7;">
                 <strong>Cyberbiz 匯出路徑：</strong> 後台 → 訂單 → 訂單報表匯出<br>
-                建議勾選欄位：<strong>訂單編號、購買人名稱、出貨方式、指定配送日期、商品名稱、商品款式、數量、備註</strong>
+                建議勾選欄位：<strong>訂單編號、收件人名稱、收件人電話、出貨方式、指定配送日期、商品名稱、商品款式、數量、備註</strong>
             </div>
         </div>
         <div id="import-step2" style="display:none">
             <div id="import-summary" class="imp-sum"></div>
             <div class="preview-wrap" id="preview-wrap"></div>
-            <div style="margin-top:8px;font-size:0.77rem;color:#888;">綠色 = 可匯入　橘色 = 缺出貨日期，略過</div>
+            <div style="margin-top:8px;font-size:0.77rem;color:#888;">綠色 = 可匯入　橘色 = 缺出貨日期，略過　灰色 = 已存在，略過</div>
         </div>
         <div class="mf">
             <button class="btn-cx" onclick="resetImport()">取消</button>
             <button class="btn-g" id="btn-do-import" style="display:none" onclick="doImport()">確認匯入</button>
+        </div>
+    </div>
+</div>
+
+<!-- PRINT MODAL -->
+<div class="overlay" id="print-overlay">
+    <div class="modal">
+        <div class="modal-title">🖨 列印訂單</div>
+        <div class="fg">
+            <div>
+                <label class="lbl">開始日期</label>
+                <input class="ctrl" type="date" id="print-start">
+            </div>
+            <div>
+                <label class="lbl">結束日期</label>
+                <input class="ctrl" type="date" id="print-end">
+            </div>
+        </div>
+        <div class="mf">
+            <button class="btn-cx" onclick="closeOverlay('print-overlay')">取消</button>
+            <button class="btn-p" onclick="doPrint()">🖨 列印</button>
         </div>
     </div>
 </div>
@@ -358,6 +379,10 @@
             <div>
                 <label class="lbl">目前登入帳號</label>
                 <div class="ctrl" style="background:#f9f9f9;color:#555;" id="s-user">—</div>
+            </div>
+            <div style="border-top:1px solid #f0f0f0;padding-top:12px;">
+                <button onclick="clearAllData()" style="background:none;border:1px solid #e53935;color:#e53935;padding:6px 14px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:0.83rem;">⚠ 清除所有訂單資料</button>
+                <div style="font-size:0.75rem;color:#aaa;margin-top:5px;">快捷鍵：Ctrl + Shift + X</div>
             </div>
         </div>
         <div class="mf">
@@ -384,14 +409,13 @@ const FILE_NAME = 'orders.json';
 
 /* ── STATE ── */
 let msal_app, account, orders = [];
-let weekStart = mondayOf(new Date());
-let calViewDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+let currentMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+let calViewDate  = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let cfg = JSON.parse(localStorage.getItem('boter_cfg') ||
     '{"siteUrl":"https://lalaso.sharepoint.com/sites/BOTERCAKER2","folder":"甜點排程工具"}');
 
 /* ────────────────────────────────────────
    TWO-LEVEL PRODUCTS
-   Structure: [{id, name (category), items:[{id, name}]}]
 ──────────────────────────────────────── */
 const DEFAULT_PRODUCTS = [
     { id:'dp1', name:'無糖無麩質蛋糕‧暖暖系列', items:[
@@ -425,73 +449,54 @@ function getProducts() {
     const raw = localStorage.getItem('boter_products');
     if (!raw) return DEFAULT_PRODUCTS;
     const arr = JSON.parse(raw);
-    // Migrate old flat format [{id,name}] → [{id,name,items:[]}]
-    if (arr.length && !('items' in arr[0])) {
-        return arr.map(p => ({ id: p.id, name: p.name, items: [] }));
-    }
+    if (arr.length && !('items' in arr[0])) return arr.map(p=>({id:p.id,name:p.name,items:[]}));
     return arr;
 }
 function setProducts(arr) {
     localStorage.setItem('boter_products', JSON.stringify(arr));
-    refreshDatalist();
-    refreshCatDropdown();
+    refreshDatalist(); refreshCatDropdown();
 }
-
-// Populate datalist with all "catName itemName" combinations
 function refreshDatalist() {
-    const dl = document.getElementById('item-list');
-    if (!dl) return;
-    const cats = getProducts();
-    let opts = '';
+    const dl = document.getElementById('item-list'); if (!dl) return;
+    const cats = getProducts(); let opts = '';
     cats.forEach(cat => {
-        (cat.items || []).forEach(it => {
-            opts += `<option value="${esc(cat.name + ' ' + it.name)}">`;
-        });
-        if (!(cat.items && cat.items.length)) {
-            opts += `<option value="${esc(cat.name)}">`;
-        }
+        (cat.items||[]).forEach(it => { opts += `<option value="${esc(cat.name+' '+it.name)}">` });
+        if (!(cat.items&&cat.items.length)) opts += `<option value="${esc(cat.name)}">`;
     });
     dl.innerHTML = opts;
 }
-
-// Populate category dropdown in order form
 function refreshCatDropdown() {
-    const sel = document.getElementById('f-cat');
-    if (!sel) return;
+    const sel = document.getElementById('f-cat'); if (!sel) return;
     const cats = getProducts();
     sel.innerHTML = '<option value="">— 選商品類別 —</option>' +
-        cats.map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
+        cats.map(c=>`<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('') +
+        '<option value="__OTHER__">其他</option>';
     document.getElementById('f-item-sel').innerHTML = '<option value="">— 選商品名稱 —</option>';
 }
-
-// When category changes, repopulate item dropdown
 function onCatChange() {
     const catName = document.getElementById('f-cat').value;
     const sel = document.getElementById('f-item-sel');
     if (!catName) { sel.innerHTML = '<option value="">— 選商品名稱 —</option>'; return; }
-    const cats = getProducts();
-    const cat = cats.find(c => c.name === catName);
+    if (catName === '__OTHER__') {
+        sel.innerHTML = '<option value="">— 選商品名稱 —</option>';
+        document.getElementById('f-item').value = '其他';
+        return;
+    }
+    const cat = getProducts().find(c => c.name === catName);
     sel.innerHTML = '<option value="">— 選商品名稱 —</option>' +
-        (cat ? (cat.items || []).map(it => `<option value="${esc(it.name)}">${esc(it.name)}</option>`).join('') : '');
+        (cat ? (cat.items||[]).map(it=>`<option value="${esc(it.name)}">${esc(it.name)}</option>`).join('') : '');
 }
-
-// When item selected from dropdown, fill text input
 function onItemSel() {
     const catName  = document.getElementById('f-cat').value;
     const itemName = document.getElementById('f-item-sel').value;
-    if (catName && itemName) {
+    if (catName && catName !== '__OTHER__' && itemName) {
         document.getElementById('f-item').value = catName + ' ' + itemName;
-    } else if (catName) {
+    } else if (catName && catName !== '__OTHER__') {
         document.getElementById('f-item').value = catName;
     }
 }
 
-// Normalize for comparison: replace ｜ with space, collapse whitespace
 function normItem(s) { return String(s||'').replace(/｜/g,' ').replace(/\s+/g,' ').trim(); }
-
-// Compute sort order: categoryIndex * 1000 + itemIndex
-// Handles both form-added items ("CategoryName ItemName｜Variant")
-// and Cyberbiz-imported items ("ItemName Variant", ｜ already replaced)
 function productOrder(item) {
     if (!item) return 999999;
     const ni = normItem(item);
@@ -499,12 +504,12 @@ function productOrder(item) {
     for (let ci = 0; ci < cats.length; ci++) {
         const cat = cats[ci];
         for (let ii = 0; ii < (cat.items||[]).length; ii++) {
-            const nFull = normItem(cat.name + ' ' + cat.items[ii].name);
+            const nFull = normItem(cat.name+' '+cat.items[ii].name);
             const nIt   = normItem(cat.items[ii].name);
-            if (ni === nFull || ni === nIt) return ci * 1000 + ii;
+            if (ni === nFull || ni === nIt) return ci*1000+ii;
         }
         const nCat = normItem(cat.name);
-        if (ni === nCat || ni.startsWith(nCat + ' ')) return ci * 1000 + 500;
+        if (ni === nCat || ni.startsWith(nCat+' ')) return ci*1000+500;
     }
     return 999999;
 }
@@ -541,7 +546,7 @@ async function getToken() {
 }
 
 /* ── SHAREPOINT ── */
-function filePath() { return `${cfg.folder || '甜點排程工具'}/${FILE_NAME}`; }
+function filePath() { return `${cfg.folder||'甜點排程工具'}/${FILE_NAME}`; }
 async function siteId() {
     const u = new URL(cfg.siteUrl);
     const r = await fetch(`https://graph.microsoft.com/v1.0/sites/${u.hostname}:${u.pathname}`,
@@ -589,14 +594,13 @@ async function loadData() {
 /* ── ORDERS CRUD ── */
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 function addOrder(d) {
-    orders.push({ id: uid(), source: 'manual', modified: false, createdDate: fmtDate(new Date()), ...d });
+    orders.push({ id:uid(), source:'manual', modified:false, createdDate:fmtDate(new Date()), ...d });
     localSave(); render(); scheduleAutoSave();
 }
 function editOrder(id, d) {
     const i = orders.findIndex(o => o.id === id); if (i < 0) return;
-    const wasImported = orders[i].source === 'import';
     let newModified = orders[i].modified;
-    if (wasImported && !newModified) {
+    if (!newModified) {
         const trackFields = ['date','orderNumber','deliveryMethod','item','quantity','customer','phone','orderNotes','shopNotes'];
         newModified = trackFields.some(f => d[f] !== undefined && String(d[f]) !== String(orders[i][f] ?? ''));
     }
@@ -608,116 +612,112 @@ function delOrder(id) {
     orders = orders.filter(o => o.id !== id); localSave(); render(); scheduleAutoSave();
 }
 function localSave() { localStorage.setItem('boter_orders', JSON.stringify(orders)); }
+function clearAllData() {
+    if (!confirm('確定要清除所有訂單資料？此操作無法復原！')) return;
+    if (!confirm('再次確認：清除後所有訂單將消失，是否繼續？')) return;
+    orders = []; localStorage.removeItem('boter_orders');
+    render(); closeOverlay('settings-overlay'); toast('已清除所有訂單資料', '');
+}
 
-/* Auto-save: debounce 2s after any change */
+/* Auto-save: debounce 2s */
 let _autoSaveTimer;
 function scheduleAutoSave() {
     clearTimeout(_autoSaveTimer);
     const btn = document.getElementById('btn-save');
     if (btn) { btn.innerHTML = '☁ 儲存中…'; btn.disabled = true; }
-    _autoSaveTimer = setTimeout(async () => {
-        await saveData();
-    }, 2000);
+    _autoSaveTimer = setTimeout(async () => { await saveData(); }, 2000);
 }
 
 /* ── DATE HELPERS ── */
 function fmtDate(d) {
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
-function mondayOf(d) {
-    const c = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    const dow = c.getDay();
-    c.setDate(c.getDate() - (dow === 0 ? 6 : dow - 1));
-    return c;
-}
-function weekDays(mon) {
-    return Array.from({length:7}, (_,i) => new Date(mon.getFullYear(), mon.getMonth(), mon.getDate()+i));
-}
+const DAY_ZH = ['日','一','二','三','四','五','六'];
+
 function goToday() {
     const t = new Date();
-    weekStart = mondayOf(new Date(t.getFullYear(), t.getMonth(), t.getDate()));
-    calViewDate = new Date(t.getFullYear(), t.getMonth(), 1);
+    currentMonth = new Date(t.getFullYear(), t.getMonth(), 1);
+    calViewDate  = new Date(t.getFullYear(), t.getMonth(), 1);
     render(); renderCalGrid();
 }
-const DAY_ZH = ['日','一','二','三','四','五','六'];
+function changeMonth(dir) {
+    currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth()+dir, 1);
+    calViewDate  = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+    render(); renderCalGrid();
+}
 
 /* ── CALENDAR ── */
 function toggleCal(e) {
     e.stopPropagation();
     const p = document.getElementById('cal-popup');
     if (!p.classList.contains('open')) {
-        calViewDate = new Date(weekStart.getFullYear(), weekStart.getMonth(), 1);
+        calViewDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
         renderCalGrid();
     }
     p.classList.toggle('open');
 }
 document.addEventListener('click', () => document.getElementById('cal-popup')?.classList.remove('open'));
-
 function calMove(dir) {
-    calViewDate = new Date(calViewDate.getFullYear(), calViewDate.getMonth() + dir, 1);
+    calViewDate = new Date(calViewDate.getFullYear(), calViewDate.getMonth()+dir, 1);
     renderCalGrid();
 }
 function renderCalGrid() {
-    const y = calViewDate.getFullYear(), m = calViewDate.getMonth();
-    document.getElementById('cal-month').textContent = `${y}年${m+1}月`;
+    const cy = calViewDate.getFullYear(), cm = calViewDate.getMonth();
+    document.getElementById('cal-month').textContent = `${cy}年${cm+1}月`;
     const todayStr = fmtDate(new Date());
-    const wArr = weekDays(weekStart).map(fmtDate);
-    const wSet = new Set(wArr);
-    let html = ['一','二','三','四','五','六','日'].map(d => `<div class="cal-dow">${d}</div>`).join('');
-    const firstDow = new Date(y, m, 1).getDay();
-    const blanks = firstDow === 0 ? 6 : firstDow - 1;
+    const curY = currentMonth.getFullYear(), curM = currentMonth.getMonth();
+    let html = ['一','二','三','四','五','六','日'].map(d=>`<div class="cal-dow">${d}</div>`).join('');
+    const firstDow = new Date(cy, cm, 1).getDay();
+    const blanks = firstDow === 0 ? 6 : firstDow-1;
     for (let i = 0; i < blanks; i++) html += `<div class="cal-day empty"></div>`;
-    const dim = new Date(y, m+1, 0).getDate();
-    const newDates = new Set(orders.filter(o => o.createdDate === todayStr).map(o => o.date));
+    const dim = new Date(cy, cm+1, 0).getDate();
+    const newDates = new Set(orders.filter(o=>o.createdDate===todayStr).map(o=>o.date));
     for (let d = 1; d <= dim; d++) {
-        const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        const cls = ['cal-day',
-            ds === todayStr ? 'today' : '',
-            wSet.has(ds) ? 'in-week' : '',
-            ds === wArr[0] ? 'week-start' : '',
-            ds === wArr[6] ? 'week-end'   : ''
-        ].filter(Boolean).join(' ');
-        html += `<div class="${cls}" onclick="pickDay('${ds}')">${d}${newDates.has(ds) ? '<span class="cal-dot"></span>' : ''}</div>`;
+        const ds = `${cy}-${String(cm+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const inCur = cy===curY && cm===curM;
+        const cls = ['cal-day', ds===todayStr?'today':'', inCur?'in-month':''].filter(Boolean).join(' ');
+        html += `<div class="${cls}" onclick="pickDay('${ds}')">${d}${newDates.has(ds)?'<span class="cal-dot"></span>':''}</div>`;
     }
     document.getElementById('cal-grid').innerHTML = html;
 }
 function pickDay(ds) {
-    weekStart = mondayOf(new Date(ds + 'T00:00:00'));
+    const d = new Date(ds+'T00:00:00');
+    currentMonth = new Date(d.getFullYear(), d.getMonth(), 1);
     document.getElementById('cal-popup').classList.remove('open');
-    render();
+    render(); renderCalGrid();
 }
 
 /* ── RENDER ── */
 function render() {
-    const days = weekDays(weekStart);
+    const y = currentMonth.getFullYear(), m = currentMonth.getMonth();
+    const dim = new Date(y, m+1, 0).getDate();
     const todayStr = fmtDate(new Date());
-    const lbl = d => `${d.getMonth()+1}月${d.getDate()}日`;
-    document.getElementById('cal-label').textContent = `${lbl(days[0])} ～ ${lbl(days[6])}`;
-    document.getElementById('week-bar').textContent =
-        `${days[0].getFullYear()}年　${lbl(days[0])}（${DAY_ZH[days[0].getDay()]}）～ ${lbl(days[6])}（${DAY_ZH[days[6].getDay()]}）`;
-
+    document.getElementById('cal-label').textContent = `${y}年${m+1}月`;
+    document.getElementById('month-bar').textContent = `${y}年 ${m+1}月`;
     const wrap = document.getElementById('schedule');
     wrap.innerHTML = '';
 
-    days.forEach(day => {
+    for (let dd = 1; dd <= dim; dd++) {
+        const day = new Date(y, m, dd);
+        if (day.getDay() === 0) continue; // skip Sunday
         const ds = fmtDate(day);
-        const dayOrders = orders.filter(o => o.date === ds).sort((a,b) => {
-            const oa = productOrder(a.item), ob = productOrder(b.item);
-            return oa !== ob ? oa - ob : (a.orderNumber||'').localeCompare(b.orderNumber||'');
+        const dayOrders = orders.filter(o=>o.date===ds).sort((a,b)=>{
+            const oa=productOrder(a.item), ob=productOrder(b.item);
+            return oa!==ob ? oa-ob : (a.orderNumber||'').localeCompare(b.orderNumber||'');
         });
         const isToday = ds === todayStr;
         const card = document.createElement('div');
-        card.className = 'day-card' + (isToday ? ' today-card' : '');
+        card.className = 'day-card'+(isToday?' today-card':'');
 
         const rows = dayOrders.map(o => {
-            const dm = o.deliveryMethod || o.timeSlot || '';
-            const delivCls = dm.includes('宅') || dm.includes('冷凍') ? 'bdg bdg-home'
-                           : dm.includes('門市') || dm.includes('取貨') ? 'bdg bdg-store'
+            const dm = o.deliveryMethod||o.timeSlot||'';
+            const delivCls = dm.includes('宅')||dm.includes('冷凍') ? 'bdg bdg-home'
+                           : dm.includes('門市')||dm.includes('取貨') ? 'bdg bdg-store'
                            : 'bdg bdg-other';
             const modBadge = o.modified ? '<span class="badge-mod">異動</span>' : '';
-            const pv = o.pickup || '未取貨';
-            const pbg = pv==='已自取' ? '#e8f5e9' : pv==='已出貨' ? '#e3f2fd' : '#f3f3f3';
-            const pco = pv==='已自取' ? '#2e7d32' : pv==='已出貨' ? '#1565c0' : '#999';
+            const pv = o.pickup||'未取貨';
+            const pbg = pv==='已自取'?'#e8f5e9':pv==='已出貨'?'#e3f2fd':'#f3f3f3';
+            const pco = pv==='已自取'?'#2e7d32':pv==='已出貨'?'#1565c0':'#999';
             const pOpts = ['未取貨','已自取','已出貨'].map(v=>`<option value="${v}"${v===pv?' selected':''}>${v}</option>`).join('');
             return `<tr>
                 <td class="td-n" title="${esc(dm)}"><span class="${delivCls}">${esc(dm)}</span></td>
@@ -736,15 +736,14 @@ function render() {
             </tr>`;
         }).join('');
 
-        // Column widths — 品項 shorter, 訂單備註 wider, 訂單編號 compact
         card.innerHTML = `
             <div class="day-hdr">
                 <span class="day-name">星期${DAY_ZH[day.getDay()]}</span>
                 <span class="day-date-lbl">${day.getMonth()+1}月${day.getDate()}日</span>
-                ${isToday ? '<span class="today-badge">今天</span>' : ''}
-                ${dayOrders.length ? `<span class="order-count">${dayOrders.length} 筆</span>` : ''}
+                ${isToday?'<span class="today-badge">今天</span>':''}
+                ${dayOrders.length?`<span class="order-count">${dayOrders.length} 筆</span>`:''}
             </div>
-            ${dayOrders.length === 0 ? '<div class="no-orders">— 無訂單 —</div>'
+            ${dayOrders.length===0 ? '<div class="no-orders">— 無訂單 —</div>'
             : `<table class="sched-table">
                 <colgroup>
                     <col style="width:118px">
@@ -761,24 +760,22 @@ function render() {
                 <thead><tr>
                     <th>配送方式</th><th>品項</th><th>量</th>
                     <th>訂單備註</th><th>商家備註</th>
-                    <th>購買人</th><th>購買人電話</th>
+                    <th>收件人</th><th>收件人電話</th>
                     <th>取貨狀態</th><th>訂單編號</th><th></th>
                 </tr></thead>
                 <tbody>${rows}</tbody>
             </table>`}`;
         wrap.appendChild(card);
-    });
+    }
 }
 
 function esc(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-// Strip category prefix for display (e.g. "奶油餅乾‧童心分享 星光…" → "星光…")
 function displayItem(item) {
     if (!item) return '';
-    const cats = getProducts();
-    for (const cat of cats) {
-        if (item.startsWith(cat.name + ' ')) return item.slice(cat.name.length + 1);
+    for (const cat of getProducts()) {
+        if (item.startsWith(cat.name+' ')) return item.slice(cat.name.length+1);
     }
     return item;
 }
@@ -787,8 +784,8 @@ function displayItem(item) {
 function onDeliveryChange() {
     const v = document.getElementById('f-delivery').value;
     const o = document.getElementById('f-delivery-other');
-    o.style.display = v === '其他' ? '' : 'none';
-    if (v !== '其他') o.value = '';
+    o.style.display = v==='其他' ? '' : 'none';
+    if (v!=='其他') o.value = '';
 }
 const KNOWN_DM = ['門市取貨 (Caker Lab)', '黑貓冷凍宅配'];
 
@@ -801,6 +798,9 @@ function openAdd() {
     document.getElementById('f-pickup').value = '未取貨';
     document.getElementById('f-delivery').value = '門市取貨 (Caker Lab)';
     document.getElementById('f-delivery-other').style.display = 'none';
+    // Hide import-only fields
+    document.getElementById('f-no-wrap').style.display = 'none';
+    document.getElementById('f-onotes-wrap').style.display = 'none';
     refreshDatalist(); refreshCatDropdown();
     openOverlay('order-overlay');
 }
@@ -808,16 +808,16 @@ function openEdit(id) {
     const o = orders.find(x => x.id === id); if (!o) return;
     document.getElementById('order-modal-title').textContent = '編輯訂單';
     document.getElementById('f-id').value       = o.id;
-    document.getElementById('f-date').value     = o.date || '';
-    document.getElementById('f-no').value       = o.orderNumber || '';
-    document.getElementById('f-qty').value      = o.quantity || 1;
-    document.getElementById('f-item').value     = o.item || '';
-    document.getElementById('f-customer').value = o.customer || '';
-    document.getElementById('f-phone').value    = o.phone || '';
-    document.getElementById('f-pickup').value   = o.pickup || '未取貨';
-    document.getElementById('f-onotes').value   = o.orderNotes || '';
-    document.getElementById('f-snotes').value   = o.shopNotes || '';
-    const dm = o.deliveryMethod || o.timeSlot || '';
+    document.getElementById('f-date').value     = o.date||'';
+    document.getElementById('f-no').value       = o.orderNumber||'';
+    document.getElementById('f-qty').value      = o.quantity||1;
+    document.getElementById('f-item').value     = o.item||'';
+    document.getElementById('f-customer').value = o.customer||'';
+    document.getElementById('f-phone').value    = o.phone||'';
+    document.getElementById('f-pickup').value   = o.pickup||'未取貨';
+    document.getElementById('f-onotes').value   = o.orderNotes||'';
+    document.getElementById('f-snotes').value   = o.shopNotes||'';
+    const dm = o.deliveryMethod||o.timeSlot||'';
     if (KNOWN_DM.includes(dm)) {
         document.getElementById('f-delivery').value = dm;
         document.getElementById('f-delivery-other').style.display = 'none';
@@ -826,15 +826,17 @@ function openEdit(id) {
         document.getElementById('f-delivery-other').value = dm;
         document.getElementById('f-delivery-other').style.display = dm ? '' : 'none';
     }
-    // Pre-fill cascading dropdowns
+    // Show/hide import-only fields
+    const isImport = o.source === 'import';
+    document.getElementById('f-no-wrap').style.display = isImport ? '' : 'none';
+    document.getElementById('f-onotes-wrap').style.display = isImport ? '' : 'none';
     refreshDatalist(); refreshCatDropdown();
-    const cats = getProducts();
-    const item = o.item || '';
+    const cats = getProducts(); const item = o.item||'';
     for (const cat of cats) {
         if (item.startsWith(cat.name)) {
             document.getElementById('f-cat').value = cat.name;
             onCatChange();
-            const found = (cat.items||[]).find(it => item.includes(it.name));
+            const found = (cat.items||[]).find(it=>item.includes(it.name));
             if (found) document.getElementById('f-item-sel').value = found.name;
             break;
         }
@@ -846,20 +848,24 @@ function submitOrder() {
     if (!form.checkValidity()) { form.reportValidity(); return; }
     const sel = document.getElementById('f-delivery').value;
     const other = document.getElementById('f-delivery-other').value.trim();
-    const deliveryMethod = sel === '其他' ? (other || '其他') : sel;
+    const deliveryMethod = sel==='其他' ? (other||'其他') : sel;
+    const id = document.getElementById('f-id').value;
+    const isEdit = !!id;
+    const existingOrder = isEdit ? orders.find(o=>o.id===id) : null;
     const d = {
         date:          document.getElementById('f-date').value,
-        orderNumber:   document.getElementById('f-no').value,
         deliveryMethod,
         item:          document.getElementById('f-item').value,
-        quantity:      parseInt(document.getElementById('f-qty').value) || 1,
+        quantity:      parseInt(document.getElementById('f-qty').value)||1,
         customer:      document.getElementById('f-customer').value,
         phone:         document.getElementById('f-phone').value,
         pickup:        document.getElementById('f-pickup').value,
-        orderNotes:    document.getElementById('f-onotes').value,
-        shopNotes:     document.getElementById('f-snotes').value
+        shopNotes:     document.getElementById('f-snotes').value,
+        ...(isEdit && existingOrder?.source==='import' ? {
+            orderNumber: document.getElementById('f-no').value,
+            orderNotes:  document.getElementById('f-onotes').value
+        } : {})
     };
-    const id = document.getElementById('f-id').value;
     id ? editOrder(id, d) : addOrder(d);
     closeOverlay('order-overlay');
 }
@@ -868,34 +874,27 @@ function submitOrder() {
    TWO-LEVEL PRODUCT MANAGEMENT
 ──────────────────────────────────────── */
 let tempProds = [];
-
 function openProducts() {
     tempProds = JSON.parse(JSON.stringify(getProducts()));
     renderProdTree(); openOverlay('products-overlay');
 }
-
 function renderProdTree() {
     const el = document.getElementById('prod-tree');
-    if (!tempProds.length) {
-        el.innerHTML = '<div style="color:#aaa;font-size:0.84rem;text-align:center;padding:12px">尚無類別，請新增</div>';
-        return;
-    }
-    el.innerHTML = tempProds.map((cat, ci) => `
+    if (!tempProds.length) { el.innerHTML = '<div style="color:#aaa;font-size:0.84rem;text-align:center;padding:12px">尚無類別，請新增</div>'; return; }
+    el.innerHTML = tempProds.map((cat,ci) => `
         <div class="cat-block">
             <div class="cat-row">
                 <span class="cat-label">類別</span>
-                <input class="cat-inp" value="${esc(cat.name)}"
-                    onchange="tempProds[${ci}].name=this.value.trim()" placeholder="商品類別名稱">
+                <input class="cat-inp" value="${esc(cat.name)}" onchange="tempProds[${ci}].name=this.value.trim()" placeholder="商品類別名稱">
                 <button class="prod-btn" onclick="moveCat(${ci},-1)" ${ci===0?'disabled':''}>↑</button>
                 <button class="prod-btn" onclick="moveCat(${ci},1)" ${ci===tempProds.length-1?'disabled':''}>↓</button>
                 <button class="prod-btn del" onclick="delCat(${ci})" title="刪除類別">✕</button>
             </div>
-            <div class="item-rows" id="items-${ci}">
-                ${(cat.items||[]).map((it, ii) => `
+            <div class="item-rows">
+                ${(cat.items||[]).map((it,ii)=>`
                     <div class="item-row">
                         <span style="color:#bbb;font-size:0.78rem;width:16px;flex-shrink:0">└</span>
-                        <input class="item-inp" value="${esc(it.name)}"
-                            onchange="tempProds[${ci}].items[${ii}].name=this.value.trim()" placeholder="商品名稱">
+                        <input class="item-inp" value="${esc(it.name)}" onchange="tempProds[${ci}].items[${ii}].name=this.value.trim()" placeholder="商品名稱">
                         <button class="prod-btn" onclick="moveItem(${ci},${ii},-1)" ${ii===0?'disabled':''}>↑</button>
                         <button class="prod-btn" onclick="moveItem(${ci},${ii},1)" ${ii===(cat.items||[]).length-1?'disabled':''}>↓</button>
                         <button class="prod-btn del" onclick="delItem(${ci},${ii})" title="刪除品名">✕</button>
@@ -906,94 +905,75 @@ function renderProdTree() {
                     <input class="ctrl" type="text" id="item-new-${ci}" placeholder="新增商品名稱…"
                         style="flex:1;padding:5px 8px;font-size:0.83rem"
                         onkeydown="if(event.key==='Enter')addItem(${ci})">
-                    <button class="btn-p" onclick="addItem(${ci})"
-                        style="padding:5px 10px;font-size:0.8rem">＋ 新增品名</button>
+                    <button class="btn-p" onclick="addItem(${ci})" style="padding:5px 10px;font-size:0.8rem">＋ 新增品名</button>
                 </div>
             </div>
         </div>`).join('');
 }
-
 function addCat() {
     const inp = document.getElementById('cat-new');
     const name = inp.value.trim(); if (!name) return;
-    tempProds.push({ id: uid(), name, items: [] }); inp.value = ''; renderProdTree();
+    tempProds.push({id:uid(),name,items:[]}); inp.value=''; renderProdTree();
 }
-function moveCat(i, dir) {
-    const j = i + dir; if (j < 0 || j >= tempProds.length) return;
-    [tempProds[i], tempProds[j]] = [tempProds[j], tempProds[i]]; renderProdTree();
+function moveCat(i,dir) {
+    const j=i+dir; if(j<0||j>=tempProds.length) return;
+    [tempProds[i],tempProds[j]]=[tempProds[j],tempProds[i]]; renderProdTree();
 }
 function delCat(i) {
-    if (!confirm(`刪除類別「${tempProds[i].name}」及其所有品名？`)) return;
-    tempProds.splice(i, 1); renderProdTree();
+    if(!confirm(`刪除類別「${tempProds[i].name}」及其所有品名？`)) return;
+    tempProds.splice(i,1); renderProdTree();
 }
 function addItem(ci) {
     const inp = document.getElementById(`item-new-${ci}`);
     const name = inp.value.trim(); if (!name) return;
-    // Sync current input values before modifying
     syncProdInputs();
-    if (!tempProds[ci].items) tempProds[ci].items = [];
-    tempProds[ci].items.push({ id: uid(), name }); inp.value = ''; renderProdTree();
+    if (!tempProds[ci].items) tempProds[ci].items=[];
+    tempProds[ci].items.push({id:uid(),name}); inp.value=''; renderProdTree();
 }
-function moveItem(ci, ii, dir) {
-    const items = tempProds[ci].items; const j = ii + dir;
-    if (j < 0 || j >= items.length) return;
-    [items[ii], items[j]] = [items[j], items[ii]]; renderProdTree();
+function moveItem(ci,ii,dir) {
+    const items=tempProds[ci].items; const j=ii+dir;
+    if(j<0||j>=items.length) return;
+    [items[ii],items[j]]=[items[j],items[ii]]; renderProdTree();
 }
-function delItem(ci, ii) {
-    if (!confirm(`刪除品名「${tempProds[ci].items[ii].name}」？`)) return;
-    tempProds[ci].items.splice(ii, 1); renderProdTree();
+function delItem(ci,ii) {
+    if(!confirm(`刪除品名「${tempProds[ci].items[ii].name}」？`)) return;
+    tempProds[ci].items.splice(ii,1); renderProdTree();
 }
 function syncProdInputs() {
-    // Sync text input changes back to tempProds before re-rendering
-    document.querySelectorAll('.cat-inp').forEach((inp, ci) => {
-        if (tempProds[ci]) tempProds[ci].name = inp.value.trim();
-    });
-    document.querySelectorAll('.item-inp').forEach(inp => {
-        const ci = parseInt(inp.dataset.ci); const ii = parseInt(inp.dataset.ii);
-        if (!isNaN(ci) && !isNaN(ii) && tempProds[ci]?.items?.[ii]) {
-            tempProds[ci].items[ii].name = inp.value.trim();
-        }
-    });
+    document.querySelectorAll('.cat-inp').forEach((inp,ci)=>{ if(tempProds[ci]) tempProds[ci].name=inp.value.trim(); });
 }
 function saveProducts() {
-    // Read latest input values
-    document.querySelectorAll('.cat-inp').forEach((inp, ci) => {
-        if (tempProds[ci]) tempProds[ci].name = inp.value.trim();
-    });
-    const cleaned = tempProds
-        .filter(c => c.name)
-        .map(c => ({ ...c, items: (c.items||[]).filter(it => it.name) }));
-    setProducts(cleaned);
-    closeOverlay('products-overlay'); render(); toast('品項清單已儲存', 'ok');
+    document.querySelectorAll('.cat-inp').forEach((inp,ci)=>{ if(tempProds[ci]) tempProds[ci].name=inp.value.trim(); });
+    const cleaned = tempProds.filter(c=>c.name).map(c=>({...c,items:(c.items||[]).filter(it=>it.name)}));
+    setProducts(cleaned); closeOverlay('products-overlay'); render(); toast('品項清單已儲存','ok');
 }
 
 function quickPickup(id, val) {
-    const i = orders.findIndex(o => o.id === id); if (i < 0) return;
-    orders[i].pickup = val;
-    localSave(); render(); scheduleAutoSave();
+    const i = orders.findIndex(o=>o.id===id); if(i<0) return;
+    orders[i].pickup=val; localSave(); render(); scheduleAutoSave();
 }
 
 /* ── IMPORT ── */
-let parsedRows = [];
+let parsedRows = [], lastImportFile = null;
 const COL_MAP = {
     date:           ['指定配送日期','預計出貨日','出貨日期','出貨日'],
     orderNumber:    ['訂單編號','單號'],
     item:           ['商品名稱','品項','商品','品名'],
     variant:        ['商品款式','款式','規格'],
     quantity:       ['數量','商品數量','件數'],
-    customer:       ['購買人名稱','收件人','訂購人','購買人','會員名稱'],
-    phone:          ['會員手機號碼','電話','收件人電話','手機'],
+    customer:       ['收件人名稱','購買人名稱','收件人','訂購人','購買人','會員名稱'],
+    phone:          ['收件人電話','會員手機號碼','電話','手機'],
     orderNotes:     ['備註','訂單備註'],
     deliveryMethod: ['出貨方式','運送方式','配送方式']
 };
 function detectCol(headers, aliases) {
-    for (const a of aliases) { const i = headers.findIndex(h => h.includes(a)); if (i >= 0) return i; }
+    for (const a of aliases) { const i=headers.findIndex(h=>h.includes(a)); if(i>=0) return i; }
     return -1;
 }
 function parseRows(headers, dataRows) {
     const cols = {};
-    for (const [f, al] of Object.entries(COL_MAP)) cols[f] = detectCol(headers, al);
-    const get = (row, idx) => idx >= 0 ? String(row[idx]||'').trim() : '';
+    for (const [f,al] of Object.entries(COL_MAP)) cols[f]=detectCol(headers,al);
+    const get = (row,idx) => idx>=0 ? String(row[idx]||'').trim() : '';
     return dataRows.map(row => {
         const rawDate = get(row, cols.date);
         const date    = normalizeDate(rawDate);
@@ -1003,14 +983,14 @@ function parseRows(headers, dataRows) {
         return {
             date, rawDate,
             orderNumber:    get(row, cols.orderNumber),
-            item, quantity: parseInt(get(row, cols.quantity)) || 1,
+            item, quantity: parseInt(get(row,cols.quantity))||1,
             customer:       get(row, cols.customer),
             phone:          get(row, cols.phone),
             orderNotes:     get(row, cols.orderNotes),
             deliveryMethod: get(row, cols.deliveryMethod),
             valid: !!date
         };
-    }).filter(r => r.item);
+    }).filter(r=>r.item);
 }
 function splitCSV(line) {
     const res=[]; let cur=''; let inQ=false;
@@ -1019,65 +999,65 @@ function splitCSV(line) {
 }
 function normalizeDate(raw) {
     if (!raw) return '';
-    const m = raw.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+    const m=raw.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
     if (m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
-    const m2 = raw.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    const m2=raw.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
     if (m2) return `${m2[3]}-${m2[1].padStart(2,'0')}-${m2[2].padStart(2,'0')}`;
     return '';
 }
 function openImport() { openOverlay('import-overlay'); }
 function resetImport() {
-    parsedRows = [];
-    document.getElementById('import-step1').style.display = '';
-    document.getElementById('import-step2').style.display = 'none';
-    document.getElementById('btn-do-import').style.display = 'none';
-    document.getElementById('file-input').value = '';
+    parsedRows=[]; lastImportFile=null;
+    document.getElementById('import-step1').style.display='';
+    document.getElementById('import-step2').style.display='none';
+    document.getElementById('btn-do-import').style.display='none';
+    document.getElementById('file-input').value='';
     closeOverlay('import-overlay');
 }
 function handleDrop(e) {
     e.preventDefault(); document.getElementById('drop-zone').classList.remove('drag-over');
-    const f = e.dataTransfer.files[0]; if(f) handleFile(f);
+    const f=e.dataTransfer.files[0]; if(f) handleFile(f);
 }
 async function handleFile(file) {
     if (!file) return;
-    const ext = file.name.split('.').pop().toLowerCase();
+    lastImportFile = file;
+    const ext=file.name.split('.').pop().toLowerCase();
     try {
         let headers, dataRows;
-        if (ext === 'xlsx' || ext === 'xls') {
-            const buf = await file.arrayBuffer();
-            const wb  = XLSX.read(buf, { type:'array', cellDates:false, raw:false });
-            const raw = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header:1, raw:false, defval:'' });
-            if (raw.length < 2) { toast('Excel 無資料','err'); return; }
-            headers  = raw[0].map(c => String(c||'').trim());
-            dataRows = raw.slice(1).map(r => r.map(c => String(c||'').trim()));
+        if (ext==='xlsx'||ext==='xls') {
+            const buf=await file.arrayBuffer();
+            const wb=XLSX.read(buf,{type:'array',cellDates:false,raw:false});
+            const raw=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:false,defval:''});
+            if (raw.length<2) { toast('Excel 無資料','err'); return; }
+            headers=raw[0].map(c=>String(c||'').trim());
+            dataRows=raw.slice(1).map(r=>r.map(c=>String(c||'').trim()));
         } else {
-            const text  = await file.text();
-            const fl    = text.split('\n')[0];
-            const delim = fl.includes('\t') ? '\t' : ',';
-            const lines = text.split('\n').filter(l=>l.trim());
-            if (lines.length < 2) { toast('CSV 無資料','err'); return; }
-            headers  = lines[0].split(delim).map(h=>h.replace(/^"|"$/g,'').trim());
-            dataRows = lines.slice(1).map(l=>(delim===','?splitCSV(l):l.split('\t')).map(c=>c.replace(/^"|"$/g,'').trim()));
+            const text=await file.text();
+            const fl=text.split('\n')[0];
+            const delim=fl.includes('\t')?'\t':',';
+            const lines=text.split('\n').filter(l=>l.trim());
+            if (lines.length<2) { toast('CSV 無資料','err'); return; }
+            headers=lines[0].split(delim).map(h=>h.replace(/^"|"$/g,'').trim());
+            dataRows=lines.slice(1).map(l=>(delim===','?splitCSV(l):l.split('\t')).map(c=>c.replace(/^"|"$/g,'').trim()));
         }
-        parsedRows = parseRows(headers, dataRows);
-        showPreview();
+        parsedRows=parseRows(headers,dataRows); showPreview();
     } catch(e) { toast('解析失敗：'+e.message,'err'); console.error(e); }
 }
 function showPreview() {
     const ok=parsedRows.filter(r=>r.valid), skip=parsedRows.filter(r=>!r.valid);
     const dup=ok.filter(r=>orders.some(o=>o.orderNumber&&o.orderNumber===r.orderNumber));
-    const sum = document.getElementById('import-summary');
-    sum.className = 'imp-sum' + (skip.length ? ' warn' : '');
-    sum.innerHTML = `共 <strong>${parsedRows.length}</strong> 筆　可匯入 <strong>${ok.length}</strong> 筆`
-        + (skip.length ? `　⚠ 略過 <strong>${skip.length}</strong> 筆（缺出貨日期）` : '')
-        + (dup.length  ? `　⚠ <strong>${dup.length}</strong> 筆已存在（跳過重複）` : '');
-    const dupNums = new Set(dup.map(r=>r.orderNumber));
-    document.getElementById('preview-wrap').innerHTML = `
+    const sum=document.getElementById('import-summary');
+    sum.className='imp-sum'+(skip.length?' warn':'');
+    sum.innerHTML=`共 <strong>${parsedRows.length}</strong> 筆　可匯入 <strong>${ok.length-dup.length}</strong> 筆`
+        +(skip.length?`　⚠ 略過 <strong>${skip.length}</strong> 筆（缺出貨日期）`:'')
+        +(dup.length?`　⚠ <strong>${dup.length}</strong> 筆已存在（略過）`:'');
+    const dupNums=new Set(dup.map(r=>r.orderNumber));
+    document.getElementById('preview-wrap').innerHTML=`
         <table class="preview-table">
-            <thead><tr><th>出貨日</th><th>訂單編號</th><th>品項</th><th>量</th><th>購買人</th><th>配送方式</th></tr></thead>
+            <thead><tr><th>出貨日</th><th>訂單編號</th><th>品項</th><th>量</th><th>收件人</th><th>配送方式</th></tr></thead>
             <tbody>${parsedRows.map(r=>{
-                const isDup = r.orderNumber && dupNums.has(r.orderNumber);
-                const rowCls = isDup ? 'row-dup' : r.valid ? 'row-ok' : 'row-warn';
+                const isDup=r.orderNumber&&dupNums.has(r.orderNumber);
+                const rowCls=isDup?'row-dup':r.valid?'row-ok':'row-warn';
                 return `<tr class="${rowCls}">
                     <td>${r.date||'<span style="color:#e65100">缺日期</span>'}</td>
                     <td>${esc(r.orderNumber)}${isDup?' <span style="color:#aaa;font-size:0.75rem">已存在</span>':''}</td>
@@ -1087,67 +1067,126 @@ function showPreview() {
             }).join('')}
             </tbody>
         </table>`;
-    document.getElementById('import-step1').style.display = 'none';
-    document.getElementById('import-step2').style.display = '';
-    if (ok.length) document.getElementById('btn-do-import').style.display = '';
+    document.getElementById('import-step1').style.display='none';
+    document.getElementById('import-step2').style.display='';
+    if (ok.length-dup.length>0) document.getElementById('btn-do-import').style.display='';
 }
 function doImport() {
-    const existing = new Set(orders.map(o=>o.orderNumber).filter(Boolean));
-    let added = 0;
-    parsedRows.filter(r=>r.valid).forEach(r => {
-        if (r.orderNumber && existing.has(r.orderNumber)) return;
-        orders.push({ id:uid(), source:'import', modified:false, pickup:'未取貨',
-            createdDate: fmtDate(new Date()),
-            date:r.date, orderNumber:r.orderNumber, deliveryMethod:r.deliveryMethod,
-            item:r.item, quantity:r.quantity, customer:r.customer, phone:r.phone,
-            orderNotes:r.orderNotes, shopNotes:'' });
+    const existing=new Set(orders.map(o=>o.orderNumber).filter(Boolean));
+    let added=0;
+    parsedRows.filter(r=>r.valid).forEach(r=>{
+        if (r.orderNumber&&existing.has(r.orderNumber)) return;
+        orders.push({id:uid(),source:'import',modified:false,pickup:'未取貨',
+            createdDate:fmtDate(new Date()),
+            date:r.date,orderNumber:r.orderNumber,deliveryMethod:r.deliveryMethod,
+            item:r.item,quantity:r.quantity,customer:r.customer,phone:r.phone,
+            orderNotes:r.orderNotes,shopNotes:''});
         added++;
     });
     localSave();
-    const first = parsedRows.find(r=>r.valid)?.date;
-    if (first) weekStart = mondayOf(new Date(first+'T00:00:00'));
-    render(); resetImport(); toast(`已匯入 ${added} 筆訂單 ✓`,'ok');
+    const first=parsedRows.find(r=>r.valid)?.date;
+    if (first) { const d=new Date(first+'T00:00:00'); currentMonth=new Date(d.getFullYear(),d.getMonth(),1); }
+    render(); renderCalGrid();
+    if (lastImportFile) uploadExcelToSP(lastImportFile);
+    resetImport(); toast(`已匯入 ${added} 筆訂單 ✓`,'ok');
+    scheduleAutoSave();
+}
+async function uploadExcelToSP(file) {
+    if (!file||!cfg.siteUrl) return;
+    try {
+        const sid=await siteId();
+        const folder=cfg.folder||'甜點排程工具';
+        const path=`${folder}/CY訂單匯出/${file.name}`;
+        const url=`https://graph.microsoft.com/v1.0/sites/${sid}/drive/root:/${path}:/content`;
+        const buf=await file.arrayBuffer();
+        const r=await fetch(url,{method:'PUT',
+            headers:{Authorization:`Bearer ${await getToken()}`,'Content-Type':'application/octet-stream'},
+            body:buf});
+        if (!r.ok) throw new Error(r.status);
+        toast('Excel 已備份到 SharePoint ✓','ok');
+    } catch(e) { toast('Excel 備份失敗：'+e.message,'err'); }
+}
+
+/* ── PRINT ── */
+function openPrintModal() {
+    const y=currentMonth.getFullYear(), m=currentMonth.getMonth();
+    const dim=new Date(y,m+1,0).getDate();
+    document.getElementById('print-start').value=`${y}-${String(m+1).padStart(2,'0')}-01`;
+    document.getElementById('print-end').value=`${y}-${String(m+1).padStart(2,'0')}-${String(dim).padStart(2,'0')}`;
+    openOverlay('print-overlay');
+}
+function doPrint() {
+    const start=document.getElementById('print-start').value;
+    const end=document.getElementById('print-end').value;
+    if (!start||!end||start>end) { alert('請確認日期區間'); return; }
+    const days=[]; const cur=new Date(start+'T00:00:00'); const endD=new Date(end+'T00:00:00');
+    while (cur<=endD) { if(cur.getDay()!==0) days.push(new Date(cur)); cur.setDate(cur.getDate()+1); }
+    let body=`<style>
+        body{font-family:'Microsoft JhengHei',sans-serif;font-size:12px;margin:0;padding:12px;}
+        h3{margin:14px 0 4px;font-size:13px;border-bottom:2px solid #c94f6a;padding-bottom:3px;color:#c94f6a;}
+        table{width:100%;border-collapse:collapse;margin-bottom:10px;}
+        th,td{padding:4px 6px;border:1px solid #ddd;text-align:left;font-size:11px;}
+        th{background:#fafafa;font-weight:600;}
+        @page{margin:1.5cm;}
+    </style>`;
+    days.forEach(day=>{
+        const ds=fmtDate(day);
+        const dayOrders=orders.filter(o=>o.date===ds).sort((a,b)=>productOrder(a.item)-productOrder(b.item));
+        if (!dayOrders.length) return;
+        body+=`<h3>星期${DAY_ZH[day.getDay()]} ${day.getMonth()+1}月${day.getDate()}日（${dayOrders.length} 筆）</h3>`;
+        body+=`<table><thead><tr><th>配送</th><th>品項</th><th>量</th><th>訂單備註</th><th>商家備註</th><th>收件人</th><th>電話</th><th>取貨</th><th>訂單編號</th></tr></thead><tbody>`;
+        dayOrders.forEach(o=>{
+            body+=`<tr><td>${esc(o.deliveryMethod||'')}</td><td>${esc(displayItem(o.item||''))}</td><td>${o.quantity||1}</td><td>${esc(o.orderNotes||'')}</td><td>${esc(o.shopNotes||'')}</td><td>${esc(o.customer||'')}</td><td>${esc(o.phone||'')}</td><td>${esc(o.pickup||'未取貨')}</td><td>${esc(o.orderNumber||'')}</td></tr>`;
+        });
+        body+=`</tbody></table>`;
+    });
+    if (!body.includes('<h3>')) { alert('選取區間內無訂單'); return; }
+    const w=window.open('','_blank','width=960,height=720');
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Boter 訂單列印 ${start} ~ ${end}</title></head><body>${body}</body></html>`);
+    w.document.close(); w.print();
+    closeOverlay('print-overlay');
 }
 
 /* ── SETTINGS ── */
 function openSettings() {
-    document.getElementById('s-url').value    = cfg.siteUrl || '';
-    document.getElementById('s-folder').value = cfg.folder  || '甜點排程工具';
+    document.getElementById('s-url').value    = cfg.siteUrl||'';
+    document.getElementById('s-folder').value = cfg.folder||'甜點排程工具';
     document.getElementById('s-user').textContent = account ? `${account.name}（${account.username}）` : '—';
     openOverlay('settings-overlay');
 }
 function saveSettings() {
-    cfg.siteUrl = document.getElementById('s-url').value.trim();
-    cfg.folder  = document.getElementById('s-folder').value.trim() || '甜點排程工具';
-    localStorage.setItem('boter_cfg', JSON.stringify(cfg));
+    cfg.siteUrl=document.getElementById('s-url').value.trim();
+    cfg.folder =document.getElementById('s-folder').value.trim()||'甜點排程工具';
+    localStorage.setItem('boter_cfg',JSON.stringify(cfg));
     closeOverlay('settings-overlay'); toast('設定已儲存','ok');
 }
 
 /* ── OVERLAYS ── */
 function openOverlay(id)  { document.getElementById(id).classList.add('open'); }
 function closeOverlay(id) { document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.overlay').forEach(el =>
-    el.addEventListener('click', e => { if(e.target===el) el.classList.remove('open'); }));
-document.addEventListener('keydown', e => {
-    if(e.key==='Escape') document.querySelectorAll('.overlay.open').forEach(el=>el.classList.remove('open'));
+document.querySelectorAll('.overlay').forEach(el=>
+    el.addEventListener('click', e=>{ if(e.target===el) el.classList.remove('open'); }));
+document.addEventListener('keydown', e=>{
+    if (e.key==='Escape') document.querySelectorAll('.overlay.open').forEach(el=>el.classList.remove('open'));
+    if (e.ctrlKey && e.shiftKey && e.key==='X') clearAllData();
 });
 
 /* ── TOAST ── */
 let _tt;
 function toast(msg, type='') {
-    const el = document.getElementById('toast');
-    el.textContent = msg; el.className = `toast show ${type}`;
-    clearTimeout(_tt); _tt = setTimeout(()=>el.classList.remove('show'), 3200);
+    const el=document.getElementById('toast');
+    el.textContent=msg; el.className=`toast show ${type}`;
+    clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),3200);
 }
 
 /* ── SHOW APP ── */
 function showApp() {
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    const name = account.name || account.username;
-    const av = document.getElementById('avatar');
-    av.textContent = name.charAt(0).toUpperCase();
-    av.title = `${name} — 點擊登出`; av.onclick = doLogout;
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    const name=account.name||account.username;
+    const av=document.getElementById('avatar');
+    av.textContent=name.charAt(0).toUpperCase();
+    av.title=`${name} — 點擊登出`; av.onclick=doLogout;
     render(); loadData();
 }
 
