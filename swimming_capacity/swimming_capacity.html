@@ -1361,15 +1361,14 @@ function renderDayDetail(ds, v, ym) {
     var d3 = new Date(ds.replace(/\//g, '-'));
     var wd3 = d3.getDay();
     var sfx = wd3 === 6 ? '_sat' : wd3 === 0 ? '_sun' : '_wd';
-    var cfg3 = getCapConfig(vk, std);
     for (var si = 0; si < sls.length; si++) {
       var sl   = sls[si];
       var cids = sm[sl] || [];
       var used = cids.length;
       // Per-slot cap: use configured value, fallback to venue zones
       var capKey = sl + sfx;
-      var capVal = cfg3[capKey];
-      var capSl = Array.isArray(capVal) ? capVal.length : (typeof capVal==='number' ? capVal : VENUES[vk].zones);
+      var capSl = getTotalCount(vk, std, capKey);
+      if (capSl === 0) capSl = VENUES[vk].zones;
       var r3 = capSl > 0 ? used / capSl : 0;
       var p3 = Math.round(r3 * 100);
       var cH = '';
@@ -2314,17 +2313,19 @@ function renderCapEditorForVenue(vk) {
         var total = 0;
         var tks = Object.keys(counts);
         for (var ti2=0; ti2<tks.length; ti2++) total += (counts[tks[ti2]]||0);
-        var canAdd = total < maxZ;
+        var hasFull = (counts['cf']||0) > 0 || (counts['wp']||0) > 0;
         var paxF = std==='max' ? 'maxPax' : 'stdPax';
         h += '<td style="padding:4px 5px;vertical-align:top">';
         for (var ti=0;ti<CAP_TYPES.length;ti++) {
           var tp = CAP_TYPES[ti];
           var cnt = counts[tp.id] || 0;
+          var isFullType = (tp.id === 'cf' || tp.id === 'wp');
+          var canAddThis = isFullType ? (!hasFull && total === 0) : (!hasFull && total < maxZ);
           h += '<div style="display:flex;align-items:center;gap:3px;margin-bottom:2px">'
             + '<button class="cap-step-btn"' + (cnt===0?' disabled':'')
             + ' onclick="stepCapType(\''+ vk +'\',\''+ std +'\',\''+ sl +'\',\''+ sfx +'\',\''+ tp.id +'\',-1)">-</button>'
             + '<span style="font-size:11px;min-width:14px;text-align:center;font-weight:'+(cnt>0?'600':'400')+';color:'+(cnt>0?'var(--tx)':'var(--tx3)')+'">'+ cnt +'</span>'
-            + '<button class="cap-step-btn"' + (!canAdd?' disabled':'')
+            + '<button class="cap-step-btn"' + (!canAddThis?' disabled':'')
             + ' onclick="stepCapType(\''+ vk +'\',\''+ std +'\',\''+ sl +'\',\''+ sfx +'\',\''+ tp.id +'\',1)">+</button>'
             + '<span style="font-size:10px;color:'+(cnt>0?'var(--tx)':'var(--tx3)')+'">'+ tp.label +'</span>'
             + '</div>';
@@ -2358,9 +2359,14 @@ function stepCapType(vk, std, sl, sfx, typeId, delta) {
     var total = 0;
     var ks = Object.keys(counts);
     for (var i=0; i<ks.length; i++) total += (counts[ks[i]]||0);
-    if (total >= VENUES[vk].zones) {
-      alert('已達上限 ' + VENUES[vk].zones + ' 班！');
-      return;
+    var isFull = (typeId === 'cf' || typeId === 'wp');
+    var hasFull = (counts['cf']||0) > 0 || (counts['wp']||0) > 0;
+    if (isFull) {
+      if (total > 0) { alert('F班／水上樂園佔用全教學區，請先清除同時段其他課程'); return; }
+      if (cur >= 1)  { alert('F班／水上樂園最多只能開 1 班'); return; }
+    } else {
+      if (hasFull) { alert('F班／水上樂園已佔用全教學區，無法新增其他課程'); return; }
+      if (total >= VENUES[vk].zones) { alert('已達上限 ' + VENUES[vk].zones + ' 班！'); return; }
     }
   }
   if (newVal === 0) delete counts[typeId]; else counts[typeId] = newVal;
