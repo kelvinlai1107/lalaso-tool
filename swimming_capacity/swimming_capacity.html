@@ -786,7 +786,8 @@ function dateCapByStd(ds, vk, std) {
     } else if (typeof val === 'number') {
       total += val; // old numeric format
     } else {
-      total += VENUES[vk].zones; // fallback: venue max
+      if (std === 'max') total += VENUES[vk].zones;
+      // std mode: unconfigured slot = 0 classes, not counted in capacity
     }
   }
   return total;
@@ -1368,7 +1369,7 @@ function renderDayDetail(ds, v, ym) {
       var capKey = sl + sfx;
       var capCfgRaw = getCapConfig(vk, std)[capKey];
       var capSl = (capCfgRaw === undefined || capCfgRaw === null)
-        ? VENUES[vk].zones
+        ? (std === 'max' ? VENUES[vk].zones : 0)
         : getTotalCount(vk, std, capKey);
       var r3 = capSl > 0 ? used / capSl : 0;
       var p3 = Math.round(r3 * 100);
