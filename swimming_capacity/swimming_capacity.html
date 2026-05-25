@@ -131,6 +131,9 @@ input[type=text]:focus{border-color:var(--itx)}
 .ilog{margin-top:10px;font-size:12px;color:var(--tx2)}
 .cap-step-btn{width:18px;height:18px;font-size:12px;border:.5px solid var(--bd2);border-radius:3px;background:var(--bg);cursor:pointer;padding:0;line-height:1;transition:opacity .1s}
 .cap-step-btn:disabled{opacity:0.3;cursor:not-allowed;background:var(--bg3)}
+.sub-tab{padding:5px 14px;font-size:12px;border:none;border-bottom:2.5px solid transparent;background:transparent;cursor:pointer;color:var(--tx2);font-weight:500;transition:all .15s}
+.sub-tab.active{color:#3A6EBF;border-bottom-color:#3A6EBF;font-weight:600}
+.sub-tab:hover:not(.active){color:var(--tx);background:var(--bg2)}
 
 /* PRINT */
 @media print{
@@ -480,36 +483,21 @@ input[type=text]:focus{border-color:var(--itx)}
 <div id="tab-capstd" class="hidden">
 <div class="card">
   <div class="sec">產能標準設定</div>
-  <p style="font-size:12px;color:var(--tx2);margin-bottom:6px">
-    選擇每個時段可開的班型（可複選）。系統依勾選班型自動計算產能和人次。最大開班：西屯4班、北屯5班。
-  </p>
-  <p style="font-size:11px;color:var(--tx3);margin-bottom:12px">
-    班型對應：課程(N.A.B)=親子N/A/B、課程(C.D.E)=幼兒C/D/兒童E、課程(F)=兒童F、非課程(自游)=自游時光、非課程(水樂)=水上樂園
-  </p>
-  <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start">
-    <div>
-      <div style="font-size:13px;font-weight:500;margin-bottom:8px">西屯館（上限 4 班）
-        <button class="btn red" style="padding:2px 8px;font-size:11px;margin-left:8px" onclick="resetCapCfgVenue('x')">清除</button>
-      </div>
-      <div style="overflow-x:auto">
-        <table class="htable" id="cap-table-x" style="width:auto;min-width:500px">
-          <thead id="cap-head-x"></thead>
-          <tbody id="cap-body-x"></tbody>
-        </table>
-      </div>
-    </div>
-    <div>
-      <div style="font-size:13px;font-weight:500;margin-bottom:8px">北屯館（上限 5 班）
-        <button class="btn red" style="padding:2px 8px;font-size:11px;margin-left:8px" onclick="resetCapCfgVenue('b')">清除</button>
-      </div>
-      <div style="overflow-x:auto">
-        <table class="htable" id="cap-table-b" style="width:auto;min-width:500px">
-          <thead id="cap-head-b"></thead>
-          <tbody id="cap-body-b"></tbody>
-        </table>
-      </div>
-    </div>
+  <p style="font-size:12px;color:var(--tx2);margin-bottom:4px">選擇每個時段可開的班型。最大開班：西屯4班、北屯5班。</p>
+  <p style="font-size:11px;color:var(--tx3);margin-bottom:10px">課程(N.A.B)=親子N/A/B、課程(C.D.E)=幼兒C/D/兒童E、課程(F)=兒童F、非課程(自游)=自游時光、非課程(水樂)=水上樂園</p>
+  <div id="cap-ver-area"></div>
+  <div style="display:flex;border-bottom:1.5px solid var(--bd);margin-bottom:12px">
+    <button id="cap-vtab-x" class="sub-tab active" onclick="switchCapVk('x')">西屯館（4班）</button>
+    <button id="cap-vtab-b" class="sub-tab" onclick="switchCapVk('b')">北屯館（5班）</button>
   </div>
+  <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;align-items:center;border-bottom:1px solid var(--bd);padding-bottom:8px">
+    <button id="cap-dtab-wd"  class="sub-tab active" onclick="switchCapDt('wd')">平日(二~五)</button>
+    <button id="cap-dtab-sat" class="sub-tab" onclick="switchCapDt('sat')">週六</button>
+    <button id="cap-dtab-sun" class="sub-tab" onclick="switchCapDt('sun')">週日</button>
+    <button id="cap-dtab-exc" class="sub-tab" onclick="switchCapDt('exc')">例外設定</button>
+    <button class="btn red" style="padding:3px 10px;font-size:11px;margin-left:auto" onclick="resetCapCfgCurrent()">清除此頁</button>
+  </div>
+  <div id="cap-editor-main"></div>
 </div>
 </div>
 
@@ -668,6 +656,9 @@ var CNAME_TO_CID = {
   '幼兒C':'yc','幼兒D':'yd','兒童E':'ce','兒童F':'cf',
   '自游時光':'fz','水上樂園':'wp'
 };
+// Day-of-week suffixes: index = getDay() (0=Sun,1=Mon,...,6=Sat)
+var DOW_SFXS   = ['_sun','_mon','_tue','_wed','_thu','_fri','_sat'];
+var DOW_LABELS = ['週日','週一','週二','週三','週四','週五','週六'];
 
 var CID_LABEL = {
   pn:'親子N',pa:'親子A',pb:'親子B',
@@ -692,6 +683,11 @@ var mSelCourse = null;
 var mSelTeacher= null;
 var hPeriod    = 'month';
 var selDate    = null;
+var capEdVk     = 'x';
+var capEdVerIdX = null;
+var capEdVerIdB = null;
+var capEdDt     = 'wd';
+var capEdExcDow = 'thu';
 
 var schedData = JSON.parse(localStorage.getItem('ssd') || '{}');
 // Teachers split by venue
@@ -772,12 +768,12 @@ function dateCapByStd(ds, vk, std) {
   if (!sls.length) return 0;
   var d2 = new Date(ds.replace(/\//g, '-'));
   var wd2 = d2.getDay();
-  var suffix = wd2 === 6 ? '_sat' : wd2 === 0 ? '_sun' : '_wd';
-  var cfg = getCapConfig(vk, std);
+  var ymDs = ds.split('/')[0] + '-' + parseInt(ds.split('/')[1]);
+  var cfg = getCapConfigForYm(vk, std, ymDs);
   var total = 0;
   for (var i = 0; i < sls.length; i++) {
-    var key2 = sls[i] + suffix;
-    var val = cfg[key2];
+    var effKey2 = getEffSlotKey(cfg, sls[i], wd2);
+    var val = cfg[effKey2];
     if (val && typeof val === 'object' && !Array.isArray(val)) {
       var tks = Object.keys(val);
       for (var k=0; k<tks.length; k++) total += (val[tks[k]]||0);
@@ -795,14 +791,94 @@ function dateCapByStd(ds, vk, std) {
 function dateCap(ds, vk) {
   return dateCapByStd(ds, vk, getCapStd());
 }
+// ===== VERSIONED CAPACITY CONFIG =====
+function ymToNum(ym) {
+  if (!ym) return 0;
+  var p = ym.split('-');
+  return parseInt(p[0]) * 100 + parseInt(p[1]);
+}
+function loadCapVersions(vk) {
+  var saved = localStorage.getItem('capCfgVersions_' + vk);
+  if (saved) { try { var v = JSON.parse(saved); if (v && v.length) return v; } catch(e){} }
+  // Migrate from legacy capCfg_vk_std keys
+  var oldStd = localStorage.getItem('capCfg_' + vk + '_std');
+  var oldMax = localStorage.getItem('capCfg_' + vk + '_max');
+  var ver = {
+    id: 'v_init',
+    label: '初始版本',
+    from: null,
+    std: oldStd ? JSON.parse(oldStd) : {},
+    max: oldMax ? JSON.parse(oldMax) : {}
+  };
+  var versions = [ver];
+  localStorage.setItem('capCfgVersions_' + vk, JSON.stringify(versions));
+  return versions;
+}
+function saveCapVersions(vk, versions) {
+  localStorage.setItem('capCfgVersions_' + vk, JSON.stringify(versions));
+}
+function getCapEdVerIdFor(vk) { return vk === 'x' ? capEdVerIdX : capEdVerIdB; }
+function setCapEdVerIdFor(vk, id) { if (vk === 'x') capEdVerIdX = id; else capEdVerIdB = id; }
+function ensureCapEdVer(vk) {
+  var versions = loadCapVersions(vk);
+  if (!versions.length) return;
+  var cur = getCapEdVerIdFor(vk);
+  if (cur) {
+    for (var i = 0; i < versions.length; i++) { if (versions[i].id === cur) return; }
+  }
+  // Pick version with latest from date
+  var best = versions[0];
+  for (var i = 1; i < versions.length; i++) {
+    if (!versions[i].from) continue;
+    if (!best.from || ymToNum(versions[i].from) > ymToNum(best.from)) best = versions[i];
+  }
+  setCapEdVerIdFor(vk, best.id);
+}
 function getCapConfig(vk, std) {
-  // Returns {slot: zones} map for a venue+standard
-  var key = 'capCfg_' + vk + '_' + std;
-  var saved = localStorage.getItem(key);
-  return saved ? JSON.parse(saved) : {};
+  // For editing: returns config from currently selected version
+  ensureCapEdVer(vk);
+  var versions = loadCapVersions(vk);
+  var cur = getCapEdVerIdFor(vk);
+  var ver = null;
+  for (var i = 0; i < versions.length; i++) { if (versions[i].id === cur) { ver = versions[i]; break; } }
+  if (!ver) ver = versions[versions.length - 1];
+  return (ver ? (ver[std] || {}) : {});
 }
 function saveCapConfig(vk, std, cfg) {
-  localStorage.setItem('capCfg_' + vk + '_' + std, JSON.stringify(cfg));
+  ensureCapEdVer(vk);
+  var versions = loadCapVersions(vk);
+  var cur = getCapEdVerIdFor(vk);
+  for (var i = 0; i < versions.length; i++) {
+    if (versions[i].id === cur) { versions[i][std] = cfg; saveCapVersions(vk, versions); return; }
+  }
+  if (versions.length > 0) { versions[0][std] = cfg; saveCapVersions(vk, versions); }
+}
+function getCapConfigForYm(vk, std, ym) {
+  // For analysis: finds the correct version for the given year-month
+  var versions = loadCapVersions(vk);
+  if (!versions.length) return {};
+  var q = ymToNum(ym);
+  var best = versions[0];
+  for (var i = 1; i < versions.length; i++) {
+    var vf = ymToNum(versions[i].from);
+    if (vf <= q && vf > ymToNum(best.from)) best = versions[i];
+  }
+  return (best[std] || {});
+}
+function getEffSlotKey(cfg, sl, wd) {
+  // wd = getDay() value 0-6. For Mon-Fri, check day-specific exception first.
+  if (wd >= 1 && wd <= 5) {
+    var excKey = sl + DOW_SFXS[wd];
+    if (excKey in cfg) return excKey;
+  }
+  var defSfx = wd === 0 ? '_sun' : wd === 6 ? '_sat' : '_wd';
+  return sl + defSfx;
+}
+function getTotalCountFromCfg(val) {
+  if (!val || typeof val !== 'object' || Array.isArray(val)) return 0;
+  var tks = Object.keys(val), total = 0;
+  for (var i = 0; i < tks.length; i++) total += (val[tks[i]] || 0);
+  return total;
 }
 function dateUsed(ds, vk, ym) {
   // Count actual classes opened (each course = 1 class)
@@ -1356,21 +1432,20 @@ function renderDayDetail(ds, v, ym) {
     if (v === 'all') h += '<div style="font-size:11px;font-weight:500;color:var(--tx2);margin-bottom:4px">' + VENUES[vk].name + '</div>';
     h += '<table class="htable" style="margin-bottom:' + (vi < vks.length-1 ? '10px' : '0') + '">'
        + '<thead><tr><th>時段</th><th style="text-align:left">課程</th><th>開班數</th><th>開班率</th></tr></thead><tbody>';
-    // Get per-slot cap using current standard
+    // Get per-slot cap using current standard (version-aware + exception-aware)
     var std = getCapStd();
     var d3 = new Date(ds.replace(/\//g, '-'));
     var wd3 = d3.getDay();
-    var sfx = wd3 === 6 ? '_sat' : wd3 === 0 ? '_sun' : '_wd';
+    var capCfg4 = getCapConfigForYm(vk, std, ym);
     for (var si = 0; si < sls.length; si++) {
       var sl   = sls[si];
       var cids = sm[sl] || [];
       var used = cids.length;
-      // Per-slot cap: use configured value, fallback to venue zones
-      var capKey = sl + sfx;
-      var capCfgRaw = getCapConfig(vk, std)[capKey];
+      var effKey4 = getEffSlotKey(capCfg4, sl, wd3);
+      var capCfgRaw = capCfg4[effKey4];
       var capSl = (capCfgRaw === undefined || capCfgRaw === null)
         ? (std === 'max' ? VENUES[vk].zones : 0)
-        : getTotalCount(vk, std, capKey);
+        : getTotalCountFromCfg(capCfgRaw);
       var r3 = capSl > 0 ? used / capSl : 0;
       var p3 = Math.round(r3 * 100);
       var cH = '';
@@ -2211,8 +2286,241 @@ function onPaxModeChange() {
 }
 
 function renderCapEditor() {
-  renderCapEditorForVenue('x');
-  renderCapEditorForVenue('b');
+  ensureCapEdVer(capEdVk);
+  // Venue tabs
+  var vArr = ['x','b'];
+  for (var i=0;i<vArr.length;i++) {
+    var bv = document.getElementById('cap-vtab-'+vArr[i]);
+    if (bv) bv.className = 'sub-tab'+(vArr[i]===capEdVk?' active':'');
+  }
+  // Day-type tabs
+  var dArr = ['wd','sat','sun','exc'];
+  for (var i=0;i<dArr.length;i++) {
+    var bd = document.getElementById('cap-dtab-'+dArr[i]);
+    if (bd) bd.className = 'sub-tab'+(dArr[i]===capEdDt?' active':'');
+  }
+  // Version bar
+  var va = document.getElementById('cap-ver-area');
+  if (va) va.innerHTML = buildCapVersionBar(capEdVk);
+  // Main area
+  var ma = document.getElementById('cap-editor-main');
+  if (!ma) return;
+  if (capEdDt === 'exc') {
+    ma.innerHTML = buildCapExceptions(capEdVk);
+  } else {
+    ma.innerHTML = buildCapTableForDt(capEdVk, capEdDt);
+  }
+}
+function switchCapVk(vk) {
+  capEdVk = vk; ensureCapEdVer(vk); renderCapEditor();
+}
+function switchCapDt(dt) {
+  capEdDt = dt; renderCapEditor();
+}
+function switchCapExcDow(dow) {
+  capEdExcDow = dow; renderCapEditor();
+}
+function selectCapVersion(verId) {
+  setCapEdVerIdFor(capEdVk, verId); renderCapEditor();
+}
+function addCapVersion() {
+  var fromInput = prompt('新版本起始月份（格式：2025-7）：');
+  if (!fromInput) return;
+  fromInput = fromInput.trim();
+  if (!/^\d{4}-\d{1,2}$/.test(fromInput)) { alert('格式錯誤，請輸入如 2025-7 的格式'); return; }
+  var versions = loadCapVersions(capEdVk);
+  var cur = getCapEdVerIdFor(capEdVk);
+  var srcVer = null;
+  for (var i=0;i<versions.length;i++) { if (versions[i].id===cur) { srcVer=versions[i]; break; } }
+  var newStd = srcVer ? JSON.parse(JSON.stringify(srcVer.std||{})) : {};
+  var newMax = srcVer ? JSON.parse(JSON.stringify(srcVer.max||{})) : {};
+  var newId = 'v_'+Date.now();
+  versions.push({id:newId, label:fromInput+'起', from:fromInput, std:newStd, max:newMax});
+  versions.sort(function(a,b){ return ymToNum(a.from)-ymToNum(b.from); });
+  saveCapVersions(capEdVk, versions);
+  setCapEdVerIdFor(capEdVk, newId);
+  renderCapEditor();
+}
+function deleteCapVersion() {
+  var versions = loadCapVersions(capEdVk);
+  if (versions.length <= 1) { alert('至少需保留一個版本'); return; }
+  if (!confirm('確定刪除此版本？刪除後無法復原。')) return;
+  var cur = getCapEdVerIdFor(capEdVk);
+  var idx = -1;
+  for (var i=0;i<versions.length;i++) { if (versions[i].id===cur) { idx=i; break; } }
+  if (idx < 0) return;
+  versions.splice(idx, 1);
+  saveCapVersions(capEdVk, versions);
+  setCapEdVerIdFor(capEdVk, versions[Math.max(0,idx-1)].id);
+  renderCapEditor();
+}
+function buildCapVersionBar(vk) {
+  var versions = loadCapVersions(vk);
+  var cur = getCapEdVerIdFor(vk);
+  var h = '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;padding:6px 10px;background:var(--bg2);border-radius:6px;border:.5px solid var(--bd)">';
+  h += '<span style="font-size:11px;color:var(--tx2);font-weight:500">版本：</span>';
+  for (var i=0;i<versions.length;i++) {
+    var v = versions[i];
+    var lbl = v.label || (v.from ? v.from+'起' : '初始版本');
+    var isAct = v.id === cur;
+    h += '<button style="padding:2px 10px;font-size:11px;border-radius:12px;border:.5px solid var(--bd2);cursor:pointer;'
+      +(isAct ? 'background:#3A6EBF;color:#fff;font-weight:600;' : 'background:var(--bg);color:var(--tx);')
+      +'" onclick="selectCapVersion(\''+v.id+'\')">'+lbl+'</button>';
+  }
+  h += '<button class="btn" style="padding:2px 8px;font-size:11px" onclick="addCapVersion()">＋ 新增版本</button>';
+  if (versions.length > 1) h += '<button class="btn red" style="padding:2px 8px;font-size:11px" onclick="deleteCapVersion()">刪除版本</button>';
+  h += '</div>';
+  return h;
+}
+function buildCapTableForDt(vk, dt) {
+  var maxZ = VENUES[vk].zones;
+  var sfx = dt==='sat'?'_sat':dt==='sun'?'_sun':'_wd';
+  var slotArr = dt==='sat'?SATURDAY_SLOTS:dt==='sun'?SUNDAY_SLOTS:WEEKDAY_SLOTS;
+  if (!slotArr||!slotArr.length) return '<p style="font-size:12px;color:var(--tx3)">此日型無配置時段</p>';
+  var h = '<div style="overflow-x:auto"><table class="htable" style="width:auto">';
+  h += '<thead><tr><th>時段</th>'
+    + '<th style="text-align:center;background:#ddeeff;min-width:175px">最大產能</th>'
+    + '<th style="text-align:center;background:#d4edda;min-width:175px">標準產能</th>'
+    + '</tr></thead><tbody>';
+  var stdKeys = ['max','std'];
+  for (var i=0;i<slotArr.length;i++) {
+    var sl = slotArr[i];
+    h += '<tr><td style="font-size:11px;font-family:monospace;white-space:nowrap;background:var(--bg2);text-align:center;padding:3px 10px">'+sl+'</td>';
+    for (var ki=0;ki<stdKeys.length;ki++) {
+      var std2 = stdKeys[ki];
+      var slotSfx = sl+sfx;
+      h += buildCapCell(vk, std2, sl, sfx, slotSfx, maxZ);
+    }
+    h += '</tr>';
+  }
+  h += '</tbody></table></div>';
+  return h;
+}
+function buildCapExceptions(vk) {
+  var DOWS_ARR = ['mon','tue','wed','thu','fri'];
+  var DOWS_LBL = ['週一','週二','週三','週四','週五'];
+  var maxZ = VENUES[vk].zones;
+  var h = '<div style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap">';
+  for (var i=0;i<DOWS_ARR.length;i++) {
+    var isAct = capEdExcDow===DOWS_ARR[i];
+    h += '<button class="sub-tab'+(isAct?' active':'')+'" onclick="switchCapExcDow(\''+DOWS_ARR[i]+'\')">'+DOWS_LBL[i]+'</button>';
+  }
+  h += '</div>';
+  h += '<p style="font-size:11px;color:var(--tx3);margin-bottom:8px">預設「同平日(二~五)」，點「設定例外」後可獨立調整。例：週四 15:30 = 教育訓練 → 設定後將兩個模式都歸零。</p>';
+  var sfx = '_'+capEdExcDow;
+  var cfgStd = getCapConfig(vk,'std');
+  var cfgMax = getCapConfig(vk,'max');
+  h += '<div style="overflow-x:auto"><table class="htable" style="width:auto"><thead><tr><th>時段</th><th>例外狀態</th>'
+    + '<th style="text-align:center;background:#ddeeff;min-width:175px">最大產能（例外）</th>'
+    + '<th style="text-align:center;background:#d4edda;min-width:175px">標準產能（例外）</th>'
+    + '</tr></thead><tbody>';
+  for (var i=0;i<WEEKDAY_SLOTS.length;i++) {
+    var sl = WEEKDAY_SLOTS[i];
+    var excKey = sl+sfx;
+    var hasExcS = excKey in cfgStd;
+    var hasExcM = excKey in cfgMax;
+    var hasExc  = hasExcS || hasExcM;
+    h += '<tr><td style="font-size:11px;font-family:monospace;background:var(--bg2);text-align:center;padding:3px 10px">'+sl+'</td>';
+    if (hasExc) {
+      h += '<td style="text-align:center;white-space:nowrap"><span style="font-size:10px;color:#e67e22;font-weight:600">有例外</span>'
+        +'<button class="btn red" style="padding:1px 6px;font-size:10px;margin-left:4px" onclick="clearCapException(\''+vk+'\',\''+capEdExcDow+'\',\''+sl+'\')">清除</button></td>';
+    } else {
+      h += '<td style="text-align:center"><span style="font-size:10px;color:var(--tx3)">同平日</span>'
+        +'<button class="btn" style="padding:1px 6px;font-size:10px;margin-left:4px" onclick="initCapException(\''+vk+'\',\''+capEdExcDow+'\',\''+sl+'\')">設定例外</button></td>';
+    }
+    var stdKeys2 = ['max','std'];
+    for (var ki=0;ki<stdKeys2.length;ki++) {
+      var std3 = stdKeys2[ki];
+      var excInStd = excKey in (std3==='max'?cfgMax:cfgStd);
+      if (!excInStd) {
+        h += '<td style="background:var(--bg2);text-align:center"><span style="font-size:10px;color:var(--tx3)">同平日</span></td>';
+        continue;
+      }
+      h += buildCapCell(vk, std3, sl, sfx, excKey, maxZ);
+    }
+    h += '</tr>';
+  }
+  h += '</tbody></table></div>';
+  return h;
+}
+function buildCapCell(vk, std, sl, sfx, slotSfx, maxZ) {
+  var counts = getCapCounts(vk, std, slotSfx);
+  var total = 0;
+  var tks = Object.keys(counts);
+  for (var ti2=0;ti2<tks.length;ti2++) total += (counts[tks[ti2]]||0);
+  var hasFull = (counts['cf']||0)>0||(counts['wp']||0)>0;
+  var paxF = std==='max'?'maxPax':'stdPax';
+  var h = '<td style="padding:4px 5px;vertical-align:top">';
+  for (var ti=0;ti<CAP_TYPES.length;ti++) {
+    var tp = CAP_TYPES[ti];
+    var cnt = counts[tp.id]||0;
+    var isFullType = (tp.id==='cf'||tp.id==='wp');
+    var canAdd = isFullType?(!hasFull&&total===0):(!hasFull&&total<maxZ);
+    h += '<div style="display:flex;align-items:center;gap:3px;margin-bottom:2px">'
+      +'<button class="cap-step-btn"'+(cnt===0?' disabled':'')
+      +' onclick="stepCapType(\''+vk+'\',\''+std+'\',\''+sl+'\',\''+sfx+'\',\''+tp.id+'\',-1)">-</button>'
+      +'<span style="font-size:11px;min-width:14px;text-align:center;font-weight:'+(cnt>0?'600':'400')+';color:'+(cnt>0?'var(--tx)':'var(--tx3)')+'">'+cnt+'</span>'
+      +'<button class="cap-step-btn"'+(!canAdd?' disabled':'')
+      +' onclick="stepCapType(\''+vk+'\',\''+std+'\',\''+sl+'\',\''+sfx+'\',\''+tp.id+'\',1)">+</button>'
+      +'<span style="font-size:10px;color:'+(cnt>0?'var(--tx)':'var(--tx3)')+'">'+tp.label+'</span>'
+      +'</div>';
+  }
+  var totalPax = calcPaxFromTypes(vk, std, slotSfx, paxF);
+  var pct = total>0?Math.round(total/maxZ*100):0;
+  var barCol = total>=maxZ?'#E24B4A':total>0?'#1D9E75':'var(--tx3)';
+  h += '<div style="margin-top:5px;border-top:.5px solid var(--bd);padding-top:3px">';
+  if (total>0) {
+    h += '<div style="height:3px;background:var(--bg3);border-radius:2px;margin-bottom:2px">'
+      +'<div style="width:'+Math.min(pct,100)+'%;height:100%;border-radius:2px;background:'+barCol+'"></div></div>';
+  }
+  h += '<span style="font-size:10px;font-weight:500;color:'+barCol+'">'+total+'/'+maxZ+' 班</span>';
+  if (totalPax) h += '<span style="font-size:10px;color:var(--tx3);margin-left:4px">/ '+totalPax+' 人</span>';
+  h += '</div></td>';
+  return h;
+}
+function initCapException(vk, dow, sl) {
+  var sfx = '_'+dow;
+  var stds2 = ['std','max'];
+  for (var i=0;i<stds2.length;i++) {
+    var cfg2 = getCapConfig(vk, stds2[i]);
+    var key2 = sl+sfx;
+    if (!(key2 in cfg2)) {
+      var wdVal = cfg2[sl+'_wd'];
+      cfg2[key2] = wdVal ? JSON.parse(JSON.stringify(wdVal)) : {};
+      saveCapConfig(vk, stds2[i], cfg2);
+    }
+  }
+  renderCapEditor();
+}
+function clearCapException(vk, dow, sl) {
+  var sfx = '_'+dow;
+  var stds2 = ['std','max'];
+  for (var i=0;i<stds2.length;i++) {
+    var cfg2 = getCapConfig(vk, stds2[i]);
+    delete cfg2[sl+sfx];
+    saveCapConfig(vk, stds2[i], cfg2);
+  }
+  renderCapEditor();
+}
+function resetCapCfgCurrent() {
+  var dtLbls = {wd:'平日',sat:'週六',sun:'週日',exc:'例外'};
+  if (!confirm('確定清除 '+VENUES[capEdVk].name+' 此版本的「'+(dtLbls[capEdDt]||capEdDt)+'」產能設定？')) return;
+  var sfxList = capEdDt==='sat'?['_sat']:capEdDt==='sun'?['_sun']:
+                capEdDt==='exc'?['_mon','_tue','_wed','_thu','_fri']:['_wd'];
+  var stds2 = ['std','max'];
+  for (var si2=0;si2<stds2.length;si2++) {
+    var cfg3 = getCapConfig(capEdVk, stds2[si2]);
+    var keys3 = Object.keys(cfg3);
+    for (var ki2=0;ki2<keys3.length;ki2++) {
+      var k3 = keys3[ki2];
+      for (var j2=0;j2<sfxList.length;j2++) {
+        var sfj = sfxList[j2];
+        if (k3.length>=sfj.length && k3.slice(k3.length-sfj.length)===sfj) { delete cfg3[k3]; break; }
+      }
+    }
+    saveCapConfig(capEdVk, stds2[si2], cfg3);
+  }
+  renderCapEditor();
 }
 
 // Class type definitions
@@ -2385,14 +2693,14 @@ function stepCapType(vk, std, sl, sfx, typeId, delta) {
   var cfg = getCapConfig(vk, std);
   cfg[key] = counts;
   saveCapConfig(vk, std, cfg);
-  renderCapEditorForVenue(vk);
+  renderCapEditor();
 }
 
 
 function resetCapCfgVenue(vk) {
-  if (!confirm('確定清除' + VENUES[vk].name + '的所有產能標準設定？')) return;
-  localStorage.removeItem('capCfg_' + vk + '_max');
-  localStorage.removeItem('capCfg_' + vk + '_std');
+  if (!confirm('確定清除' + VENUES[vk].name + '此版本的所有產能標準設定？')) return;
+  saveCapConfig(vk, 'std', {});
+  saveCapConfig(vk, 'max', {});
   renderCapEditor();
 }
 
