@@ -1574,6 +1574,10 @@ function processFile(file) {
       var hdr = rows[hi];
       var ciD = hdr.indexOf('課程日期'), ciT = hdr.indexOf('課程時間');
       var ciN = hdr.indexOf('課程名稱'),  ciV = hdr.indexOf('開課店別');
+      // 授課老師欄位：區分同時段同課型的不同班（不同教師 = 不同班）
+      var ciIns = hdr.indexOf('授課老師');
+      if (ciIns < 0) ciIns = hdr.indexOf('教師');
+      if (ciIns < 0) ciIns = hdr.indexOf('教練');
       var cnt = 0, newD = {}, seen = {};
       for (var i = hi + 1; i < rows.length; i++) {
         var row  = rows[i];
@@ -1592,8 +1596,9 @@ function processFile(file) {
           ds = String(rawD).trim();
         }
         if (!/\d{4}\/\d{2}\/\d{2}/.test(ds)) continue;
-        // 以 date+bfTime+cid+vk 去重：同班多位學員只算一班
-        var seenKey = ds + '|' + rawT + '|' + cid + '|' + vk;
+        // 以 date+bfTime+cid+授課老師+vk 去重：同班多位學員只算一班，不同老師=不同班
+        var insVal = ciIns >= 0 ? String(row[ciIns]).trim() : '';
+        var seenKey = ds + '|' + rawT + '|' + cid + '|' + (insVal || '_') + '|' + vk;
         if (seen[seenKey]) continue;
         seen[seenKey] = true;
         var yr2 = ds.split('/')[0], mo2 = parseInt(ds.split('/')[1]), ym2 = yr2 + '-' + mo2;
