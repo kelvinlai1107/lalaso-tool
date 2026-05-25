@@ -723,8 +723,7 @@ var IR        = JSON.parse(localStorage.getItem('sir') || '[]');
       var cnames = mo[vk][dateSlot];
       for (var ci = 0; ci < cnames.length; ci++) {
         var cid = CNAME_TO_CID[cnames[ci]];
-        if (cid && HD[ym][vk][date][slot].indexOf(cid) < 0)
-          HD[ym][vk][date][slot].push(cid);
+        if (cid) HD[ym][vk][date][slot].push(cid);
       }
     }
   }
@@ -1367,8 +1366,10 @@ function renderDayDetail(ds, v, ym) {
       var used = cids.length;
       // Per-slot cap: use configured value, fallback to venue zones
       var capKey = sl + sfx;
-      var capSl = getTotalCount(vk, std, capKey);
-      if (capSl === 0) capSl = VENUES[vk].zones;
+      var capCfgRaw = getCapConfig(vk, std)[capKey];
+      var capSl = (capCfgRaw === undefined || capCfgRaw === null)
+        ? VENUES[vk].zones
+        : getTotalCount(vk, std, capKey);
       var r3 = capSl > 0 ? used / capSl : 0;
       var p3 = Math.round(r3 * 100);
       var cH = '';
@@ -1572,13 +1573,14 @@ function processFile(file) {
       var hdr = rows[hi];
       var ciD = hdr.indexOf('課程日期'), ciT = hdr.indexOf('課程時間');
       var ciN = hdr.indexOf('課程名稱'),  ciV = hdr.indexOf('開課店別');
-      var cnt = 0, newD = {};
+      var cnt = 0, newD = {}, seen = {};
       for (var i = hi + 1; i < rows.length; i++) {
         var row  = rows[i];
         var rN   = String(row[ciN]).trim();
         var cid  = BF_COURSE[rN];
         if (!cid) continue;
-        var slots = BF_TIME[String(row[ciT]).trim()];
+        var rawT = String(row[ciT]).trim();
+        var slots = BF_TIME[rawT];
         if (!slots) continue;
         var vk   = String(row[ciV]).indexOf('西屯') >= 0 ? 'x' : 'b';
         var rawD = row[ciD], ds = '';
@@ -1589,13 +1591,17 @@ function processFile(file) {
           ds = String(rawD).trim();
         }
         if (!/\d{4}\/\d{2}\/\d{2}/.test(ds)) continue;
+        // 以 date+bfTime+cid+vk 去重：同班多位學員只算一班
+        var seenKey = ds + '|' + rawT + '|' + cid + '|' + vk;
+        if (seen[seenKey]) continue;
+        seen[seenKey] = true;
         var yr2 = ds.split('/')[0], mo2 = parseInt(ds.split('/')[1]), ym2 = yr2 + '-' + mo2;
         if (!newD[ym2]) newD[ym2] = {x:{}, b:{}};
         if (!newD[ym2][vk][ds]) newD[ym2][vk][ds] = {};
         for (var si = 0; si < slots.length; si++) {
           var sl = slots[si];
           if (!newD[ym2][vk][ds][sl]) newD[ym2][vk][ds][sl] = [];
-          if (newD[ym2][vk][ds][sl].indexOf(cid) < 0) newD[ym2][vk][ds][sl].push(cid);
+          newD[ym2][vk][ds][sl].push(cid);
         }
         cnt++;
       }
