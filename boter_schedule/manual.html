@@ -3,41 +3,41 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Boter 甜點師排程工具 — 使用說明書</title>
+<title>Boter 訂單管理系統 — 使用說明書</title>
 <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family:'Microsoft JhengHei','PingFang TC',sans-serif; background:#f8f8f8; color:#333; font-size:15px; line-height:1.7; }
 
     /* COVER */
-    .cover { background:linear-gradient(145deg,#fff5f7,#ffe0e8); min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px; page-break-after:always; }
-    .cover-logo { font-size:5rem; margin-bottom:16px; }
-    .cover-brand { font-size:3rem; font-weight:900; color:#c94f6a; letter-spacing:3px; }
+    .cover { background:linear-gradient(145deg,#FAF7F4,#F5EDE0); min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px; page-break-after:always; }
+    .cover-logo { margin-bottom:16px; }
+    .cover-brand { font-size:3rem; font-weight:900; color:#9B6B2E; letter-spacing:3px; }
     .cover-sub { font-size:1.3rem; color:#888; margin:10px 0 40px; }
-    .cover-divider { width:60px; height:3px; background:#c94f6a; margin:0 auto 40px; border-radius:2px; }
-    .cover-info { background:#fff; border-radius:14px; padding:24px 40px; box-shadow:0 4px 20px rgba(201,79,106,.12); text-align:left; min-width:320px; }
+    .cover-divider { width:60px; height:3px; background:#9B6B2E; margin:0 auto 40px; border-radius:2px; }
+    .cover-info { background:#fff; border-radius:14px; padding:24px 40px; box-shadow:0 4px 20px rgba(155,107,46,.12); text-align:left; min-width:320px; }
     .cover-info p { color:#555; margin:6px 0; font-size:0.95rem; }
-    .cover-info strong { color:#c94f6a; }
+    .cover-info strong { color:#9B6B2E; }
 
     /* LAYOUT */
     .page { max-width:860px; margin:0 auto; padding:40px 24px; }
-    h1.sec { font-size:1.6rem; font-weight:900; color:#c94f6a; border-bottom:3px solid #fce8ed; padding-bottom:10px; margin:48px 0 24px; display:flex; align-items:center; gap:10px; }
-    h1.sec .num { background:#c94f6a; color:#fff; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.9rem; flex-shrink:0; }
+    h1.sec { font-size:1.6rem; font-weight:900; color:#9B6B2E; border-bottom:3px solid #F5EDE0; padding-bottom:10px; margin:48px 0 24px; display:flex; align-items:center; gap:10px; }
+    h1.sec .num { background:#9B6B2E; color:#fff; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.9rem; flex-shrink:0; }
     h2.sub { font-size:1.1rem; font-weight:700; color:#444; margin:24px 0 10px; display:flex; align-items:center; gap:8px; }
-    h2.sub::before { content:'▸'; color:#c94f6a; }
+    h2.sub::before { content:'▸'; color:#9B6B2E; }
 
     /* STEPS */
     .steps { counter-reset:step; }
     .step { display:flex; gap:14px; margin:10px 0; align-items:flex-start; }
-    .step-n { background:#c94f6a; color:#fff; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.82rem; font-weight:700; flex-shrink:0; margin-top:2px; }
+    .step-n { background:#9B6B2E; color:#fff; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.82rem; font-weight:700; flex-shrink:0; margin-top:2px; }
     .step-body { flex:1; }
 
     /* CARDS */
-    .card { background:#fff; border-radius:12px; padding:20px 24px; margin:14px 0; box-shadow:0 2px 8px rgba(0,0,0,.06); border-left:4px solid #c94f6a; }
+    .card { background:#fff; border-radius:12px; padding:20px 24px; margin:14px 0; box-shadow:0 2px 8px rgba(0,0,0,.06); border-left:4px solid #9B6B2E; }
     .card.blue { border-left-color:#0078d4; }
     .card.green { border-left-color:#2e7d32; }
     .card.orange { border-left-color:#e65100; }
     .card.gray { border-left-color:#9e9e9e; }
-    .card-title { font-weight:700; color:#c94f6a; margin-bottom:6px; font-size:0.95rem; }
+    .card-title { font-weight:700; color:#9B6B2E; margin-bottom:6px; font-size:0.95rem; }
     .card.blue .card-title { color:#0078d4; }
     .card.green .card-title { color:#2e7d32; }
     .card.orange .card-title { color:#e65100; }
@@ -45,14 +45,15 @@
 
     /* TABLE */
     table { width:100%; border-collapse:collapse; margin:14px 0; font-size:0.9rem; }
-    th { background:#fce8ed; color:#c94f6a; padding:10px 12px; text-align:left; font-weight:700; }
+    th { background:#F5EDE0; color:#9B6B2E; padding:10px 12px; text-align:left; font-weight:700; }
     td { padding:9px 12px; border-bottom:1px solid #f0f0f0; vertical-align:top; }
     tr:last-child td { border-bottom:none; }
     tr:nth-child(even) td { background:#fafafa; }
 
     /* BADGES */
     .bdg { display:inline-block; padding:2px 10px; border-radius:20px; font-size:0.8rem; font-weight:600; }
-    .bdg-pink { background:#fce8ed; color:#c94f6a; }
+    .bdg-pink { background:#F5EDE0; color:#9B6B2E; }
+
     .bdg-blue { background:#e3f2fd; color:#0078d4; }
     .bdg-green { background:#e8f5e9; color:#2e7d32; }
     .bdg-orange { background:#fff3e0; color:#e65100; }
@@ -77,7 +78,7 @@
 
     /* FLOW */
     .flow { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:12px 0; }
-    .flow-step { background:#fce8ed; color:#c94f6a; border-radius:8px; padding:6px 14px; font-size:0.88rem; font-weight:600; }
+    .flow-step { background:#F5EDE0; color:#9B6B2E; border-radius:8px; padding:6px 14px; font-size:0.88rem; font-weight:600; }
     .flow-arrow { color:#ccc; font-size:1.2rem; }
 
     /* STATUS BADGES */
@@ -87,11 +88,11 @@
 
     /* TOC */
     .toc { background:#fff; border-radius:12px; padding:24px 28px; box-shadow:0 2px 8px rgba(0,0,0,.06); }
-    .toc h3 { color:#c94f6a; font-size:1rem; margin-bottom:16px; letter-spacing:1px; }
+    .toc h3 { color:#9B6B2E; font-size:1rem; margin-bottom:16px; letter-spacing:1px; }
     .toc ol { padding-left:20px; }
     .toc li { margin:8px 0; }
     .toc a { color:#555; text-decoration:none; font-size:0.95rem; }
-    .toc a:hover { color:#c94f6a; }
+    .toc a:hover { color:#7A5220; }
 
     /* PRINT */
     @media print {
@@ -107,9 +108,9 @@
 
 <!-- COVER -->
 <div class="cover">
-    <div class="cover-logo">🎂</div>
+    <div class="cover-logo"><img src="logo.png" alt="Boter" style="height:90px;"></div>
     <div class="cover-brand">Boter</div>
-    <div class="cover-sub">甜點師排程工具</div>
+    <div class="cover-sub">訂單管理系統</div>
     <div class="cover-divider"></div>
     <div class="cover-info">
         <p>📘 <strong>使用說明書</strong></p>
@@ -145,7 +146,7 @@
 
 <!-- ── 1 ── -->
 <h1 class="sec" id="s1"><span class="num">1</span>工具簡介</h1>
-<p>Boter 甜點師排程工具是一套<strong>線上訂單管理系統</strong>，協助甜點師掌握每日出貨的訂單狀況。</p>
+<p>Boter 訂單管理系統是一套<strong>線上訂單管理工具</strong>，協助甜點師掌握每日出貨的訂單狀況。</p>
 <div class="icon-row" style="margin-top:16px">
     <div class="icon-item"><span class="ic">📦</span><div><div class="ic-name">匯入 Cyberbiz 訂單</div><div class="ic-label">直接上傳 Excel 匯入</div></div></div>
     <div class="icon-item"><span class="ic">📅</span><div><div class="ic-name">月份行程總覽</div><div class="ic-label">一頁看完整個月訂單</div></div></div>
@@ -211,7 +212,7 @@
 <h2 class="sub">每日訂單欄位說明</h2>
 <table>
     <tr><th>欄位</th><th>說明</th></tr>
-    <tr><td><strong>配送方式</strong></td><td><span class="bdg bdg-green">門市取貨</span> 或 <span class="bdg bdg-orange">黑貓冷凍宅配</span></td></tr>
+    <tr><td><strong>配送方式</strong></td><td><span class="bdg bdg-green">門市取貨</span> 或 <span class="bdg bdg-orange">黑貓冷凍宅配</span> 或 其他（自行填入文字）</td></tr>
     <tr><td><strong>品項</strong></td><td>商品名稱（含款式）</td></tr>
     <tr><td><strong>量</strong></td><td>數量</td></tr>
     <tr><td><strong>訂單備註</strong></td><td>Cyberbiz 匯入的備註（客戶備註）</td></tr>
@@ -267,7 +268,7 @@
     <span class="flow-step">下載 Excel 檔</span>
 </div>
 <div class="tip warn" style="margin-top:10px">
-    <span class="tip-icon">⚠️</span> 匯出時建議勾選：<strong>訂單編號、收件人名稱、收件人電話、出貨方式、指定配送日期、商品名稱、商品款式、數量、備註</strong>
+    <span class="tip-icon">⚠️</span> 匯出時建議勾選：<strong>時間、訂單編號、會員名稱、收件人名稱、收件人電話、出貨方式、指定配送日期、商品名稱、商品款式、數量、小計、總額、備註、商家備註</strong>
 </div>
 
 <h2 class="sub">匯入步驟</h2>
@@ -517,8 +518,8 @@
 
 <!-- FOOTER -->
 <div style="margin-top:60px; padding:24px; background:#fff; border-radius:12px; text-align:center; color:#aaa; font-size:0.85rem; box-shadow:0 1px 4px rgba(0,0,0,.06);">
-    <div style="font-size:1.5rem; margin-bottom:8px;">🎂</div>
-    <div style="font-weight:700; color:#c94f6a; font-size:1rem; margin-bottom:4px;">Boter 甜點師排程工具</div>
+    <div style="margin-bottom:8px;"><img src="logo.png" alt="Boter" style="height:40px;"></div>
+    <div style="font-weight:700; color:#9B6B2E; font-size:1rem; margin-bottom:4px;">Boter 訂單管理系統</div>
     <div>如有問題請聯繫系統管理人員</div>
 </div>
 

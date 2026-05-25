@@ -3,17 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Boter 甜點師排程工具</title>
+    <title>Boter 訂單管理系統</title>
     <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
+        :root {
+            --brand:    #9B6B2E;
+            --brand-dk: #7A5220;
+            --brand-lt: #F5EDE0;
+            --brand-bg: #FAF7F4;
+            --border:   #E8D8C4;
+        }
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family:'Microsoft JhengHei','PingFang TC',sans-serif; background:#f0f0f0; color:#333; font-size:14px; }
+        body { font-family:'Microsoft JhengHei','PingFang TC',sans-serif; background:var(--brand-bg); color:#3D2B1A; font-size:14px; }
 
         /* LOGIN */
-        #login-screen { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background:linear-gradient(145deg,#fff5f7,#ffe8ed); }
-        .login-brand { font-size:2.8rem; font-weight:900; color:#c94f6a; letter-spacing:2px; }
-        .login-sub { color:#999; margin:6px 0 44px; }
+        #login-screen { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background:linear-gradient(145deg,#FAF7F4,#F0E6D6); }
+        .login-logo { height:60px; margin-bottom:10px; }
+        .login-title { font-size:1.1rem; font-weight:700; color:var(--brand); letter-spacing:1px; margin-bottom:4px; }
+        .login-sub { color:#999; margin:0 0 44px; font-size:0.9rem; }
         .btn-ms { background:#0078d4; color:#fff; border:none; padding:13px 32px; border-radius:8px; font-size:1rem; cursor:pointer; display:flex; align-items:center; gap:10px; font-family:inherit; }
         .btn-ms:hover { background:#006abf; }
 
@@ -21,130 +29,131 @@
         #app { display:none; min-height:100vh; }
 
         /* HEADER */
-        header { background:#fff; padding:0 20px; height:54px; box-shadow:0 2px 6px rgba(0,0,0,.08); position:sticky; top:0; z-index:200; display:flex; align-items:center; gap:8px; }
-        .h-brand { font-weight:900; color:#c94f6a; font-size:1.1rem; white-space:nowrap; }
-        .h-div { width:1px; height:24px; background:#e0e0e0; flex-shrink:0; }
-        .btn-nav { background:none; border:1px solid #ddd; border-radius:6px; padding:4px 10px; cursor:pointer; font-size:1rem; line-height:1; color:#555; }
-        .btn-nav:hover { background:#f5f5f5; }
+        header { background:#fff; padding:0 20px; height:54px; box-shadow:0 2px 6px rgba(0,0,0,.07); position:sticky; top:0; z-index:200; display:flex; align-items:center; gap:8px; border-bottom:2px solid var(--brand-lt); }
+        .h-logo { height:28px; }
+        .h-title { font-weight:700; color:var(--brand); font-size:0.95rem; white-space:nowrap; margin-left:2px; }
+        .h-div { width:1px; height:24px; background:var(--border); flex-shrink:0; }
+        .btn-nav { background:none; border:1px solid var(--border); border-radius:6px; padding:4px 10px; cursor:pointer; font-size:1rem; line-height:1; color:#666; }
+        .btn-nav:hover { background:var(--brand-lt); }
 
         /* CALENDAR */
         .cal-wrap { position:relative; }
-        .cal-trigger { display:flex; align-items:center; gap:6px; cursor:pointer; padding:5px 12px; border:1px solid #ddd; border-radius:7px; font-size:0.88rem; font-weight:600; white-space:nowrap; background:#fff; user-select:none; }
-        .cal-trigger:hover { background:#f9f9f9; }
-        .cal-popup { display:none; position:absolute; top:calc(100% + 8px); left:0; background:#fff; border:1px solid #e0e0e0; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.15); padding:14px; z-index:500; width:268px; }
+        .cal-trigger { display:flex; align-items:center; gap:6px; cursor:pointer; padding:5px 12px; border:1px solid var(--border); border-radius:7px; font-size:0.88rem; font-weight:600; white-space:nowrap; background:#fff; user-select:none; color:#555; }
+        .cal-trigger:hover { background:var(--brand-lt); }
+        .cal-popup { display:none; position:absolute; top:calc(100% + 8px); left:0; background:#fff; border:1px solid var(--border); border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.12); padding:14px; z-index:500; width:268px; }
         .cal-popup.open { display:block; }
         .cal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
-        .cal-head span { font-weight:700; font-size:0.9rem; }
-        .cal-nav { background:none; border:none; cursor:pointer; padding:4px 10px; border-radius:5px; font-size:1.1rem; }
-        .cal-nav:hover { background:#f5f5f5; }
+        .cal-head span { font-weight:700; font-size:0.9rem; color:var(--brand); }
+        .cal-nav { background:none; border:none; cursor:pointer; padding:4px 10px; border-radius:5px; font-size:1.1rem; color:#888; }
+        .cal-nav:hover { background:var(--brand-lt); }
         .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
         .cal-dow { text-align:center; font-size:0.7rem; color:#999; padding:3px 0; font-weight:600; }
-        .cal-day { text-align:center; padding:5px 2px; border-radius:5px; cursor:pointer; font-size:0.82rem; }
-        .cal-day:hover { background:#ffe0e8; }
-        .cal-day.today { font-weight:700; color:#c94f6a; }
-        .cal-day.in-month { background:#fce8ed; border-radius:5px; }
+        .cal-day { text-align:center; padding:5px 2px; border-radius:5px; cursor:pointer; font-size:0.82rem; color:#3D2B1A; }
+        .cal-day:hover { background:var(--brand-lt); }
+        .cal-day.today { font-weight:700; color:var(--brand); }
+        .cal-day.in-month { background:var(--brand-lt); border-radius:5px; }
         .cal-day.other-month { color:#ccc; }
         .cal-day.empty { pointer-events:none; }
 
-        .btn-today { background:none; border:1px solid #c94f6a; color:#c94f6a; border-radius:6px; padding:5px 10px; cursor:pointer; font-size:0.82rem; font-family:inherit; white-space:nowrap; }
-        .btn-today:hover { background:#fff0f3; }
+        .btn-today { background:none; border:1px solid var(--brand); color:var(--brand); border-radius:6px; padding:5px 10px; cursor:pointer; font-size:0.82rem; font-family:inherit; white-space:nowrap; }
+        .btn-today:hover { background:var(--brand-lt); }
         .h-right { margin-left:auto; display:flex; align-items:center; gap:8px; }
-        .btn-p { background:#c94f6a; color:#fff; border:none; padding:7px 14px; border-radius:7px; cursor:pointer; font-size:0.83rem; font-family:inherit; white-space:nowrap; }
-        .btn-p:hover { background:#b3435c; }
-        .btn-b { background:#0078d4; color:#fff; border:none; padding:7px 14px; border-radius:7px; cursor:pointer; font-size:0.83rem; font-family:inherit; white-space:nowrap; }
-        .btn-b:hover { background:#006abf; }
-        .btn-g { background:#2e7d32; color:#fff; border:none; padding:7px 14px; border-radius:7px; cursor:pointer; font-size:0.83rem; font-family:inherit; white-space:nowrap; }
-        .btn-g:hover { background:#256427; }
-        .btn-ic { background:none; border:1px solid #ddd; border-radius:7px; padding:6px 9px; cursor:pointer; font-size:0.95rem; line-height:1; }
-        .btn-ic:hover { background:#f5f5f5; }
-        .avatar { width:32px; height:32px; border-radius:50%; background:#c94f6a; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.9rem; cursor:pointer; flex-shrink:0; }
+        .btn-p  { background:var(--brand); color:#fff; border:none; padding:7px 14px; border-radius:7px; cursor:pointer; font-size:0.83rem; font-family:inherit; white-space:nowrap; }
+        .btn-p:hover  { background:var(--brand-dk); }
+        .btn-b  { background:#0078d4; color:#fff; border:none; padding:7px 14px; border-radius:7px; cursor:pointer; font-size:0.83rem; font-family:inherit; white-space:nowrap; }
+        .btn-b:hover  { background:#006abf; }
+        .btn-g  { background:#5a7a2e; color:#fff; border:none; padding:7px 14px; border-radius:7px; cursor:pointer; font-size:0.83rem; font-family:inherit; white-space:nowrap; }
+        .btn-g:hover  { background:#466024; }
+        .btn-ic { background:none; border:1px solid var(--border); border-radius:7px; padding:6px 9px; cursor:pointer; font-size:0.95rem; line-height:1; text-decoration:none; display:inline-flex; align-items:center; }
+        .btn-ic:hover { background:var(--brand-lt); }
+        .avatar { width:32px; height:32px; border-radius:50%; background:var(--brand); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.9rem; cursor:pointer; flex-shrink:0; }
 
         /* SCHEDULE */
         main { padding:14px 20px; max-width:1500px; margin:0 auto; }
-        .month-bar { font-size:0.82rem; color:#888; margin-bottom:10px; padding-left:2px; }
-        .day-card { background:#fff; border-radius:10px; margin-bottom:14px; box-shadow:0 1px 4px rgba(0,0,0,.07); overflow:hidden; }
-        .day-card.today-card { box-shadow:0 0 0 2px #c94f6a,0 2px 8px rgba(201,79,106,.15); }
-        .day-hdr { background:#fafafa; border-bottom:1px solid #f0f0f0; padding:8px 14px; display:flex; align-items:center; gap:8px; }
-        .day-name { font-weight:800; font-size:0.9rem; }
-        .day-date-lbl { color:#777; font-size:0.86rem; }
-        .today-badge { background:#c94f6a; color:#fff; font-size:0.7rem; padding:2px 7px; border-radius:10px; font-weight:700; }
-        .order-count { background:#f0f0f0; color:#555; font-size:0.75rem; padding:2px 8px; border-radius:10px; }
-        .no-orders { padding:14px; text-align:center; color:#bbb; font-size:0.84rem; }
+        .month-bar { font-size:0.82rem; color:#999; margin-bottom:10px; padding-left:2px; }
+        .day-card { background:#fff; border-radius:10px; margin-bottom:14px; box-shadow:0 1px 4px rgba(0,0,0,.06); overflow:hidden; border:1px solid var(--border); }
+        .day-card.today-card { box-shadow:0 0 0 2px var(--brand),0 2px 8px rgba(155,107,46,.15); }
+        .day-hdr { background:var(--brand-lt); border-bottom:1px solid var(--border); padding:8px 14px; display:flex; align-items:center; gap:8px; }
+        .day-name { font-weight:800; font-size:0.9rem; color:var(--brand-dk); }
+        .day-date-lbl { color:#888; font-size:0.86rem; }
+        .today-badge { background:var(--brand); color:#fff; font-size:0.7rem; padding:2px 7px; border-radius:10px; font-weight:700; }
+        .order-count { background:rgba(155,107,46,.12); color:var(--brand); font-size:0.75rem; padding:2px 8px; border-radius:10px; font-weight:600; }
+        .no-orders { padding:14px; text-align:center; color:#ccc; font-size:0.84rem; }
 
         /* TABLE */
         .sched-table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:0.81rem; }
-        .sched-table th { background:#fafafa; padding:6px 7px; text-align:left; font-size:0.74rem; color:#888; font-weight:600; border-bottom:1px solid #efefef; white-space:nowrap; overflow:hidden; }
-        .sched-table td { padding:6px 7px; border-bottom:1px solid #f5f5f5; vertical-align:top; }
+        .sched-table th { background:#FDFAF7; padding:6px 7px; text-align:left; font-size:0.74rem; color:#9B7850; font-weight:600; border-bottom:1px solid var(--border); white-space:nowrap; overflow:hidden; }
+        .sched-table td { padding:6px 7px; border-bottom:1px solid #F5EDE0; vertical-align:top; }
         .sched-table tr:last-child td { border-bottom:none; }
-        .sched-table tr:hover td { background:#fdf9fa; }
+        .sched-table tr:hover td { background:#FDFAF7; }
         .td-n { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .td-w { white-space:normal; word-break:break-all; overflow:visible; }
 
         .bdg { display:inline-block; padding:1px 6px; border-radius:8px; font-size:0.74rem; white-space:nowrap; }
-        .bdg-home  { background:#fff3e0; color:#e65100; }
+        .bdg-home  { background:#fff3e0; color:#b05a00; }
         .bdg-store { background:#e8f5e9; color:#2e7d32; }
-        .bdg-other { background:#f3f3f3; color:#777; }
-        .badge-mod { display:inline-block; background:#e65100; color:#fff; font-size:0.68rem; padding:1px 4px; border-radius:3px; margin-left:3px; vertical-align:middle; font-weight:700; }
+        .bdg-other { background:#f3f0eb; color:#7a6248; }
+        .badge-mod { display:inline-block; background:#b05a00; color:#fff; font-size:0.68rem; padding:1px 4px; border-radius:3px; margin-left:3px; vertical-align:middle; font-weight:700; }
         .pickup-sel { border:none; border-radius:8px; font-size:0.74rem; padding:2px 5px; cursor:pointer; font-family:inherit; outline:none; font-weight:600; }
-        .dot-new { position:absolute; top:3px; left:3px; width:7px; height:7px; background:#e53935; border-radius:50%; }
-        .cal-dot { display:block; width:5px; height:5px; background:#e53935; border-radius:50%; margin:1px auto 0; }
-        .row-dup td:first-child { border-left:3px solid #9e9e9e; }
-        .row-dup td { color:#aaa; }
+        .dot-new { position:absolute; top:3px; left:3px; width:7px; height:7px; background:#c0392b; border-radius:50%; }
+        .cal-dot { display:block; width:5px; height:5px; background:#c0392b; border-radius:50%; margin:1px auto 0; }
+        .row-dup td:first-child { border-left:3px solid #c9b99a; }
+        .row-dup td { color:#b8a898; }
 
-        .btn-act { background:none; border:none; cursor:pointer; padding:3px 5px; border-radius:4px; font-size:0.82rem; color:#bbb; }
-        .btn-act:hover { background:#f0f0f0; color:#333; }
+        .btn-act { background:none; border:none; cursor:pointer; padding:3px 5px; border-radius:4px; font-size:0.82rem; color:#c9b99a; }
+        .btn-act:hover { background:var(--brand-lt); color:var(--brand); }
 
         /* MODAL */
-        .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500; align-items:center; justify-content:center; }
+        .overlay { display:none; position:fixed; inset:0; background:rgba(61,43,26,.4); z-index:500; align-items:center; justify-content:center; }
         .overlay.open { display:flex; }
-        .modal { background:#fff; border-radius:14px; padding:24px; width:520px; max-width:94vw; max-height:92vh; overflow-y:auto; box-shadow:0 8px 32px rgba(0,0,0,.18); }
+        .modal { background:#fff; border-radius:14px; padding:24px; width:520px; max-width:94vw; max-height:92vh; overflow-y:auto; box-shadow:0 8px 32px rgba(0,0,0,.15); }
         .modal-lg { width:700px; }
-        .modal-title { font-size:1.05rem; font-weight:800; color:#c94f6a; margin-bottom:18px; }
+        .modal-title { font-size:1.05rem; font-weight:800; color:var(--brand); margin-bottom:18px; }
         .fg { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
         .ff { grid-column:1/-1; }
-        .lbl { display:block; font-size:0.77rem; color:#777; margin-bottom:3px; }
-        .ctrl { width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:7px; font-size:0.87rem; font-family:inherit; background:#fff; }
-        .ctrl:focus { outline:none; border-color:#c94f6a; }
+        .lbl { display:block; font-size:0.77rem; color:#9B7850; margin-bottom:3px; }
+        .ctrl { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:7px; font-size:0.87rem; font-family:inherit; background:#fff; color:#3D2B1A; }
+        .ctrl:focus { outline:none; border-color:var(--brand); }
         .mf { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
-        .btn-cx { padding:7px 16px; border:1px solid #ddd; background:#fff; border-radius:7px; cursor:pointer; font-family:inherit; }
-        .btn-cx:hover { background:#f5f5f5; }
+        .btn-cx { padding:7px 16px; border:1px solid var(--border); background:#fff; border-radius:7px; cursor:pointer; font-family:inherit; color:#666; }
+        .btn-cx:hover { background:var(--brand-lt); }
 
         /* TWO-LEVEL PRODUCT MANAGEMENT */
         .prod-scroll { max-height:380px; overflow-y:auto; margin-bottom:12px; }
-        .cat-block { border:1px solid #e8e8e8; border-radius:9px; margin-bottom:8px; overflow:hidden; }
-        .cat-row { display:flex; align-items:center; gap:6px; padding:8px 10px; background:#fafafa; border-bottom:1px solid #f0f0f0; }
-        .cat-label { font-size:0.72rem; color:#888; font-weight:600; margin-right:2px; }
-        .cat-inp { flex:1; border:none; background:transparent; font-size:0.9rem; font-weight:700; font-family:inherit; outline:none; color:#333; }
-        .cat-inp:focus { border-bottom:1px solid #c94f6a; }
+        .cat-block { border:1px solid var(--border); border-radius:9px; margin-bottom:8px; overflow:hidden; }
+        .cat-row { display:flex; align-items:center; gap:6px; padding:8px 10px; background:var(--brand-lt); border-bottom:1px solid var(--border); }
+        .cat-label { font-size:0.72rem; color:var(--brand); font-weight:600; margin-right:2px; }
+        .cat-inp { flex:1; border:none; background:transparent; font-size:0.9rem; font-weight:700; font-family:inherit; outline:none; color:var(--brand-dk); }
+        .cat-inp:focus { border-bottom:1px solid var(--brand); }
         .item-rows { padding:6px 10px 6px 20px; display:flex; flex-direction:column; gap:4px; }
         .item-row { display:flex; align-items:center; gap:6px; }
-        .item-inp { flex:1; border:none; background:transparent; font-size:0.86rem; font-family:inherit; outline:none; color:#555; }
-        .item-inp:focus { border-bottom:1px solid #c94f6a; }
+        .item-inp { flex:1; border:none; background:transparent; font-size:0.86rem; font-family:inherit; outline:none; color:#5a4030; }
+        .item-inp:focus { border-bottom:1px solid var(--brand); }
         .item-add-row { padding:4px 10px 8px 20px; }
-        .prod-btn { background:none; border:none; cursor:pointer; padding:2px 6px; border-radius:4px; font-size:0.82rem; color:#bbb; }
-        .prod-btn:hover { background:#f0f0f0; color:#333; }
+        .prod-btn { background:none; border:none; cursor:pointer; padding:2px 6px; border-radius:4px; font-size:0.82rem; color:#c9b99a; }
+        .prod-btn:hover { background:var(--brand-lt); color:var(--brand); }
         .prod-btn:disabled { opacity:0.25; cursor:default; }
-        .prod-btn.del:hover { color:#e53935; }
+        .prod-btn.del:hover { color:#c0392b; background:#fdf0ec; }
         .cat-add-row { margin-top:4px; }
 
         /* IMPORT */
-        .drop-zone { border:2px dashed #ddd; border-radius:10px; padding:28px; text-align:center; cursor:pointer; transition:border-color .2s,background .2s; }
-        .drop-zone:hover,.drop-zone.drag-over { border-color:#c94f6a; background:#fff5f7; }
+        .drop-zone { border:2px dashed var(--border); border-radius:10px; padding:28px; text-align:center; cursor:pointer; transition:border-color .2s,background .2s; }
+        .drop-zone:hover,.drop-zone.drag-over { border-color:var(--brand); background:var(--brand-lt); }
         .drop-zone input { display:none; }
-        .preview-wrap { margin-top:12px; overflow-x:auto; max-height:260px; overflow-y:auto; border:1px solid #eee; border-radius:8px; }
+        .preview-wrap { margin-top:12px; overflow-x:auto; max-height:260px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; }
         .preview-table { width:100%; border-collapse:collapse; font-size:0.79rem; }
-        .preview-table th { background:#f5f5f5; padding:5px 8px; text-align:left; position:sticky; top:0; border-bottom:1px solid #ddd; white-space:nowrap; }
-        .preview-table td { padding:5px 8px; border-bottom:1px solid #f5f5f5; max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .row-ok  td:first-child { border-left:3px solid #2e7d32; }
-        .row-warn td:first-child { border-left:3px solid #f57f17; }
-        .imp-sum { background:#e8f5e9; border-radius:8px; padding:9px 13px; font-size:0.84rem; color:#2e7d32; }
-        .imp-sum.warn { background:#fff8e1; color:#795548; }
+        .preview-table th { background:#FDFAF7; padding:5px 8px; text-align:left; position:sticky; top:0; border-bottom:1px solid var(--border); white-space:nowrap; color:#9B7850; }
+        .preview-table td { padding:5px 8px; border-bottom:1px solid #F5EDE0; max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .row-ok  td:first-child { border-left:3px solid #5a7a2e; }
+        .row-warn td:first-child { border-left:3px solid #c07820; }
+        .imp-sum { background:#F0EBE0; border-radius:8px; padding:9px 13px; font-size:0.84rem; color:var(--brand-dk); }
+        .imp-sum.warn { background:#fdf5e0; color:#7a5820; }
 
         /* TOAST */
-        .toast { position:fixed; bottom:22px; right:22px; background:#222; color:#fff; padding:10px 20px; border-radius:9px; font-size:0.83rem; z-index:9999; opacity:0; transition:opacity .3s; pointer-events:none; }
+        .toast { position:fixed; bottom:22px; right:22px; background:#3D2B1A; color:#fff; padding:10px 20px; border-radius:9px; font-size:0.83rem; z-index:9999; opacity:0; transition:opacity .3s; pointer-events:none; }
         .toast.show { opacity:1; }
-        .toast.ok  { background:#2e7d32; }
-        .toast.err { background:#c62828; }
+        .toast.ok  { background:#5a7a2e; }
+        .toast.err { background:#9b2e1a; }
         .spinner { display:inline-block; width:15px; height:15px; border:3px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; }
         @keyframes spin { to { transform:rotate(360deg); } }
 
@@ -160,7 +169,8 @@
 
 <!-- LOGIN -->
 <div id="login-screen">
-    <div class="login-brand">Boter</div>
+    <img src="logo.png" alt="Boter" class="login-logo">
+    <div class="login-title">訂單管理系統</div>
     <div class="login-sub">甜點師排程管理工具</div>
     <button class="btn-ms" onclick="doLogin()">
         <svg width="20" height="20" viewBox="0 0 21 21">
@@ -171,13 +181,14 @@
         </svg>
         使用 Microsoft 帳號登入
     </button>
-    <div style="margin-top:14px;color:#aaa;font-size:0.8rem;">僅限公司 Microsoft 帳號</div>
+    <div style="margin-top:14px;color:#bbb;font-size:0.8rem;">僅限公司 Microsoft 帳號</div>
 </div>
 
 <!-- APP -->
 <div id="app">
     <header>
-        <span class="h-brand">🎂 Boter</span>
+        <img src="logo.png" alt="Boter" class="h-logo">
+        <span class="h-title">訂單管理系統</span>
         <div class="h-div"></div>
         <button class="btn-nav" onclick="changeMonth(-1)">‹</button>
         <div class="cal-wrap">
@@ -201,6 +212,7 @@
             <button class="btn-b" id="btn-save" onclick="saveData()">☁ 儲存</button>
             <button class="btn-ic" onclick="openPrintModal()" title="列印">🖨</button>
             <button class="btn-ic" onclick="openProducts()" title="品項清單">📋</button>
+            <a href="manual.html" target="_blank" class="btn-ic" title="使用說明書">📖</a>
             <button class="btn-ic" onclick="openSettings()" title="設定">⚙</button>
             <div class="avatar" id="avatar">K</div>
         </div>
@@ -222,7 +234,6 @@
                     <label class="lbl">出貨日期 *</label>
                     <input class="ctrl" type="date" id="f-date" required>
                 </div>
-                <!-- import-only: 訂單編號 -->
                 <div id="f-no-wrap">
                     <label class="lbl">訂單編號</label>
                     <input class="ctrl" type="text" id="f-no" placeholder="#1001">
@@ -236,7 +247,6 @@
                     </select>
                     <input class="ctrl" type="text" id="f-delivery-other" placeholder="請輸入配送方式" style="display:none;margin-top:6px">
                 </div>
-                <!-- Two-level item selection -->
                 <div class="ff">
                     <label class="lbl">品項 *</label>
                     <div style="display:flex;gap:8px;margin-bottom:6px">
@@ -270,7 +280,6 @@
                     <label class="lbl">收件人電話</label>
                     <input class="ctrl" type="text" id="f-phone" placeholder="0912345678">
                 </div>
-                <!-- import-only: 訂單備註 -->
                 <div class="ff" id="f-onotes-wrap">
                     <label class="lbl">訂單備註</label>
                     <input class="ctrl" type="text" id="f-onotes" placeholder="來自 Cyberbiz 的備註">
@@ -292,7 +301,7 @@
 <div class="overlay" id="products-overlay">
     <div class="modal modal-lg">
         <div class="modal-title">📋 品項清單管理</div>
-        <div style="font-size:0.79rem;color:#888;margin-bottom:12px;">
+        <div style="font-size:0.79rem;color:#9B7850;margin-bottom:12px;">
             <strong>商品類別</strong>（第一層）可包含多個 <strong>商品名稱</strong>（第二層）。排序決定訂單顯示順序。
         </div>
         <div class="prod-scroll" id="prod-tree"></div>
@@ -322,18 +331,18 @@
                 ondrop="handleDrop(event)">
                 <input type="file" id="file-input" accept=".xlsx,.xls,.csv,.txt" onchange="handleFile(this.files[0])">
                 <div style="font-size:2rem;margin-bottom:6px;">📄</div>
-                <div style="font-weight:700;margin-bottom:4px;">點擊選擇檔案，或拖曳至此</div>
-                <div style="color:#888;font-size:0.83rem;">支援 .xlsx / .csv</div>
+                <div style="font-weight:700;margin-bottom:4px;color:#5a4030;">點擊選擇檔案，或拖曳至此</div>
+                <div style="color:#9B7850;font-size:0.83rem;">支援 .xlsx / .csv</div>
             </div>
-            <div style="margin-top:12px;background:#f0f4ff;border-radius:8px;padding:10px 13px;font-size:0.79rem;color:#3949ab;line-height:1.7;">
+            <div style="margin-top:12px;background:#F0EBE0;border-radius:8px;padding:10px 13px;font-size:0.79rem;color:var(--brand-dk);line-height:1.7;">
                 <strong>Cyberbiz 匯出路徑：</strong> 後台 → 訂單 → 訂單報表匯出<br>
-                建議勾選欄位：<strong>訂單編號、收件人名稱、收件人電話、出貨方式、指定配送日期、商品名稱、商品款式、數量、備註</strong>
+                建議勾選欄位：<strong>時間、訂單編號、會員名稱、收件人名稱、收件人電話、出貨方式、指定配送日期、商品名稱、商品款式、數量、小計、總額、備註、商家備註</strong>
             </div>
         </div>
         <div id="import-step2" style="display:none">
             <div id="import-summary" class="imp-sum"></div>
             <div class="preview-wrap" id="preview-wrap"></div>
-            <div style="margin-top:8px;font-size:0.77rem;color:#888;">綠色 = 可匯入　橘色 = 缺出貨日期，略過　灰色 = 已存在，略過</div>
+            <div style="margin-top:8px;font-size:0.77rem;color:#9B7850;">綠色 = 可匯入　橘色 = 缺出貨日期，略過　灰色 = 已存在，略過</div>
         </div>
         <div class="mf">
             <button class="btn-cx" onclick="resetImport()">取消</button>
@@ -378,11 +387,11 @@
             </div>
             <div>
                 <label class="lbl">目前登入帳號</label>
-                <div class="ctrl" style="background:#f9f9f9;color:#555;" id="s-user">—</div>
+                <div class="ctrl" style="background:#FDFAF7;color:#9B7850;" id="s-user">—</div>
             </div>
-            <div style="border-top:1px solid #f0f0f0;padding-top:12px;">
-                <button onclick="clearAllData()" style="background:none;border:1px solid #e53935;color:#e53935;padding:6px 14px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:0.83rem;">⚠ 清除所有訂單資料</button>
-                <div style="font-size:0.75rem;color:#aaa;margin-top:5px;">快捷鍵：Ctrl + Shift + X</div>
+            <div style="border-top:1px solid var(--border);padding-top:12px;">
+                <button onclick="clearAllData()" style="background:none;border:1px solid #c0392b;color:#c0392b;padding:6px 14px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:0.83rem;">⚠ 清除所有訂單資料</button>
+                <div style="font-size:0.75rem;color:#bbb;margin-top:5px;">快捷鍵：Ctrl + Shift + X</div>
             </div>
         </div>
         <div class="mf">
@@ -485,7 +494,7 @@ function onCatChange() {
     if (catName === '__OTHER__') {
         sel.innerHTML = '<option value="">— 選商品名稱 —</option>';
         itemInp.value = '其他';
-        itemInp.readOnly = true; itemInp.style.background = '#f5f5f5';
+        itemInp.readOnly = true; itemInp.style.background = '#F5EDE0';
         return;
     }
     itemInp.readOnly = false; itemInp.style.background = '';
@@ -626,7 +635,6 @@ function clearAllData() {
     render(); closeOverlay('settings-overlay'); toast('已清除所有訂單資料', '');
 }
 
-/* Auto-save: debounce 2s */
 let _autoSaveTimer;
 function scheduleAutoSave() {
     clearTimeout(_autoSaveTimer);
@@ -646,7 +654,6 @@ function goToday() {
     currentMonth = new Date(t.getFullYear(), t.getMonth(), 1);
     calViewDate  = new Date(t.getFullYear(), t.getMonth(), 1);
     render(); renderCalGrid();
-    // Scroll to today's card after render
     const todayStr = fmtDate(t);
     requestAnimationFrame(() => {
         const el = document.querySelector(`.day-card[data-date="${todayStr}"]`);
@@ -712,7 +719,7 @@ function render() {
 
     for (let dd = 1; dd <= dim; dd++) {
         const day = new Date(y, m, dd);
-        if (day.getDay() === 0) continue; // skip Sunday
+        if (day.getDay() === 0) continue;
         const ds = fmtDate(day);
         const dayOrders = orders.filter(o=>o.date===ds).sort((a,b)=>{
             const oa=productOrder(a.item), ob=productOrder(b.item);
@@ -730,8 +737,8 @@ function render() {
                            : 'bdg bdg-other';
             const modBadge = o.modified ? '<span class="badge-mod">異動</span>' : '';
             const pv = o.pickup||'未取貨';
-            const pbg = pv==='已自取'?'#e8f5e9':pv==='已出貨'?'#e3f2fd':'#f3f3f3';
-            const pco = pv==='已自取'?'#2e7d32':pv==='已出貨'?'#1565c0':'#999';
+            const pbg = pv==='已自取'?'#e8f5e9':pv==='已出貨'?'#e3f2fd':'#f3f0eb';
+            const pco = pv==='已自取'?'#2e7d32':pv==='已出貨'?'#1565c0':'#9B7850';
             const pOpts = ['未取貨','已自取','已出貨'].map(v=>`<option value="${v}"${v===pv?' selected':''}>${v}</option>`).join('');
             return `<tr>
                 <td class="td-n" title="${esc(dm)}"><span class="${delivCls}">${esc(dm)}</span></td>
@@ -760,16 +767,10 @@ function render() {
             ${dayOrders.length===0 ? '<div class="no-orders">— 無訂單 —</div>'
             : `<table class="sched-table">
                 <colgroup>
-                    <col style="width:118px">
-                    <col style="width:130px">
-                    <col style="width:36px">
-                    <col style="width:150px">
-                    <col style="width:120px">
-                    <col style="width:70px">
-                    <col style="width:103px">
-                    <col style="width:68px">
-                    <col style="width:88px">
-                    <col style="width:50px">
+                    <col style="width:118px"><col style="width:130px"><col style="width:36px">
+                    <col style="width:150px"><col style="width:120px">
+                    <col style="width:70px"><col style="width:103px">
+                    <col style="width:68px"><col style="width:88px"><col style="width:50px">
                 </colgroup>
                 <thead><tr>
                     <th>配送方式</th><th>品項</th><th>量</th>
@@ -812,10 +813,8 @@ function openAdd() {
     document.getElementById('f-pickup').value = '未取貨';
     document.getElementById('f-delivery').value = '門市取貨 (Caker Lab)';
     document.getElementById('f-delivery-other').style.display = 'none';
-    // Hide import-only fields
     document.getElementById('f-no-wrap').style.display = 'none';
     document.getElementById('f-onotes-wrap').style.display = 'none';
-    // Reset item input state
     const itemInp = document.getElementById('f-item');
     itemInp.readOnly = false; itemInp.style.background = '';
     refreshDatalist(); refreshCatDropdown();
@@ -843,10 +842,11 @@ function openEdit(id) {
         document.getElementById('f-delivery-other').value = dm;
         document.getElementById('f-delivery-other').style.display = dm ? '' : 'none';
     }
-    // Show/hide import-only fields
     const isImport = o.source === 'import';
     document.getElementById('f-no-wrap').style.display = isImport ? '' : 'none';
     document.getElementById('f-onotes-wrap').style.display = isImport ? '' : 'none';
+    const itemInp = document.getElementById('f-item');
+    itemInp.readOnly = false; itemInp.style.background = '';
     refreshDatalist(); refreshCatDropdown();
     const cats = getProducts(); const item = o.item||'';
     for (const cat of cats) {
@@ -887,9 +887,7 @@ function submitOrder() {
     closeOverlay('order-overlay');
 }
 
-/* ────────────────────────────────────────
-   TWO-LEVEL PRODUCT MANAGEMENT
-──────────────────────────────────────── */
+/* ── PRODUCT MANAGEMENT ── */
 let tempProds = [];
 function openProducts() {
     tempProds = JSON.parse(JSON.stringify(getProducts()));
@@ -897,7 +895,7 @@ function openProducts() {
 }
 function renderProdTree() {
     const el = document.getElementById('prod-tree');
-    if (!tempProds.length) { el.innerHTML = '<div style="color:#aaa;font-size:0.84rem;text-align:center;padding:12px">尚無類別，請新增</div>'; return; }
+    if (!tempProds.length) { el.innerHTML = '<div style="color:#bbb;font-size:0.84rem;text-align:center;padding:12px">尚無類別，請新增</div>'; return; }
     el.innerHTML = tempProds.map((cat,ci) => `
         <div class="cat-block">
             <div class="cat-row">
@@ -905,16 +903,16 @@ function renderProdTree() {
                 <input class="cat-inp" value="${esc(cat.name)}" onchange="tempProds[${ci}].name=this.value.trim()" placeholder="商品類別名稱">
                 <button class="prod-btn" onclick="moveCat(${ci},-1)" ${ci===0?'disabled':''}>↑</button>
                 <button class="prod-btn" onclick="moveCat(${ci},1)" ${ci===tempProds.length-1?'disabled':''}>↓</button>
-                <button class="prod-btn del" onclick="delCat(${ci})" title="刪除類別">✕</button>
+                <button class="prod-btn del" onclick="delCat(${ci})">✕</button>
             </div>
             <div class="item-rows">
                 ${(cat.items||[]).map((it,ii)=>`
                     <div class="item-row">
-                        <span style="color:#bbb;font-size:0.78rem;width:16px;flex-shrink:0">└</span>
+                        <span style="color:#c9b99a;font-size:0.78rem;width:16px;flex-shrink:0">└</span>
                         <input class="item-inp" value="${esc(it.name)}" onchange="tempProds[${ci}].items[${ii}].name=this.value.trim()" placeholder="商品名稱">
                         <button class="prod-btn" onclick="moveItem(${ci},${ii},-1)" ${ii===0?'disabled':''}>↑</button>
                         <button class="prod-btn" onclick="moveItem(${ci},${ii},1)" ${ii===(cat.items||[]).length-1?'disabled':''}>↓</button>
-                        <button class="prod-btn del" onclick="delItem(${ci},${ii})" title="刪除品名">✕</button>
+                        <button class="prod-btn del" onclick="delItem(${ci},${ii})">✕</button>
                     </div>`).join('')}
             </div>
             <div class="item-add-row">
@@ -1076,8 +1074,8 @@ function showPreview() {
                 const isDup=r.orderNumber&&dupNums.has(r.orderNumber);
                 const rowCls=isDup?'row-dup':r.valid?'row-ok':'row-warn';
                 return `<tr class="${rowCls}">
-                    <td>${r.date||'<span style="color:#e65100">缺日期</span>'}</td>
-                    <td>${esc(r.orderNumber)}${isDup?' <span style="color:#aaa;font-size:0.75rem">已存在</span>':''}</td>
+                    <td>${r.date||'<span style="color:#c07820">缺日期</span>'}</td>
+                    <td>${esc(r.orderNumber)}${isDup?' <span style="color:#bbb;font-size:0.75rem">已存在</span>':''}</td>
                     <td>${esc(r.item)}</td>
                     <td>${r.quantity}</td><td>${esc(r.customer)}</td><td>${esc(r.deliveryMethod)}</td>
                 </tr>`;
@@ -1140,10 +1138,10 @@ function doPrint() {
     while (cur<=endD) { if(cur.getDay()!==0) days.push(new Date(cur)); cur.setDate(cur.getDate()+1); }
     let body=`<style>
         body{font-family:'Microsoft JhengHei',sans-serif;font-size:12px;margin:0;padding:12px;}
-        h3{margin:14px 0 4px;font-size:13px;border-bottom:2px solid #c94f6a;padding-bottom:3px;color:#c94f6a;}
+        h3{margin:14px 0 4px;font-size:13px;border-bottom:2px solid #9B6B2E;padding-bottom:3px;color:#9B6B2E;}
         table{width:100%;border-collapse:collapse;margin-bottom:10px;}
-        th,td{padding:4px 6px;border:1px solid #ddd;text-align:left;font-size:11px;}
-        th{background:#fafafa;font-weight:600;}
+        th,td{padding:4px 6px;border:1px solid #E8D8C4;text-align:left;font-size:11px;}
+        th{background:#FAF7F4;font-weight:600;color:#9B7850;}
         @page{margin:1.5cm;}
     </style>`;
     days.forEach(day=>{
