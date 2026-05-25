@@ -11,11 +11,27 @@
   --bd:rgba(0,0,0,.12);--bd2:rgba(0,0,0,.22);--ibg:#e6f1fb;--itx:#0c447c;
   --r:8px;--rl:12px
 }
-@media(prefers-color-scheme:dark){:root{
-  --bg:#1c1c1a;--bg2:#252523;--bg3:#2e2e2c;--tx:#f0ede8;--tx2:#a0a09a;--tx3:#6e6e68;
-  --bd:rgba(255,255,255,.12);--bd2:rgba(255,255,255,.22);--ibg:#0c2d4a;--itx:#85b7eb
-}}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg3);color:var(--tx);min-height:100vh;padding:16px 12px;font-size:14px}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg3);color:var(--tx);min-height:100vh;font-size:14px;display:flex}
+.sidebar{width:180px;min-width:180px;background:var(--bg);border-right:.5px solid var(--bd);min-height:100vh;display:flex;flex-direction:column;padding:16px 0;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sidebar-logo{padding:0 16px 16px;border-bottom:.5px solid var(--bd);margin-bottom:8px}
+.sidebar-logo h1{font-size:15px;font-weight:600;line-height:1.3}
+.sidebar-logo p{font-size:11px;color:var(--tx2);margin-top:3px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:9px 16px;cursor:pointer;font-size:13px;font-weight:500;color:var(--tx2);transition:all .12s;border-left:3px solid transparent}
+.nav-item:hover{background:var(--bg2);color:var(--tx)}
+.nav-item.on{background:var(--ibg);color:var(--itx);border-left-color:var(--itx)}
+.nav-item.sub{padding:7px 16px 7px 32px;font-size:12px;font-weight:400}
+.nav-item.sub.on{border-left-color:var(--itx)}
+.nav-section{font-size:10px;font-weight:500;color:var(--tx3);padding:12px 16px 4px;text-transform:uppercase;letter-spacing:.05em}
+.nav-group{display:flex;flex-direction:column}
+.nav-parent{display:flex;align-items:center;justify-content:space-between;padding:9px 16px;cursor:pointer;font-size:13px;font-weight:500;color:var(--tx2);transition:all .12s;border-left:3px solid transparent}
+.nav-parent:hover{background:var(--bg2);color:var(--tx)}
+.nav-parent.open{color:var(--tx)}
+.nav-arrow{font-size:10px;transition:transform .2s;display:inline-block}
+.nav-parent.open .nav-arrow{transform:rotate(90deg)}
+.nav-children{display:none;flex-direction:column}
+.nav-children.open{display:flex}
+.main-content{flex:1;padding:16px 20px;min-width:0;overflow-x:hidden}
+.page{max-width:900px}
 .page{max-width:1200px;margin:0 auto}
 h1{font-size:19px;font-weight:500;margin-bottom:3px}
 .sub{font-size:12px;color:var(--tx2);margin-bottom:14px}
@@ -41,7 +57,7 @@ input[type=text]:focus{border-color:var(--itx)}
 .week-tabs{display:flex;gap:5px;flex-wrap:wrap}
 .wtab{padding:5px 12px;border:.5px solid var(--bd2);border-radius:20px;background:transparent;color:var(--tx2);cursor:pointer;font-size:12px;font-weight:500;transition:all .12s}
 .wtab.on{background:var(--ibg);color:var(--itx);border-color:transparent}
-.grid-wrap{overflow-x:auto;margin-bottom:10px}
+.grid-wrap{overflow-x:auto;margin-bottom:10px;-webkit-overflow-scrolling:touch}
 .sched-grid{border-collapse:collapse;font-size:12px;min-width:800px;width:100%}
 .sched-grid th{background:var(--bg2);color:var(--tx2);font-weight:500;padding:6px 3px;text-align:center;border:.5px solid var(--bd);white-space:nowrap;font-size:11px}
 .sched-grid th.day-hd{font-size:12px;font-weight:500;color:var(--tx);background:var(--bg2)}
@@ -106,11 +122,6 @@ input[type=text]:focus{border-color:var(--itx)}
 .tl0{background:#e1f5ee;color:#085041}
 .tl1{background:#faeeda;color:#633806}
 .tl2{background:#fcebeb;color:#791f1f}
-@media(prefers-color-scheme:dark){
-  .tl0{background:#04342c;color:#9fe1cb}
-  .tl1{background:#412402;color:#fac775}
-  .tl2{background:#501313;color:#f7c1c1}
-}
 
 /* IMPORT */
 .izone{border:1.5px dashed var(--bd2);border-radius:var(--rl);padding:16px;text-align:center;cursor:pointer;background:var(--bg2)}
@@ -126,7 +137,7 @@ input[type=text]:focus{border-color:var(--itx)}
   .card{border:none;padding:4px}
   .sched-grid{font-size:10px}
   .slot-add,.ct-d{display:none!important}
-  #tab-history,#tab-import,#tab-teachers{display:none!important}
+  #tab-history,#tab-import,#tab-teachers,#tab-bftime,#tab-slots,#tab-capstd,#tab-sp{display:none!important}
   #tab-schedule{display:block!important}
 }
 @media(max-width:600px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -137,32 +148,43 @@ input[type=text]:focus{border-color:var(--itx)}
 </style>
 </head>
 <body>
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <h1>游泳學院</h1>
+    <p>排課與產能管理工具</p>
+  </div>
+  <!-- AUTH in sidebar -->
+  <div style="padding:0 12px 10px;border-bottom:.5px solid var(--bd);margin-bottom:8px">
+    <div style="font-size:11px;color:var(--tx2);margin-bottom:5px" id="auth-status">載入中...</div>
+    <div id="sync-info" class="hidden" style="font-size:10px;color:var(--tx2);margin-bottom:4px"><span id="sync-status"></span></div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <button id="btn-sync" class="btn hidden" style="font-size:11px;padding:4px 8px" onclick="saveToSharePoint()">&#8593; 同步 SharePoint</button>
+      <button id="btn-signin" class="btn pri" style="font-size:11px;padding:4px 8px" onclick="signIn()">&#128274; 登入公司帳號</button>
+      <button id="btn-signout" class="btn hidden" style="font-size:11px;padding:4px 8px" onclick="signOut()">登出</button>
+    </div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-item on" id="nav-schedule" onclick="switchTab('schedule')">&#128203; 排課矩陣</div>
+    <div class="nav-item" id="nav-history" onclick="switchTab('history')">&#128200; 產能分析</div>
+    <div class="nav-item" id="nav-import" onclick="switchTab('import')">&#128229; 匯入報表</div>
+  </div>
+  <div class="nav-parent" id="nav-settings-parent" onclick="toggleSettings()">
+    <span>&#9881; 設定管理</span>
+    <span class="nav-arrow">&#9654;</span>
+  </div>
+  <div class="nav-children" id="nav-settings-children">
+    <div class="nav-item sub" id="nav-teachers" onclick="switchTab('teachers')">教師名單</div>
+    <div class="nav-item sub" id="nav-course" onclick="switchTab('course')">班別設定</div>
+    <div class="nav-item sub" id="nav-bftime" onclick="switchTab('bftime')">匯入時段對照</div>
+    <div class="nav-item sub" id="nav-slots" onclick="switchTab('slots')">產能分析時段</div>
+    <div class="nav-item sub" id="nav-capstd" onclick="switchTab('capstd')">產能標準設定</div>
+    <div class="nav-item sub" id="nav-sp" onclick="switchTab('sp')">SharePoint 設定</div>
+  </div>
+</div>
+<!-- MAIN CONTENT -->
+<div class="main-content">
 <div class="page">
-<h1>游泳學院排課與產能管理工具</h1>
-<p class="sub">西屯館（4教學區）× 北屯館（5教學區）</p>
-
-<!-- AUTH BAR -->
-<div class="auth-bar">
-  <div class="auth-left">
-    <span class="auth-icon">&#9679;</span>
-    <span id="auth-status">載入中...</span>
-  </div>
-  <div class="auth-right">
-    <span id="sync-info" class="hidden" style="font-size:11px;color:var(--tx2)">
-      <span id="sync-status"></span>
-    </span>
-    <button id="btn-sync" class="btn hidden" onclick="saveToSharePoint()">&#8593; 同步到 SharePoint</button>
-    <button id="btn-signin" class="btn pri" onclick="signIn()">&#128274; 登入公司帳號</button>
-    <button id="btn-signout" class="btn hidden" onclick="signOut()">登出</button>
-  </div>
-</div>
-
-<div class="tabs">
-  <button class="tab on" onclick="switchTab('schedule')">排課矩陣</button>
-  <button class="tab" onclick="switchTab('history')">歷史分析</button>
-  <button class="tab" onclick="switchTab('import')">匯入報表</button>
-  <button class="tab" onclick="switchTab('teachers')">教師管理</button>
-</div>
 
 <!-- SCHEDULE -->
 <div id="tab-schedule">
@@ -193,10 +215,16 @@ input[type=text]:focus{border-color:var(--itx)}
 <!-- HISTORY -->
 <div id="tab-history" class="hidden">
 <div class="card">
-  <div class="sec">歷史產能利用率（Bookfast 報表）</div>
+  <div class="sec">產能利用率分析（Bookfast 報表）</div>
+  <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:8px 12px;background:var(--bg2);border-radius:var(--r);font-size:12px">
+    <span style="font-weight:500;color:var(--tx2)">利用率說明：</span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#1D9E75"></span>離峰（&lt;50%）</span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#EF9F27"></span>穩定（50%～80%）</span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#E24B4A"></span>飽和（&gt;80%）</span>
+  </div>
   <div class="pbars">
     <button class="pb-btn on" onclick="setPeriod('month')">月</button>
-    <button class="pb-btn" onclick="setPeriod('week')">週</button>
+    <button class="pb-btn" onclick="setPeriod('season')">季</button>
     <button class="pb-btn" onclick="setPeriod('year')">年</button>
     <select id="hv-sel" onchange="renderHistory()">
       <option value="x">西屯館</option>
@@ -205,10 +233,25 @@ input[type=text]:focus{border-color:var(--itx)}
     </select>
     <select id="hy-sel" onchange="onHYearChange()"></select>
     <select id="hm-sel" onchange="renderHistory()"></select>
+    <select id="hs-sel" onchange="renderHistory()" style="display:none"></select>
+    <span style="font-size:12px;color:var(--tx2);margin-left:4px">產能標準：</span>
+    <select id="hcap-sel" onchange="onCapStdChange()">
+      <option value="std" selected>標準產能</option>
+      <option value="max">最大產能</option>
+    </select>
+    <span style="font-size:12px;color:var(--tx2);margin-left:4px">人次標準：</span>
+    <select id="hpax-sel" onchange="onPaxModeChange()">
+      <option value="std" selected>標準人次</option>
+      <option value="max">最大人次</option>
+    </select>
   </div>
   <div id="hist-content"></div>
+  <div id="rev-detail-section" class="hidden" style="margin-top:0">
+    <div id="revenue-content"></div>
+  </div>
   <div class="row" style="margin-top:10px">
     <button class="btn" onclick="copyHistReport()" id="hcbtn">複製分析報表</button>
+    <button class="btn" onclick="toggleRevDetail()" id="rev-detail-btn">顯示產值明細 &#9660;</button>
     <button class="btn red" onclick="clearAllHistory()">清除所有歷史</button>
   </div>
 </div>
@@ -218,7 +261,8 @@ input[type=text]:focus{border-color:var(--itx)}
 <div id="tab-import" class="hidden">
 <div class="card">
   <div class="sec">匯入 Bookfast 預約報表（xlsx）</div>
-  <p style="font-size:12px;color:var(--tx2);margin-bottom:12px">每月18號上傳下個月的報表，系統自動解析並儲存到歷史分析（不影響排課矩陣）。</p>
+  <p style="font-size:12px;color:var(--tx2);margin-bottom:12px">每月18號上傳下個月的報表，系統自動解析並儲存到產能分析（不影響排課矩陣）。</p>
+  <p style="font-size:12px;color:#EF9F27;margin-bottom:12px">⚠ 若有修改「時段對照管理」，需重新上傳報表才會套用新對照到課程明細。</p>
   <div class="izone" id="izone"
     ondrop="onDrop(event)" ondragover="onDragOver(event)" ondragleave="onDragLeave()"
     onclick="document.getElementById('finput').click()">
@@ -233,18 +277,242 @@ input[type=text]:focus{border-color:var(--itx)}
 </div>
 
 <!-- TEACHERS -->
+<!-- TEACHERS -->
 <div id="tab-teachers" class="hidden">
 <div class="card">
   <div class="sec">教師名單管理</div>
-  <div class="teacher-list" id="teacher-list"></div>
-  <div class="row">
-    <input type="text" id="new-teacher" placeholder="輸入教師代號（如 LA、TC）" style="width:200px"
-      onkeydown="if(event.key==='Enter')addTeacher()">
-    <button class="btn pri" onclick="addTeacher()">新增教師</button>
+  <p style="font-size:12px;color:var(--tx2);margin-bottom:12px">各館教師名單分開設定，排課矩陣只顯示該館教師。</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:600px">
+    <div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:8px">西屯館</div>
+      <div class="teacher-list" id="teacher-list-x"></div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <input type="text" id="new-teacher-x" placeholder="代號（如 LA）" style="width:110px">
+        <button class="btn pri" style="padding:5px 10px" onclick="addTeacher('x')">新增</button>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:8px">北屯館</div>
+      <div class="teacher-list" id="teacher-list-b"></div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <input type="text" id="new-teacher-b" placeholder="代號（如 TC）" style="width:110px">
+        <button class="btn pri" style="padding:5px 10px" onclick="addTeacher('b')">新增</button>
+      </div>
+    </div>
   </div>
-  <p style="font-size:12px;color:var(--tx2);margin-top:8px">教師代號會出現在排課矩陣的老師選單中。</p>
+</div>
 </div>
 
+<!-- COURSE SETTINGS -->
+<div id="tab-course" class="hidden">
+<div class="card">
+  <div class="sec">班別設定</div>
+  <p style="font-size:12px;color:var(--tx2);margin-bottom:12px">
+    設定 Bookfast E欄課程名稱、分析工具課程、排課矩陣標籤的對應，以及每個課程的最大人次與客單價。
+  </p>
+
+  <!-- Part A: Course Map Table -->
+  <div style="font-size:12px;font-weight:500;color:var(--tx2);margin-bottom:8px">班別設定</div>
+  <div style="overflow-x:auto;margin-bottom:16px">
+    <table class="htable" id="course-map-table">
+      <thead><tr>
+        <th style="min-width:180px">Bookfast E欄課程名稱</th>
+        <th style="min-width:100px">分析工具課程</th>
+        <th style="min-width:80px">排課標籤</th>
+        <th style="min-width:60px">顏色</th>
+        <th style="min-width:80px">操作</th>
+      </tr></thead>
+      <tbody id="course-map-body"></tbody>
+    </table>
+  </div>
+
+  <!-- Add row -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 80px auto auto;gap:6px;align-items:end;max-width:700px;margin-bottom:8px">
+    <div>
+      <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">Bookfast E欄名稱</div>
+      <input type="text" id="cm-bfname" placeholder="【Ａ】親子游泳" style="width:100%">
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">分析工具課程（現有或新課程代號）</div>
+      <div style="display:flex;gap:4px">
+        <select id="cm-cid" style="flex:1" onchange="onCmCidChange()">
+          <option value="pa">親子A</option>
+          <option value="pb">親子B</option>
+          <option value="pn">親子N</option>
+          <option value="yc">幼兒C</option>
+          <option value="yd">幼兒D</option>
+          <option value="ce">兒童E</option>
+          <option value="cf">兒童F</option>
+          <option value="fz">自游時光</option>
+          <option value="wp">水上樂園</option>
+          <option value="_new">＋ 新課程...</option>
+        </select>
+        <input type="text" id="cm-cid-new" placeholder="新代號" style="width:70px;display:none">
+      </div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">標籤</div>
+      <input type="text" id="cm-label" placeholder="A" style="width:100%">
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">顏色</div>
+      <div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap">
+        <input type="color" id="cm-color" value="#185FA5" style="width:32px;height:28px;padding:2px;border:.5px solid var(--bd2);border-radius:4px;cursor:pointer">
+        <div id="color-presets" style="display:flex;gap:3px;flex-wrap:wrap"></div>
+      </div>
+    </div>
+    <button class="btn pri" onclick="addCourseMap()">新增</button>
+  </div>
+  <div class="row" style="margin-bottom:24px">
+    <button class="btn" onclick="resetCourseMap()">還原預設值</button>
+  </div>
+
+  <!-- Part B: Course Pricing & Capacity -->
+  <div style="font-size:12px;font-weight:500;color:var(--tx2);margin-bottom:8px">班別人次與客單價設定</div>
+  <p style="font-size:11px;color:var(--tx3);margin-bottom:10px">設定每個班別的人次與客單價，兩館分開設定。</p>
+  <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start">
+    <div>
+      <div style="font-size:12px;font-weight:500;margin-bottom:6px">西屯館</div>
+      <table class="htable" style="width:360px">
+        <thead><tr>
+          <th>班別</th>
+          <th style="width:72px;text-align:right">最大人次</th>
+          <th style="width:72px;text-align:right">標準人次</th>
+          <th style="width:86px;text-align:right">客單價（元）</th>
+        </tr></thead>
+        <tbody id="course-pricing-body-x"></tbody>
+      </table>
+    </div>
+    <div>
+      <div style="font-size:12px;font-weight:500;margin-bottom:6px">北屯館</div>
+      <table class="htable" style="width:360px">
+        <thead><tr>
+          <th>班別</th>
+          <th style="width:72px;text-align:right">最大人次</th>
+          <th style="width:72px;text-align:right">標準人次</th>
+          <th style="width:86px;text-align:right">客單價（元）</th>
+        </tr></thead>
+        <tbody id="course-pricing-body-b"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- BFTIME -->
+<div id="tab-bftime" class="hidden">
+<div class="card">
+  <div class="sec">匯入時段對照</div>
+  <p style="font-size:12px;color:var(--tx2);margin-bottom:12px">
+    Bookfast 課程時間欄位 → 分析工具時段的對應。可新增、編輯、刪除。
+  </p>
+  <table class="htable" id="bftime-table" style="max-width:480px;margin-bottom:12px">
+    <thead><tr>
+      <th style="width:160px">Bookfast 時間</th>
+      <th style="width:140px">對應時段</th>
+      <th style="width:90px">操作</th>
+    </tr></thead>
+    <tbody id="bftime-body"></tbody>
+  </table>
+  <div style="display:grid;grid-template-columns:160px 140px auto;gap:6px;align-items:end;max-width:480px;margin-bottom:10px">
+    <div>
+      <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">Bookfast 時間</div>
+      <input type="text" id="bft-key" placeholder="09:20~10:00" style="width:100%">
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">對應時段（逗號分隔）</div>
+      <input type="text" id="bft-val" placeholder="09:30" style="width:100%"
+        onkeydown="if(event.key==='Enter')addBfTime()">
+    </div>
+    <button class="btn pri" onclick="addBfTime()">新增</button>
+  </div>
+  <div class="row">
+    <button class="btn" onclick="resetBfTime()">還原預設值</button>
+  </div>
+</div>
+</div>
+
+<!-- SLOTS -->
+<div id="tab-slots" class="hidden">
+<div class="card">
+  <div class="sec">產能分析時段設定</div>
+  <p style="font-size:12px;color:var(--tx2);margin-bottom:12px">
+    設定產能計算時每天有哪些時段。修改後立即套用。
+  </p>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;max-width:700px">
+    <div>
+      <div style="font-size:12px;font-weight:500;color:var(--tx2);margin-bottom:6px">週二～週五</div>
+      <div id="slot-weekday-list" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px"></div>
+      <div style="display:flex;gap:6px">
+        <input type="text" id="slot-wd-inp" placeholder="例如 14:30" style="width:90px"
+          onkeydown="if(event.key==='Enter')addSlot('weekday')">
+        <button class="btn pri" style="padding:5px 8px" onclick="addSlot('weekday')">新增</button>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:12px;font-weight:500;color:var(--tx2);margin-bottom:6px">週六</div>
+      <div id="slot-saturday-list" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px"></div>
+      <div style="display:flex;gap:6px">
+        <input type="text" id="slot-sat-inp" placeholder="例如 13:30" style="width:90px"
+          onkeydown="if(event.key==='Enter')addSlot('saturday')">
+        <button class="btn pri" style="padding:5px 8px" onclick="addSlot('saturday')">新增</button>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:12px;font-weight:500;color:var(--tx2);margin-bottom:6px">週日</div>
+      <div id="slot-sunday-list" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px"></div>
+      <div style="display:flex;gap:6px">
+        <input type="text" id="slot-sun-inp" placeholder="例如 13:30" style="width:90px"
+          onkeydown="if(event.key==='Enter')addSlot('sunday')">
+        <button class="btn pri" style="padding:5px 8px" onclick="addSlot('sunday')">新增</button>
+      </div>
+    </div>
+  </div>
+  <div class="row" style="margin-top:12px">
+    <button class="btn" onclick="resetSlots()">還原預設時段</button>
+  </div>
+</div>
+</div>
+
+<!-- CAPSTD -->
+<div id="tab-capstd" class="hidden">
+<div class="card">
+  <div class="sec">產能標準設定</div>
+  <p style="font-size:12px;color:var(--tx2);margin-bottom:6px">
+    選擇每個時段可開的班型（可複選）。系統依勾選班型自動計算產能和人次。最大開班：西屯4班、北屯5班。
+  </p>
+  <p style="font-size:11px;color:var(--tx3);margin-bottom:12px">
+    班型對應：課程(N.A.B)=親子N/A/B、課程(C.D.E)=幼兒C/D/兒童E、課程(F)=兒童F、非課程(自游)=自游時光、非課程(水樂)=水上樂園
+  </p>
+  <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start">
+    <div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:8px">西屯館（上限 4 班）
+        <button class="btn red" style="padding:2px 8px;font-size:11px;margin-left:8px" onclick="resetCapCfgVenue('x')">清除</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="htable" id="cap-table-x" style="width:auto;min-width:500px">
+          <thead id="cap-head-x"></thead>
+          <tbody id="cap-body-x"></tbody>
+        </table>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:8px">北屯館（上限 5 班）
+        <button class="btn red" style="padding:2px 8px;font-size:11px;margin-left:8px" onclick="resetCapCfgVenue('b')">清除</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="htable" id="cap-table-b" style="width:auto;min-width:500px">
+          <thead id="cap-head-b"></thead>
+          <tbody id="cap-body-b"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- SP SETTINGS -->
+<div id="tab-sp" class="hidden">
 <div class="card">
   <div class="sec">SharePoint 路徑設定</div>
   <p style="font-size:12px;color:var(--tx2);margin-bottom:12px">修改後按「儲存設定」，下次同步就會使用新路徑。</p>
@@ -276,7 +544,7 @@ input[type=text]:focus{border-color:var(--itx)}
   </div>
 </div>
 </div>
-</div>
+</div><!-- /main-content -->
 
 <!-- MODAL -->
 <div class="mov" id="mov" onclick="closeOv(event)">
@@ -285,6 +553,7 @@ input[type=text]:focus{border-color:var(--itx)}
   <p class="mmeta" id="mm"></p>
   <div class="sec" style="margin-bottom:5px">選擇課程</div>
   <div class="clist" id="cl"></div>
+  <div id="bf-slot-area"></div>
   <div class="sec" style="margin-bottom:5px;margin-top:8px">選擇老師（可不選）</div>
   <div class="trlist" id="trl"></div>
   <div class="modal-actions">
@@ -332,8 +601,20 @@ var CZONES = {
 var DAY_KEYS   = ['tue','wed','thu','fri','sat','sun'];
 var DAY_LABELS = {tue:'週二',wed:'週三',thu:'週四',fri:'週五',sat:'週六',sun:'週日'};
 
-var WEEKDAY_SLOTS = ['09:30','10:30','11:30','13:30','15:00','15:30','16:00','16:30','17:30','18:30','19:30'];
-var WEEKEND_SLOTS = ['09:30','10:30','11:30','14:00','15:00','16:00','17:00'];
+var WEEKDAY_SLOTS_DEFAULT = ['09:30','10:30','11:30','13:30','14:30','15:30','16:30','17:30','18:30','19:30'];
+var SATURDAY_SLOTS_DEFAULT = ['09:30','10:30','11:30','14:00','15:00','16:00','17:00'];
+var SUNDAY_SLOTS_DEFAULT   = ['09:30','10:30','11:30','14:00','15:00','16:00','17:00'];
+var WEEKDAY_SLOTS  = WEEKDAY_SLOTS_DEFAULT.slice();
+var SATURDAY_SLOTS = SATURDAY_SLOTS_DEFAULT.slice();
+var SUNDAY_SLOTS   = SUNDAY_SLOTS_DEFAULT.slice();
+
+function loadSlotSettings() {
+  var s = JSON.parse(localStorage.getItem('slotSettings') || '{}');
+  WEEKDAY_SLOTS  = s.weekday  || WEEKDAY_SLOTS_DEFAULT.slice();
+  SATURDAY_SLOTS = s.saturday || SATURDAY_SLOTS_DEFAULT.slice();
+  SUNDAY_SLOTS   = s.sunday   || SUNDAY_SLOTS_DEFAULT.slice();
+}
+loadSlotSettings();
 
 // Sub-label for each slot (the paired time)
 var SLOT_SUB = {
@@ -356,20 +637,29 @@ var BF_COURSE = {
   '【Ｐ】水上樂園｜西屯':'wp','【Ｐ】水上樂園｜北屯':'wp'
 };
 
-var BF_TIME = {
+// BF_TIME is loaded from localStorage (user-editable) with these defaults
+var BF_TIME_DEFAULT = {
   '09:20~10:00':['09:30'],'09:30~10:10':['09:30'],'09:40~10:20':['09:30'],
   '10:20~11:00':['10:30'],'10:30~11:10':['10:30'],'10:40~11:20':['10:30'],'10:40~11:30':['10:30'],
   '11:20~12:10':['11:30'],'11:30~12:10':['11:30'],'11:30~12:20':['11:30'],
   '11:40~12:20':['11:30'],'11:40~12:30':['11:30'],
-  '13:00~13:40':['13:30'],
-  '14:30~15:50':['14:00','15:00'],
-  '15:00~15:50':['15:00'],'15:10~16:00':['15:00'],'15:20~16:00':['15:30'],'15:30~16:10':['15:30'],
-  '16:00~16:50':['16:00'],'16:00~17:20':['16:00','17:00'],
+  '13:00~13:40':['13:30'],'13:30~14:20':['13:30'],
+  '14:30~15:50':['14:30'],
+  '15:00~15:50':['15:00'],'15:10~16:00':['15:00'],
+  '15:20~16:00':['15:30'],'15:30~16:10':['15:30'],
+  '16:00~16:50':['16:00'],'16:00~17:20':['16:00'],
   '16:10~17:00':['16:00'],'16:20~17:10':['16:30'],'16:30~17:20':['16:30'],
-  '17:00~17:50':['17:00'],'17:10~18:00':['17:00'],'17:20~18:10':['17:30'],'17:30~18:20':['17:30'],
+  '17:00~17:50':['17:00'],'17:10~18:00':['17:00'],
+  '17:20~18:10':['17:30'],'17:30~18:20':['17:30'],
   '18:30~19:20':['18:30'],'18:40~19:30':['18:30'],
   '19:30~20:20':['19:30'],'19:40~20:30':['19:30']
 };
+function loadBfTime() {
+  var saved = localStorage.getItem('bfTimeMap');
+  BF_TIME = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(BF_TIME_DEFAULT));
+}
+var BF_TIME = JSON.parse(JSON.stringify(BF_TIME_DEFAULT));
+loadBfTime();
 
 var CNAME_TO_CID = {
   '親子A':'pa','親子B':'pb','親子N':'pn',
@@ -395,13 +685,18 @@ var schedYear  = 2026;
 var schedMonth = 5;
 var schedWeek  = 1;
 var mTarget    = null;
+var mSelBfSlot = null;
 var mSelCourse = null;
 var mSelTeacher= null;
 var hPeriod    = 'month';
 var selDate    = null;
 
 var schedData = JSON.parse(localStorage.getItem('ssd') || '{}');
-var teachers  = JSON.parse(localStorage.getItem('str') || '["LA","TC","RB","JM","EE","Cooper","Jimmy","Taco","Joanne","LALA","Ruby"]');
+// Teachers split by venue
+var teachersX = JSON.parse(localStorage.getItem('str_x') || '["LA","TC","RB","JM"]');
+var teachersB = JSON.parse(localStorage.getItem('str_b') || '["LA","TC","RB","JM"]');
+function getTeachers(vk) { return vk === 'x' ? teachersX : teachersB; }
+function svT() { localStorage.setItem('str_x', JSON.stringify(teachersX)); localStorage.setItem('str_b', JSON.stringify(teachersB)); }
 var HD        = JSON.parse(localStorage.getItem('sh')  || '{}');
 var IR        = JSON.parse(localStorage.getItem('sir') || '[]');
 
@@ -441,7 +736,7 @@ var IR        = JSON.parse(localStorage.getItem('sir') || '[]');
 function svH() { localStorage.setItem('sh',  JSON.stringify(HD)); }
 function svI() { localStorage.setItem('sir', JSON.stringify(IR)); }
 function svS() { localStorage.setItem('ssd', JSON.stringify(schedData)); }
-function svT() { localStorage.setItem('str', JSON.stringify(teachers)); }
+// svT defined above with str_x/str_b
 
 // ===== UTILS =====
 function pad(n) { return n < 10 ? '0' + n : String(n); }
@@ -459,20 +754,57 @@ function getDateSlots(ds) {
   var d = new Date(ds.replace(/\//g, '-'));
   var wd = d.getDay();
   if (wd === 1) return [];
-  if (wd === 0 || wd === 6) return WEEKEND_SLOTS.slice();
+  if (wd === 6) return SATURDAY_SLOTS.slice();
+  if (wd === 0) return SUNDAY_SLOTS.slice();
   return WEEKDAY_SLOTS.slice();
 }
 function czForVenue(cid, vk) {
   var z = CZONES[cid];
   return z ? (vk === 'x' ? z.x : z.b) : 0;
 }
-function dateCap(ds, vk) { return getDateSlots(ds).length * VENUES[vk].zones; }
+function getCapStd() {
+  // Returns current capacity standard: 'max' or 'std'
+  return window._capStd || 'std';
+}
+function dateCapByStd(ds, vk, std) {
+  var sls = getDateSlots(ds);
+  if (!sls.length) return 0;
+  var d2 = new Date(ds.replace(/\//g, '-'));
+  var wd2 = d2.getDay();
+  var suffix = wd2 === 6 ? '_sat' : wd2 === 0 ? '_sun' : '_wd';
+  var cfg = getCapConfig(vk, std);
+  var total = 0;
+  for (var i = 0; i < sls.length; i++) {
+    var key2 = sls[i] + suffix;
+    var val = cfg[key2];
+    if (Array.isArray(val)) {
+      total += val.length; // new format: array of type ids
+    } else if (typeof val === 'number') {
+      total += val; // old numeric format
+    } else {
+      total += VENUES[vk].zones; // fallback: venue max
+    }
+  }
+  return total;
+}
+function dateCap(ds, vk) {
+  return dateCapByStd(ds, vk, getCapStd());
+}
+function getCapConfig(vk, std) {
+  // Returns {slot: zones} map for a venue+standard
+  var key = 'capCfg_' + vk + '_' + std;
+  var saved = localStorage.getItem(key);
+  return saved ? JSON.parse(saved) : {};
+}
+function saveCapConfig(vk, std, cfg) {
+  localStorage.setItem('capCfg_' + vk + '_' + std, JSON.stringify(cfg));
+}
 function dateUsed(ds, vk, ym) {
+  // Count actual classes opened (each course = 1 class)
   var sm = ((HD[ym] || {})[vk] || {})[ds] || {};
   var sls = getDateSlots(ds), t = 0;
   for (var i = 0; i < sls.length; i++) {
-    var arr = sm[sls[i]] || [];
-    for (var j = 0; j < arr.length; j++) t += czForVenue(arr[j], vk);
+    t += (sm[sls[i]] || []).length;
   }
   return t;
 }
@@ -517,7 +849,9 @@ function getWeekDate(y, m, w, dk) {
 }
 
 function getSlotsForDk(dk) {
-  return (dk === 'sat' || dk === 'sun') ? WEEKEND_SLOTS : WEEKDAY_SLOTS;
+  if (dk === 'sat') return SATURDAY_SLOTS;
+  if (dk === 'sun') return SUNDAY_SLOTS;
+  return WEEKDAY_SLOTS;
 }
 
 function schedKey(vk, y, m, w, dk, sl) {
@@ -567,7 +901,12 @@ function renderSched() {
     y + '年' + mo + '月 第' + w + '週 — ' + VENUES[v].name;
 
   // All slots union
-  var allSlots = ['09:30','10:30','11:30','13:30','14:00','15:00','15:30','16:00','16:30','17:00','17:30','18:30','19:30'];
+  // Build allSlots from actual configured slots (no sub-label display)
+  var _allSlotsSet = {};
+  WEEKDAY_SLOTS.forEach(function(s){ _allSlotsSet[s] = true; });
+  SATURDAY_SLOTS.forEach(function(s){ _allSlotsSet[s] = true; });
+  SUNDAY_SLOTS.forEach(function(s){ _allSlotsSet[s] = true; });
+  var allSlots = Object.keys(_allSlotsSet).sort();
 
   var h = '<table class="sched-grid"><thead>';
   // Row 1: day headers
@@ -595,8 +934,7 @@ function renderSched() {
     }
     if (!anyDay) continue;
 
-    var sub = SLOT_SUB[sl] ? '<br><span style="font-size:9px;color:var(--tx3)">' + SLOT_SUB[sl] + '</span>' : '';
-    h += '<tr><td class="time-cell">' + sl + sub + '</td>';
+    h += '<tr><td class="time-cell">' + sl + '</td>';
 
     for (var di = 0; di < DAY_KEYS.length; di++) {
       var dk = DAY_KEYS[di];
@@ -614,8 +952,9 @@ function renderSched() {
       h += '<td class="slot-cell">';
       for (var ii = 0; ii < items.length; ii++) {
         var it = items[ii];
+        var bfLbl = it.bfSlot ? '<span style="font-size:9px;opacity:.75;margin-left:2px">' + it.bfSlot + '</span>' : '';
         h += '<div class="ctag" style="background:' + it.color + '">'
-           + '<span class="ct-n">' + it.label + '</span>'
+           + '<span class="ct-n">' + it.label + bfLbl + '</span>'
            + '<button class="ct-d" onclick="delItem(\'' + key + '\',' + ii + ',event)">×</button>'
            + '</div>';
       }
@@ -632,11 +971,13 @@ function renderSched() {
       }
       h += '</td>';
 
-      // Lifeguard cell
-      h += '<td class="slot-cell">'
-         + '<textarea class="lg-inp" rows="1" placeholder="救生" onchange="saveLG(\'' + lgKey + '\',this.value)">'
-         + lgVal
-         + '</textarea></td>';
+      // Lifeguard cell: dropdown of venue teachers
+      var vTch = getTeachers(v);
+      var lgSel = '<select style="width:100%;font-size:11px;border:none;background:transparent;color:var(--tx);padding:2px" onchange="saveLG(\'' + lgKey + '\',this.value)"><option value="">—</option>';
+      for (var ti = 0; ti < vTch.length; ti++)
+        lgSel += '<option value="' + vTch[ti] + '"' + (lgVal === vTch[ti] ? ' selected' : '') + '>' + vTch[ti] + '</option>';
+      lgSel += '</select>';
+      h += '<td class="slot-cell">' + lgSel + '</td>';
     }
     h += '</tr>';
   }
@@ -732,9 +1073,11 @@ function openModal(key, dk, sl) {
   mTarget = {key:key, dk:dk, sl:sl};
   mSelCourse  = null;
   mSelTeacher = null;
+  mSelBfSlot  = null;
   document.getElementById('mt').textContent = '新增課程 — ' + DAY_LABELS[dk] + ' ' + sl;
   document.getElementById('mm').textContent = VENUES[schedVenue].name;
 
+  // Course list
   var cl = '';
   for (var i = 0; i < COURSE_OPTS.length; i++) {
     var c = COURSE_OPTS[i];
@@ -744,12 +1087,41 @@ function openModal(key, dk, sl) {
   }
   document.getElementById('cl').innerHTML = cl;
 
+  // BF slot selector: show bftime keys that map to this slot
+  var bfKeys = Object.keys(BF_TIME).filter(function(k) {
+    return BF_TIME[k].indexOf(sl) >= 0;
+  }).sort();
+  var bfHtml = '<div style="font-size:11px;color:var(--tx2);margin-bottom:4px;margin-top:8px">Bookfast 開課時間（選填）</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:5px">'
+    + '<button class="tropt on" id="bfopt-none" onclick="selBfSlot(null)">不指定</button>';
+  for (var i = 0; i < bfKeys.length; i++)
+    bfHtml += '<button class="tropt" id="bfopt-' + i + '" onclick="selBfSlot(\'' + bfKeys[i] + '\')">' + bfKeys[i] + '</button>';
+  bfHtml += '</div>';
+  document.getElementById('bf-slot-area').innerHTML = bfHtml;
+
+  // Teacher list: filter by current venue
+  var vTeachers = getTeachers(schedVenue);
   var tl2 = '';
-  for (var i = 0; i < teachers.length; i++)
-    tl2 += '<button class="tropt" id="topt-' + i + '" onclick="selTeacher(\'' + teachers[i] + '\')">' + teachers[i] + '</button>';
+  for (var i = 0; i < vTeachers.length; i++)
+    tl2 += '<button class="tropt" id="topt-' + i + '" onclick="selTeacher(\'' + vTeachers[i] + '\')">' + vTeachers[i] + '</button>';
   document.getElementById('trl').innerHTML = tl2;
 
   document.getElementById('mov').classList.add('open');
+}
+
+function selBfSlot(val) {
+  mSelBfSlot = val;
+  var bfOpts = document.querySelectorAll('[id^="bfopt-"]');
+  for (var bi = 0; bi < bfOpts.length; bi++) bfOpts[bi].classList.remove('on');
+  if (val === null) {
+    var el = document.getElementById('bfopt-none');
+    if (el) el.classList.add('on');
+  } else {
+    var bfKeys = Object.keys(BF_TIME).filter(function(k){ return BF_TIME[k].indexOf(mTarget.sl) >= 0; }).sort();
+    var idx = bfKeys.indexOf(val);
+    var el2 = document.getElementById('bfopt-' + idx);
+    if (el2) el2.classList.add('on');
+  }
 }
 
 function selCourse(idx) {
@@ -761,9 +1133,10 @@ function selCourse(idx) {
 
 function selTeacher(name) {
   mSelTeacher = (mSelTeacher === name) ? null : name;
-  var opts = document.querySelectorAll('.tropt');
+  var vTeachers = getTeachers(schedVenue);
+  var opts = document.querySelectorAll('#trl .tropt');
   for (var i = 0; i < opts.length; i++)
-    opts[i].classList.toggle('on', teachers[i] === mSelTeacher);
+    opts[i].classList.toggle('on', vTeachers[i] === mSelTeacher);
 }
 
 function confirmModal() {
@@ -774,7 +1147,8 @@ function confirmModal() {
     label:   mSelCourse.label,
     cid:     mSelCourse.cid,
     color:   mSelCourse.color,
-    teacher: mSelTeacher || ''
+    teacher: mSelTeacher || '',
+    bfSlot:  mSelBfSlot || ''
   });
   svS(); closeModal(); renderSched();
 }
@@ -783,29 +1157,57 @@ function closeModal() { document.getElementById('mov').classList.remove('open');
 function closeOv(e)   { if (e.target === document.getElementById('mov')) closeModal(); }
 
 // ===== TEACHERS =====
-function renderTeachers() {
+function renderTeachersForVenue(vk) {
+  var arr = getTeachers(vk);
+  var el = document.getElementById('teacher-list-' + vk);
+  if (!el) return;
   var h = '';
-  for (var i = 0; i < teachers.length; i++) {
-    h += '<div class="teacher-chip">' + teachers[i]
-       + '<button class="tc-del" onclick="delTeacher(' + i + ')">×</button></div>';
-  }
-  document.getElementById('teacher-list').innerHTML = h;
+  for (var i = 0; i < arr.length; i++)
+    h += '<div class="teacher-chip" data-vk="' + vk + '" data-idx="' + i + '">'
+       + '<span>' + arr[i] + '</span>'
+       + '<span class="tc-del" data-vk="' + vk + '" data-idx="' + i + '">×</span>'
+       + '</div>';
+  el.innerHTML = h || '<span style="font-size:12px;color:var(--tx3)">（尚無教師）</span>';
 }
-function addTeacher() {
-  var inp = document.getElementById('new-teacher');
+function renderTeachers() {
+  renderTeachersForVenue('x');
+  renderTeachersForVenue('b');
+  // Re-bind delegation
+  bindTeacherEvents('x');
+  bindTeacherEvents('b');
+}
+function bindTeacherEvents(vk) {
+  var el = document.getElementById('teacher-list-' + vk);
+  if (!el) return;
+  el.onclick = function(e) {
+    var tgt = e.target;
+    if (tgt.classList.contains('tc-del')) {
+      var dv = tgt.getAttribute('data-vk');
+      var di = parseInt(tgt.getAttribute('data-idx'));
+      if (!isNaN(di)) {
+        var arr = getTeachers(dv);
+        if (di >= 0 && di < arr.length) { arr.splice(di, 1); svT(); renderTeachers(); }
+      }
+    }
+  };
+}
+function addTeacher(vk) {
+  var inp = document.getElementById('new-teacher-' + vk);
+  if (!inp) return;
   var name = inp.value.trim();
-  if (!name) return;
-  if (teachers.indexOf(name) < 0) { teachers.push(name); svT(); }
   inp.value = '';
+  if (!name) return;
+  var arr = getTeachers(vk);
+  if (arr.indexOf(name) < 0) { arr.push(name); svT(); }
   renderTeachers();
 }
-function delTeacher(idx) { teachers.splice(idx, 1); svT(); renderTeachers(); }
+function delTeacher(btn) { /* handled by delegation */ }
 
 // ===== HISTORY =====
 function setPeriod(p) {
   selDate = null; hPeriod = p;
   var btns = document.querySelectorAll('.pb-btn');
-  var ps = ['month','week','year'];
+  var ps = ['month','season','year'];
   for (var i = 0; i < btns.length; i++) btns[i].classList.toggle('on', ps[i] === p);
   updateHistCtrl(); renderHistory();
 }
@@ -819,6 +1221,7 @@ function updateHistCtrl() {
   yrs.sort().reverse();
   var ySel = document.getElementById('hy-sel');
   var mSel = document.getElementById('hm-sel');
+  var sSel = document.getElementById('hs-sel');
   if (!ySel) return;
   var cy = ySel.value || yrs[0] || '2026';
   var yh = '';
@@ -826,7 +1229,24 @@ function updateHistCtrl() {
     yh += '<option value="' + yrs[i] + '"' + (yrs[i] === cy ? ' selected' : '') + '>' + yrs[i] + '年</option>';
   ySel.innerHTML = yh;
 
-  if (hPeriod === 'year') { mSel.style.display = 'none'; return; }
+  if (hPeriod === 'year') {
+    mSel.style.display = 'none';
+    if (sSel) sSel.style.display = 'none';
+    return;
+  }
+  if (hPeriod === 'season') {
+    mSel.style.display = 'none';
+    if (sSel) {
+      sSel.style.display = '';
+      var cs = sSel.value || 'S1';
+      sSel.innerHTML = '<option value="S1"' + (cs==='S1'?' selected':'') + '>S1（3-6月）</option>'
+        + '<option value="S2"' + (cs==='S2'?' selected':'') + '>S2（7-10月）</option>'
+        + '<option value="S3"' + (cs==='S3'?' selected':'') + '>S3（11-2月）</option>';
+    }
+    return;
+  }
+  // month
+  if (sSel) sSel.style.display = 'none';
   mSel.style.display = '';
   var mos = [], seen2 = {};
   for (var i = 0; i < keys.length; i++) {
@@ -845,15 +1265,19 @@ function onHYearChange() { updateHistCtrl(); renderHistory(); }
 
 function renderHistory() {
   updateHistCtrl();
-  var v  = document.getElementById('hv-sel').value;
-  var yr = document.getElementById('hy-sel').value || '2026';
-  var mo = parseInt(document.getElementById('hm-sel').value || '4');
-  var ym = yr + '-' + mo;
-  var el = document.getElementById('hist-content');
+  var v   = document.getElementById('hv-sel').value;
+  var yr  = document.getElementById('hy-sel').value || '2026';
+  var mo  = parseInt((document.getElementById('hm-sel').value || '4'));
+  var sSel = document.getElementById('hs-sel');
+  var sn  = sSel ? (sSel.value || 'S1') : 'S1';
+  var el  = document.getElementById('hist-content');
   if (!el) return;
-  if      (hPeriod === 'month') el.innerHTML = renderMonthView(parseInt(yr), mo, v, ym);
-  else if (hPeriod === 'week')  el.innerHTML = renderWeekView(parseInt(yr), mo, v, ym);
-  else                          el.innerHTML = renderYearView(yr, v);
+  if      (hPeriod === 'month')  el.innerHTML = renderMonthView(parseInt(yr), mo, v, yr+'-'+mo);
+  else if (hPeriod === 'season') el.innerHTML = renderSeasonView(parseInt(yr), sn, v);
+  else                           el.innerHTML = renderYearView(yr, v);
+  // Also refresh revenue detail if visible
+  var det = document.getElementById('rev-detail-section');
+  if (det && !det.classList.contains('hidden')) renderRevenue();
 }
 
 function getVR(ds, ym, v) {
@@ -883,24 +1307,29 @@ function renderMonthView(yr, mo, v, ym) {
       continue;
     }
     var r = vr.used / vr.cap, p = Math.round(r * 100);
-    var op = Math.max(0.12, r);
+    // Lighter bg tint, always dark text for readability
+    var op = Math.max(0.15, r * 0.7);
     var hex = Math.round(op * 255).toString(16);
     if (hex.length < 2) hex = '0' + hex;
     h += '<div class="cday' + (isSel ? ' on' : '') + '" style="background:' + rc(r) + hex
-       + ';cursor:pointer' + (isSel ? ';border:.5px solid var(--bd2)' : '') + '"'
+       + ';cursor:pointer' + (isSel ? ';border:2px solid var(--bd2)' : '') + '"'
        + ' onclick="selectDate(\'' + ds + '\')">'
-       + '<div class="cdn">' + d.getDate() + '</div>'
-       + '<div class="cdp" style="color:' + rc(r) + '">' + p + '%</div></div>';
+       + '<div class="cdn" style="color:var(--tx);font-weight:600">' + d.getDate() + '</div>'
+       + '<div class="cdp" style="color:var(--tx);font-weight:700">' + p + '%</div></div>';
   }
   h += '</div>';
   var tR = mC ? mU / mC : 0, pct = Math.round(tR * 100), col = rc(tR);
+  var revTotalM = calcRevTotal([ym], v);
+  var revStrM = revTotalM > 0 ? '$' + revTotalM.toLocaleString() : '—';
   h += '<div class="metrics">'
-     + '<div class="mc"><div class="mcl">月總產能</div><div class="mcv">' + mC + '</div></div>'
-     + '<div class="mc"><div class="mcl">月實際排課</div><div class="mcv">' + mU + '</div></div>'
-     + '<div class="mc"><div class="mcl">月平均利用率</div>'
+     + '<div class="mc"><div class="mcl">總產能（班）</div><div class="mcv">' + mC + '</div></div>'
+     + '<div class="mc"><div class="mcl">實際開班</div><div class="mcv">' + mU + '</div></div>'
+     + '<div class="mc"><div class="mcl">平均利用率</div>'
      + '<div class="mcv" style="color:' + col + '">' + pct + '% <span class="tag ' + tcls(tR) + '">' + tlabel(tR) + '</span></div>'
      + '<div class="pb"><div class="pf" style="width:' + pct + '%;background:' + col + '"></div></div>'
-     + '</div></div>';
+     + '</div>'
+     + '<div class="mc"><div class="mcl">產値預測</div><div class="mcv" style="color:#854F0B">' + revStrM + '</div></div>'
+     + '</div>';
   h += '<div id="day-detail">'
      + (selDate ? renderDayDetail(selDate, v, ym) : '<p style="font-size:12px;color:var(--tx3);margin-top:6px">點擊日期查看課程明細</p>')
      + '</div>';
@@ -919,35 +1348,43 @@ function renderDayDetail(ds, v, ym) {
   for (var vi = 0; vi < vks.length; vi++) {
     var vk = vks[vi];
     var sm = ((HD[ym] || {})[vk] || {})[ds] || {};
-    var Z  = VENUES[vk].zones;
     if (v === 'all') h += '<div style="font-size:11px;font-weight:500;color:var(--tx2);margin-bottom:4px">' + VENUES[vk].name + '</div>';
     h += '<table class="htable" style="margin-bottom:' + (vi < vks.length-1 ? '10px' : '0') + '">'
-       + '<thead><tr><th>時段</th><th style="text-align:left">課程</th><th>佔用</th><th>剩餘</th><th>利用率</th></tr></thead><tbody>';
+       + '<thead><tr><th>時段</th><th style="text-align:left">課程</th><th>開班數</th><th>開班率</th></tr></thead><tbody>';
+    // Get per-slot cap using current standard
+    var std = getCapStd();
+    var d3 = new Date(ds.replace(/\//g, '-'));
+    var wd3 = d3.getDay();
+    var sfx = wd3 === 6 ? '_sat' : wd3 === 0 ? '_sun' : '_wd';
+    var cfg3 = getCapConfig(vk, std);
     for (var si = 0; si < sls.length; si++) {
       var sl   = sls[si];
       var cids = sm[sl] || [];
-      var used = 0;
-      for (var ci = 0; ci < cids.length; ci++) used += czForVenue(cids[ci], vk);
-      var rem  = Z - used, r = used / Z, p = Math.round(r * 100);
+      var used = cids.length;
+      // Per-slot cap: use configured value, fallback to venue zones
+      var capKey = sl + sfx;
+      var capVal = cfg3[capKey];
+      var capSl = Array.isArray(capVal) ? capVal.length : (typeof capVal==='number' ? capVal : VENUES[vk].zones);
+      var r3 = capSl > 0 ? used / capSl : 0;
+      var p3 = Math.round(r3 * 100);
       var cH = '';
       if (!cids.length) {
         cH = '<span style="font-size:11px;color:var(--tx3)">—</span>';
       } else {
         for (var ci = 0; ci < cids.length; ci++) {
-          var cid   = cids[ci];
-          var zu    = czForVenue(cid, vk);
-          var clr   = CID_COLOR[cid] || '#888';
-          var clbl  = CID_LABEL[cid] || cid;
+          var cid  = cids[ci];
+          var clr  = CID_COLOR[cid] || '#888';
+          var clbl = CID_LABEL[cid] || cid;
           cH += '<span style="display:inline-flex;align-items:center;font-size:10px;padding:2px 6px;border-radius:4px;color:#fff;background:' + clr + ';font-weight:500;margin:1px 2px 1px 0">'
-              + clbl + ' ' + zu + '區</span>';
+              + clbl + '</span>';
         }
       }
+      var showDash = (capSl === 0);
       h += '<tr>'
          + '<td style="font-size:11px;color:var(--tx2);white-space:nowrap">' + sl + '</td>'
          + '<td style="text-align:left;padding:4px 8px">' + cH + '</td>'
-         + '<td style="font-size:12px;font-weight:500">' + used + '/' + Z + '</td>'
-         + '<td style="font-size:12px;font-weight:500;color:' + (rem===0?'#1D9E75':rem<0?'#E24B4A':'var(--tx)') + '">' + rem + '</td>'
-         + '<td style="font-size:11px;font-weight:500;color:' + rc(r) + '">' + p + '%</td></tr>';
+         + '<td style="font-size:12px;font-weight:500">' + (showDash ? '<span style="color:var(--tx3)">—</span>' : used + '/' + capSl) + '</td>'
+         + '<td style="font-size:12px;font-weight:500;color:' + (showDash ? 'var(--tx3)' : rc(r3)) + '">' + (showDash ? '—' : p3 + '%') + '</td></tr>';
     }
     h += '</tbody></table>';
   }
@@ -962,7 +1399,7 @@ function renderWeekView(yr, mo, v, ym) {
     if (!weeks[wk]) { weeks[wk] = []; wOrder.push(wk); }
     weeks[wk].push(days[i]);
   }
-  var h = '<table class="htable"><thead><tr><th>週次</th><th>日期範圍</th><th>產能</th><th>已排課</th><th>利用率</th></tr></thead><tbody>';
+  var h = '<table class="htable"><thead><tr><th>週次</th><th>日期範圍</th><th>產能（班）</th><th>實際開班</th><th>利用率</th></tr></thead><tbody>';
   for (var wi = 0; wi < wOrder.length; wi++) {
     var wk = wOrder[wi], wDays = weeks[wk], cap = 0, used = 0;
     for (var i = 0; i < wDays.length; i++) {
@@ -979,24 +1416,105 @@ function renderWeekView(yr, mo, v, ym) {
   return h;
 }
 
-function renderYearView(yr, v) {
-  var h = '<table class="htable"><thead><tr><th>月份</th><th>產能</th><th>已排課</th><th>利用率</th></tr></thead><tbody>';
-  var hasData = false;
-  for (var mo = 1; mo <= 12; mo++) {
-    var ym = yr + '-' + mo;
-    if (!HD[ym]) continue;
-    hasData = true;
-    var days = getDaysInMonth(parseInt(yr), mo), cap = 0, used = 0;
-    for (var i = 0; i < days.length; i++) {
-      var vr = getVR(fmtDate(days[i]), ym, v);
-      cap += vr.cap; used += vr.used;
+function getSeasonMonths(yr, sn) {
+  var yr2 = parseInt(yr);
+  if (sn === 'S1') return [{yr:yr2,mo:3},{yr:yr2,mo:4},{yr:yr2,mo:5},{yr:yr2,mo:6}];
+  if (sn === 'S2') return [{yr:yr2,mo:7},{yr:yr2,mo:8},{yr:yr2,mo:9},{yr:yr2,mo:10}];
+  return [{yr:yr2,mo:11},{yr:yr2,mo:12},{yr:yr2+1,mo:1},{yr:yr2+1,mo:2}];
+}
+
+function calcRevTotal(yms, v) {
+  var paxField = (window._revPaxMode || 'std') === 'max' ? 'maxPax' : 'stdPax';
+  var vks = v === 'all' ? ['x','b'] : [v];
+  var total = 0;
+  for (var vi = 0; vi < vks.length; vi++) {
+    var vk = vks[vi];
+    for (var ymi = 0; ymi < yms.length; ymi++) {
+      var parts = yms[ymi].split('-');
+      var vData = (HD[yms[ymi]] || {})[vk] || {};
+      var days = getDaysInMonth(parseInt(parts[0]), parseInt(parts[1]));
+      for (var di = 0; di < days.length; di++) {
+        var dsR = fmtDate(days[di]);
+        var smR = vData[dsR] || {};
+        var slsR = getDateSlots(dsR);
+        for (var si = 0; si < slsR.length; si++) {
+          var cidsR = smR[slsR[si]] || [];
+          for (var ci = 0; ci < cidsR.length; ci++) {
+            var prKey = vk + '_' + cidsR[ci];
+            var pr = COURSE_PRICING[prKey] || {};
+            total += (pr[paxField] || 0) * (pr.price || 0);
+          }
+        }
+      }
     }
-    var r = cap ? used/cap : 0, p = Math.round(r*100);
-    h += '<tr><td style="font-weight:500">' + mo + '月</td><td>' + cap + '</td><td>' + used + '</td>'
-       + '<td style="font-weight:500;color:' + rc(r) + '">' + p + '% <span class="tag ' + tcls(r) + '">' + tlabel(r) + '</span></td></tr>';
   }
-  if (!hasData) h += '<tr><td colspan="4" style="text-align:center;color:var(--tx3);padding:16px">尚無資料</td></tr>';
-  h += '</tbody></table>';
+  return total;
+}
+
+function renderSeasonView(yr, sn, v) {
+  var months = getSeasonMonths(yr, sn);
+  var labels = {S1:'S1（3-6月）',S2:'S2（7-10月）',S3:'S3（11月-雙年1-2月）'};
+  var h = '<div style="font-size:12px;font-weight:500;color:var(--tx2);margin-bottom:10px">' + labels[sn] + '</div>';
+  h += '<table class="htable"><thead><tr><th>月份</th><th>產能（班）</th><th>實際開班</th><th>利用率</th></tr></thead><tbody>';
+  var tCap=0,tUsed=0,yms=[];
+  for (var mi=0;mi<months.length;mi++) {
+    var mObj=months[mi],ym=mObj.yr+'-'+mObj.mo;
+    yms.push(ym);
+    var days=getDaysInMonth(mObj.yr,mObj.mo),cap=0,used=0;
+    for(var di=0;di<days.length;di++){var vr=getVR(fmtDate(days[di]),ym,v);cap+=vr.cap;used+=vr.used;}
+    tCap+=cap;tUsed+=used;
+    var r=cap?used/cap:0,p=Math.round(r*100);
+    var moLbl=mObj.yr!==parseInt(yr)?mObj.yr+'/'+mObj.mo+'月':mObj.mo+'月';
+    h+='<tr><td style="font-weight:500">'+moLbl+'</td><td>'+cap+'</td><td>'+used+'</td>'
+      +'<td style="font-weight:500;color:'+rc(r)+'">'+p+'% <span class="tag '+tcls(r)+'">'+tlabel(r)+'</span></td></tr>';
+  }
+  h+='</tbody></table>';
+  var tR=tCap?tUsed/tCap:0,pct=Math.round(tR*100),col=rc(tR);
+  var rev=calcRevTotal(yms,v),revStr=rev>0?'$'+rev.toLocaleString():'\u2014';
+  h+='<div class="metrics" style="margin-top:12px">'
+    +'<div class="mc"><div class="mcl">季總產能（班）</div><div class="mcv">'+tCap+'</div></div>'
+    +'<div class="mc"><div class="mcl">季實際開班</div><div class="mcv">'+tUsed+'</div></div>'
+    +'<div class="mc"><div class="mcl">季平均利用率</div>'
+    +'<div class="mcv" style="color:'+col+'">'+pct+'% <span class="tag '+tcls(tR)+'">'+tlabel(tR)+'</span></div>'
+    +'<div class="pb"><div class="pf" style="width:'+pct+'%;background:'+col+'"></div></div></div>'
+    +'<div class="mc"><div class="mcl">產値預測</div><div class="mcv" style="color:#854F0B">'+revStr+'</div></div>'
+    +'</div>';
+  return h;
+}
+
+function renderYearView(yr, v) {
+  var sns=['S1','S2','S3'];
+  var snL={S1:'S1（3-6月）',S2:'S2（7-10月）',S3:'S3（11月-雙年1-2月）'};
+  var h='<table class="htable"><thead><tr><th>季</th><th>產能（班）</th><th>實際開班</th><th>利用率</th><th>產値預測</th></tr></thead><tbody>';
+  var gCap=0,gUsed=0,gRev=0,hasData=false;
+  for(var si=0;si<sns.length;si++){
+    var sn=sns[si],months=getSeasonMonths(yr,sn),cap=0,used=0,yms=[];
+    for(var mi=0;mi<months.length;mi++){
+      var mObj=months[mi],ym=mObj.yr+'-'+mObj.mo;
+      if(HD[ym]) hasData=true;
+      yms.push(ym);
+      var days=getDaysInMonth(mObj.yr,mObj.mo);
+      for(var di=0;di<days.length;di++){var vr=getVR(fmtDate(days[di]),ym,v);cap+=vr.cap;used+=vr.used;}
+    }
+    gCap+=cap;gUsed+=used;
+    var rev=calcRevTotal(yms,v);gRev+=rev;
+    var r=cap?used/cap:0,p=Math.round(r*100);
+    h+='<tr><td style="font-weight:500">'+snL[sn]+'</td><td>'+cap+'</td><td>'+used+'</td>'
+      +'<td style="font-weight:500;color:'+rc(r)+'">'+p+'% <span class="tag '+tcls(r)+'">'+tlabel(r)+'</span></td>'
+      +'<td style="font-weight:500;color:#854F0B">'+(rev>0?'$'+rev.toLocaleString():'\u2014')+'</td></tr>';
+  }
+  if(!hasData) h+='<tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:16px">尚無資料</td></tr>';
+  h+='</tbody></table>';
+  var tR=gCap?gUsed/gCap:0,pct=Math.round(tR*100),col=rc(tR);
+  var revStr2=gRev>0?'$'+gRev.toLocaleString():'\u2014';
+  h+='<div class="metrics" style="margin-top:12px">'
+    +'<div class="mc"><div class="mcl">年總產能（班）</div><div class="mcv">'+gCap+'</div></div>'
+    +'<div class="mc"><div class="mcl">年實際開班</div><div class="mcv">'+gUsed+'</div></div>'
+    +'<div class="mc"><div class="mcl">年平均利用率</div>'
+    +'<div class="mcv" style="color:'+col+'">'+pct+'% <span class="tag '+tcls(tR)+'">'+tlabel(tR)+'</span></div>'
+    +'<div class="pb"><div class="pf" style="width:'+pct+'%;background:'+col+'"></div></div></div>'
+    +'<div class="mc"><div class="mcl">年產値預測</div><div class="mcv" style="color:#854F0B">'+revStr2+'</div></div>'
+    +'</div>';
   return h;
 }
 
@@ -1006,7 +1524,7 @@ function copyHistReport() {
   var mo = parseInt(document.getElementById('hm-sel').value || '4');
   var ym = yr + '-' + mo;
   var vn = {x:'西屯館', b:'北屯館', all:'兩館合計'};
-  var lines = [yr + '年' + mo + '月 產能利用率 — ' + vn[v], '', '日期\t星期\t產能\t已排課\t利用率'];
+  var lines = [yr + '年' + mo + '月 產能利用率 — ' + vn[v], '', '日期\t星期\t產能(班)\t實際開班\t利用率'];
   var wds = ['日','一','二','三','四','五','六'];
   var days = getDaysInMonth(parseInt(yr), mo);
   for (var i = 0; i < days.length; i++) {
@@ -1115,16 +1633,25 @@ function renderImpHist() {
 
 // ===== TAB SWITCH =====
 function switchTab(t) {
-  var ids = ['schedule','history','import','teachers'];
+  var ids = ['schedule','history','import','teachers','bftime','slots','capstd','sp','course'];
   for (var i = 0; i < ids.length; i++) {
     var el = document.getElementById('tab-' + ids[i]);
     if (el) el.classList.toggle('hidden', ids[i] !== t);
   }
-  var tabs = document.querySelectorAll('.tab');
-  for (var i = 0; i < tabs.length; i++) tabs[i].classList.toggle('on', ids[i] === t);
+  // Update sidebar nav highlight
+  for (var ni = 0; ni < ids.length; ni++) {
+    var nav = document.getElementById('nav-' + ids[ni]);
+    if (nav) nav.classList.toggle('on', ids[ni] === t);
+  }
+  openSettingsIfSub(t);
   if (t === 'history')  { updateHistCtrl(); renderHistory(); }
   if (t === 'import')   renderImpHist();
-  if (t === 'teachers') { renderTeachers(); initSpSettingsUI(); }
+  if (t === 'teachers') renderTeachers();
+  if (t === 'bftime')   renderBfTimeTable();
+  if (t === 'slots')    renderSlotLists();
+  if (t === 'capstd')   renderCapEditor();
+  if (t === 'sp')       initSpSettingsUI();
+  if (t === 'course')   renderCourseMap();
 }
 
 // ===== INIT =====
@@ -1371,7 +1898,7 @@ function loadFromSharePoint() {
         if (data.schedData) { schedData = data.schedData; svS(); }
         if (data.HD)        { HD = data.HD;               svH(); }
         if (data.IR)        { IR = data.IR;               svI(); }
-        if (data.teachers)  { teachers = data.teachers;   svT(); }
+        if (data.teachersX) { teachersX = data.teachersX; } if (data.teachersB) { teachersB = data.teachersB; } if (data.teachersX || data.teachersB) svT();
         lastSyncTime = new Date();
         setSyncStatus('已從 SharePoint 載入（' + lastSyncTime.toLocaleTimeString('zh-TW') + '）', '#1D9E75');
         renderSched();
@@ -1392,7 +1919,8 @@ function saveToSharePoint() {
       schedData: schedData,
       HD: HD,
       IR: IR,
-      teachers: teachers,
+      teachersX: teachersX,
+      teachersB: teachersB,
       savedAt: new Date().toISOString()
     });
     return getToken().then(function(tokenResp) {
@@ -1517,5 +2045,690 @@ function testSpConnection() {
 
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
+<script>
+// ===== BF_TIME MANAGEMENT =====
+function renderBfTimeTable() {
+  var tbody = document.getElementById('bftime-body');
+  if (!tbody) return;
+  var keys = Object.keys(BF_TIME).sort();
+  var html = '';
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i], v = BF_TIME[k];
+    var vStr = Array.isArray(v) ? v.join(',') : String(v);
+    var safeK = k.replace(/\\/g,'\\\\').replace(/"/g,'&quot;');
+    html += '<tr>'
+      + '<td style="font-family:monospace;font-size:12px">' + k + '</td>'
+      + '<td class="bft-val-cell" style="font-size:12px">' + vStr + '</td>'
+      + '<td style="white-space:nowrap">'
+      +   '<button class="btn" style="padding:3px 7px;font-size:11px;margin-right:3px" onclick="editBfTime(this,&quot;' + safeK + '&quot;)">編輯</button>'
+      +   '<button class="btn red" style="padding:3px 7px;font-size:11px" onclick="delBfTime(&quot;' + safeK + '&quot;)">刪除</button>'
+      + '</td>'
+      + '</tr>';
+  }
+  tbody.innerHTML = html;
+}
+
+function addBfTime() {
+  var k = (document.getElementById('bft-key').value || '').trim();
+  var vRaw = (document.getElementById('bft-val').value || '').trim();
+  if (!k || !vRaw) { alert('請填寫 Bookfast 時間和對應時段'); return; }
+  var v = vRaw.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+  BF_TIME[k] = v;
+  localStorage.setItem('bfTimeMap', JSON.stringify(BF_TIME));
+  document.getElementById('bft-key').value = '';
+  document.getElementById('bft-val').value = '';
+  renderBfTimeTable();
+}
+
+function editBfTime(btn, k) {
+  var row = btn.closest('tr');
+  var valCell = row.querySelector('.bft-val-cell');
+  var currentVal = (BF_TIME[k] || []).join(',');
+  var inp = document.createElement('input');
+  inp.type = 'text';
+  inp.value = currentVal;
+  inp.style.cssText = 'width:100%;font-size:12px;padding:2px 6px;border:.5px solid var(--bd2);border-radius:4px;background:var(--bg);color:var(--tx)';
+  valCell.innerHTML = '';
+  valCell.appendChild(inp);
+  inp.focus();
+  btn.textContent = '儲存';
+  btn.onclick = function() {
+    var newVal = inp.value.trim().split(',').map(function(s){return s.trim();}).filter(Boolean);
+    if (!newVal.length) { alert('請填寫對應時段'); return; }
+    BF_TIME[k] = newVal;
+    localStorage.setItem('bfTimeMap', JSON.stringify(BF_TIME));
+    renderBfTimeTable();
+  };
+  inp.onkeydown = function(e) { if (e.key === 'Enter') btn.click(); if (e.key === 'Escape') renderBfTimeTable(); };
+}
+
+function delBfTime(k) {
+  if (!confirm('確定刪除「' + k + '」這筆對照？')) return;
+  delete BF_TIME[k];
+  localStorage.setItem('bfTimeMap', JSON.stringify(BF_TIME));
+  renderBfTimeTable();
+}
+
+function resetBfTime() {
+  if (!confirm('確定還原所有時段對照為預設值？')) return;
+  BF_TIME = JSON.parse(JSON.stringify(BF_TIME_DEFAULT));
+  localStorage.removeItem('bfTimeMap');
+  renderBfTimeTable();
+}
+
+// ===== SLOT SETTINGS UI =====
+function renderSlotLists() {
+  renderSlotList('weekday',  WEEKDAY_SLOTS,  'slot-weekday-list');
+  renderSlotList('saturday', SATURDAY_SLOTS, 'slot-saturday-list');
+  renderSlotList('sunday',   SUNDAY_SLOTS,   'slot-sunday-list');
+}
+
+function renderSlotList(type, slots, elId) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  var sorted = slots.slice().sort();
+  var html = '';
+  for (var i = 0; i < sorted.length; i++) {
+    var sl = sorted[i];
+    html += '<span style="display:inline-flex;align-items:center;gap:3px;padding:3px 8px;background:var(--bg2);border:.5px solid var(--bd2);border-radius:20px;font-size:12px">'
+      + sl
+      + '<button data-type="' + type + '" data-sl="' + sl + '" style="background:none;border:none;cursor:pointer;color:var(--tx3);font-size:13px;line-height:1;padding:0;margin-left:2px" '
+      + 'onclick="removeSlotBtn(this)">×</button>'
+      + '</span>';
+  }
+  el.innerHTML = html || '<span style="font-size:12px;color:var(--tx3)">（尚無時段）</span>';
+}
+
+function removeSlotBtn(btn) {
+  var type = btn.getAttribute('data-type');
+  var val  = btn.getAttribute('data-sl');
+  removeSlot(type, val);
+}
+
+function addSlot(type) {
+  var inpId = type === 'weekday' ? 'slot-wd-inp' : type === 'saturday' ? 'slot-sat-inp' : 'slot-sun-inp';
+  var inp = document.getElementById(inpId);
+  var val = (inp.value || '').trim();
+  if (!val.match(/^\d{2}:\d{2}$/)) { alert('格式錯誤，請輸入如 14:30 的格式'); return; }
+  var arr = type === 'weekday' ? WEEKDAY_SLOTS : type === 'saturday' ? SATURDAY_SLOTS : SUNDAY_SLOTS;
+  if (arr.indexOf(val) >= 0) { alert(val + ' 已存在'); return; }
+  arr.push(val);
+  arr.sort();
+  saveSlots();
+  inp.value = '';
+  renderSlotLists();
+}
+
+function removeSlot(type, val) {
+  var arr = type === 'weekday' ? WEEKDAY_SLOTS : type === 'saturday' ? SATURDAY_SLOTS : SUNDAY_SLOTS;
+  var idx = arr.indexOf(val);
+  if (idx >= 0) arr.splice(idx, 1);
+  saveSlots();
+  renderSlotLists();
+}
+
+function saveSlots() {
+  localStorage.setItem('slotSettings', JSON.stringify({
+    weekday:  WEEKDAY_SLOTS,
+    saturday: SATURDAY_SLOTS,
+    sunday:   SUNDAY_SLOTS
+  }));
+}
+
+function resetSlots() {
+  if (!confirm('確定還原預設時段？')) return;
+  WEEKDAY_SLOTS  = WEEKDAY_SLOTS_DEFAULT.slice();
+  SATURDAY_SLOTS = SATURDAY_SLOTS_DEFAULT.slice();
+  SUNDAY_SLOTS   = SUNDAY_SLOTS_DEFAULT.slice();
+  localStorage.removeItem('slotSettings');
+  renderSlotLists();
+}
+
+// ===== CAPACITY STANDARD =====
+function onCapStdChange() {
+  window._capStd = document.getElementById('hcap-sel').value;
+  renderHistory();
+}
+function onPaxModeChange() {
+  window._revPaxMode = document.getElementById('hpax-sel').value;
+  renderHistory();
+}
+
+function renderCapEditor() {
+  renderCapEditorForVenue('x');
+  renderCapEditorForVenue('b');
+}
+
+// Class type definitions
+var CAP_TYPES = [
+  {id:'nab', label:'課程(N.A.B)', cids:['pn','pa','pb']},
+  {id:'cde', label:'課程(C.D.E)', cids:['yc','yd','ce']},
+  {id:'cf',  label:'課程(F)',     cids:['cf']},
+  {id:'fz',  label:'非課程(自游)', cids:['fz']},
+  {id:'wp',  label:'非課程(水樂)', cids:['wp']}
+];
+
+// Get pax for a type from COURSE_PRICING (use first cid in type, avg if different)
+function getTypePax(vk, typeId, paxField) {
+  for (var i=0;i<CAP_TYPES.length;i++) {
+    if (CAP_TYPES[i].id !== typeId) continue;
+    var cids = CAP_TYPES[i].cids;
+    var total=0, cnt=0;
+    for (var j=0;j<cids.length;j++) {
+      var p = COURSE_PRICING[vk+'_'+cids[j]] || {};
+      if (p[paxField]) { total += p[paxField]; cnt++; }
+    }
+    return cnt ? Math.round(total/cnt) : 0;
+  }
+  return 0;
+}
+
+// Get selected types for a slot+sfx
+function getCapTypes(vk, std, slotSfx) {
+  var cfg = getCapConfig(vk, std);
+  return cfg[slotSfx] || [];
+}
+
+// Compute cap (班數) from selected types
+function calcCapFromTypes(vk, std, slotSfx) {
+  return getCapTypes(vk, std, slotSfx).length;
+}
+
+// Compute pax from selected types
+function calcPaxFromTypes(vk, std, slotSfx, paxField) {
+  var types = getCapTypes(vk, std, slotSfx);
+  var total = 0;
+  for (var i=0;i<types.length;i++) total += getTypePax(vk, types[i], paxField);
+  return total;
+}
+
+function renderCapEditorForVenue(vk) {
+  var maxZ = VENUES[vk].zones;
+  var allSlots = {};
+  WEEKDAY_SLOTS.forEach(function(s){ allSlots[s]=true; });
+  SATURDAY_SLOTS.forEach(function(s){ allSlots[s]=true; });
+  SUNDAY_SLOTS.forEach(function(s){ allSlots[s]=true; });
+  var slots = Object.keys(allSlots).sort();
+
+  var thead = document.getElementById('cap-head-'+vk);
+  var tbody = document.getElementById('cap-body-'+vk);
+  if (!tbody) return;
+
+  // Header: 時段 | 最大產能(types x3) | 標準產能(types x3)
+  // Columns: slot | [wd col] [sat col] [sun col] per std
+  // Each col = 5 checkboxes stacked
+  var sfxLabels = [{sfx:'_wd',label:'二五'},{sfx:'_sat',label:'周六'},{sfx:'_sun',label:'周日'}];
+  if (thead) {
+    var th = '<tr>'
+      + '<th rowspan="2">時段</th>'
+      + '<th colspan="3" style="text-align:center;background:var(--ibg);color:var(--itx)">最大產能</th>'
+      + '<th colspan="3" style="text-align:center;background:#e6f4ea;color:#1a5c2a">標準產能</th>'
+      + '</tr><tr>';
+    for (var si2=0;si2<2;si2++) {
+      var bg = si2===0?'#ddeeff':'#d4edda';
+      for (var di=0;di<sfxLabels.length;di++)
+        th += '<th style="font-size:10px;text-align:center;background:'+bg+';padding:3px 6px;min-width:90px">'+sfxLabels[di].label+'</th>';
+    }
+    th += '</tr>';
+    thead.innerHTML = th;
+  }
+
+  var stdKeys = ['max','std'];
+  var h = '';
+  for (var i=0;i<slots.length;i++) {
+    var sl = slots[i];
+    var isWd  = WEEKDAY_SLOTS.indexOf(sl)>=0;
+    var isSat = SATURDAY_SLOTS.indexOf(sl)>=0;
+    var isSun = SUNDAY_SLOTS.indexOf(sl)>=0;
+    h += '<tr><td style="font-size:11px;font-family:monospace;white-space:nowrap;background:var(--bg2);text-align:center;padding:3px 6px">'+sl+'</td>';
+    for (var ki=0;ki<stdKeys.length;ki++) {
+      var std = stdKeys[ki];
+      for (var di2=0;di2<sfxLabels.length;di2++) {
+        var sfx = sfxLabels[di2].sfx;
+        var applicable = (sfx==='_wd'&&isWd)||(sfx==='_sat'&&isSat)||(sfx==='_sun'&&isSun);
+        if (!applicable) { h += '<td style="background:var(--bg2)"></td>'; continue; }
+        var selTypes = getCapTypes(vk, std, sl+sfx);
+        var cellId = 'cap-'+vk+'-'+std+'-'+sl.replace(':','')+sfx;
+        h += '<td style="padding:3px 4px;vertical-align:top">';
+        for (var ti=0;ti<CAP_TYPES.length;ti++) {
+          var tp = CAP_TYPES[ti];
+          var checked = selTypes.indexOf(tp.id)>=0 ? ' checked' : '';
+          h += '<div style="white-space:nowrap;margin-bottom:2px">'
+            + '<input type="checkbox"' + checked
+            + ' onchange="toggleCapType(\''+ vk +'\',\''+ std +'\',\''+ sl +'\',\''+ sfx +'\',\''+ tp.id +'\',this.checked)"'
+            + ' style="margin-right:3px">';
+          h += '<span style="font-size:10px">' + tp.label + '</span></div>';
+        }
+        // Show computed cap+pax
+        var nTypes = selTypes.length;
+        var paxF = std==='max' ? 'maxPax' : 'stdPax';
+        var totalPax = calcPaxFromTypes(vk, std, sl+sfx, paxF);
+        h += '<div style="font-size:10px;color:var(--tx3);margin-top:3px">';
+        h += nTypes + '班';
+        if (totalPax) h += ' / ' + totalPax + '人';
+        h += '</div>';
+        h += '</td>';
+      }
+    }
+    h += '</tr>';
+  }
+  tbody.innerHTML = h;
+}
+
+function toggleCapType(vk, std, sl, sfx, typeId, checked) {
+  var cfg = getCapConfig(vk, std);
+  var key = sl + sfx;
+  if (!cfg[key]) cfg[key] = [];
+  var idx = cfg[key].indexOf(typeId);
+  if (checked && idx < 0) {
+    if (cfg[key].length >= VENUES[vk].zones) {
+      alert('已達上限 ' + VENUES[vk].zones + ' 班！');
+      renderCapEditorForVenue(vk); return;
+    }
+    cfg[key].push(typeId);
+  } else if (!checked && idx >= 0) {
+    cfg[key].splice(idx, 1);
+  }
+  saveCapConfig(vk, std, cfg);
+  // Update the summary display without full re-render
+  renderCapEditorForVenue(vk);
+}
+
+
+function resetCapCfgVenue(vk) {
+  if (!confirm('確定清除' + VENUES[vk].name + '的所有產能標準設定？')) return;
+  localStorage.removeItem('capCfg_' + vk + '_max');
+  localStorage.removeItem('capCfg_' + vk + '_std');
+  renderCapEditor();
+}
+
+
+function saveCapCell(vk, std, key, val, maxZ) {
+  var cfg = getCapConfig(vk, std);
+  var num = parseInt(val);
+  if (val === '' || isNaN(num)) {
+    delete cfg[key];
+  } else {
+    cfg[key] = Math.min(Math.max(0, num), maxZ);
+  }
+  saveCapConfig(vk, std, cfg);
+}
+
+// resetCapCfg replaced by resetCapCfgVenue
+
+// (overridden above by cap JS block)
+
+// ===== SIDEBAR SETTINGS TOGGLE =====
+function toggleSettings() {
+  var parent   = document.getElementById('nav-settings-parent');
+  var children = document.getElementById('nav-settings-children');
+  if (!parent || !children) return;
+  var isOpen = children.classList.contains('open');
+  if (isOpen) {
+    parent.classList.remove('open');
+    children.classList.remove('open');
+  } else {
+    parent.classList.add('open');
+    children.classList.add('open');
+  }
+}
+// Auto-open settings group when a sub-tab is active
+function openSettingsIfSub(t) {
+  var subTabs = ['teachers','course','bftime','slots','capstd','sp'];
+  if (subTabs.indexOf(t) >= 0) {
+    var parent   = document.getElementById('nav-settings-parent');
+    var children = document.getElementById('nav-settings-children');
+    if (parent)   parent.classList.add('open');
+    if (children) children.classList.add('open');
+  }
+}
+
+// ===== COURSE MAP MANAGEMENT =====
+var COURSE_MAP_DEFAULT = [
+  {bfName:'【Ａ】親子游泳',       cid:'pa', label:'A',   color:'#185FA5'},
+  {bfName:'【Ａ】親子游泳｜體驗專班', cid:'pa', label:'A體', color:'#378ADD'},
+  {bfName:'【Ａ】親子體驗｜北屯',  cid:'pa', label:'A體', color:'#378ADD'},
+  {bfName:'【Ａ】親子體驗｜西屯',  cid:'pa', label:'A體', color:'#378ADD'},
+  {bfName:'【Ｂ】親子游泳',       cid:'pb', label:'B',   color:'#7B3F9E'},
+  {bfName:'【Ｃ】幼兒游泳',       cid:'yc', label:'C',   color:'#1D9E75'},
+  {bfName:'【Ｃ】幼兒游泳｜補課專班', cid:'yc', label:'C補', color:'#85C9A0'},
+  {bfName:'【Ｃ】幼兒游泳｜體驗專班', cid:'yc', label:'C體', color:'#3DB892'},
+  {bfName:'【Ｃ】幼兒體驗｜北屯',  cid:'yc', label:'C體', color:'#3DB892'},
+  {bfName:'【Ｃ】幼兒體驗｜西屯',  cid:'yc', label:'C體', color:'#3DB892'},
+  {bfName:'【Ｄ】幼兒游泳',       cid:'yd', label:'D',   color:'#639922'},
+  {bfName:'【Ｅ】兒童游泳',       cid:'ce', label:'E',   color:'#854F0B'},
+  {bfName:'【Ｅ】兒童游泳｜補課專班', cid:'ce', label:'E補', color:'#C89050'},
+  {bfName:'【Ｅ】兒童游泳｜體驗專班', cid:'ce', label:'E體', color:'#B87840'},
+  {bfName:'【Ｅ】兒童體驗｜北屯',  cid:'ce', label:'E體', color:'#B87840'},
+  {bfName:'【Ｅ】兒童體驗｜西屯',  cid:'ce', label:'E體', color:'#B87840'},
+  {bfName:'【Ｆ】兒童游泳',       cid:'cf', label:'F',   color:'#993556'},
+  {bfName:'【Ｎ】新生寶寶游泳',    cid:'pn', label:'N',   color:'#0F6E56'},
+  {bfName:'【Ｎ】新生寶寶｜北屯',  cid:'pn', label:'N',   color:'#0F6E56'},
+  {bfName:'【Ｎ】新生寶寶｜西屯',  cid:'pn', label:'N',   color:'#0F6E56'},
+  {bfName:'【Ｓ】自游時光｜西屯',  cid:'fz', label:'自游', color:'#534AB7'},
+  {bfName:'【Ｓ】自游時光｜北屯',  cid:'fz', label:'自游', color:'#534AB7'},
+  {bfName:'【Ｐ】水上樂園｜西屯',  cid:'wp', label:'水樂', color:'#D85A30'},
+  {bfName:'【Ｐ】水上樂園｜北屯',  cid:'wp', label:'水樂', color:'#D85A30'},
+];
+function loadCourseMap() {
+  var saved = localStorage.getItem('courseMap');
+  if (saved) return JSON.parse(saved);
+  return JSON.parse(JSON.stringify(COURSE_MAP_DEFAULT));
+}
+var COURSE_MAP = loadCourseMap();
+
+function syncBfCourseFromMap() {
+  // Rebuild BF_COURSE from COURSE_MAP
+  var newBFC = {};
+  for (var i = 0; i < COURSE_MAP.length; i++) newBFC[COURSE_MAP[i].bfName] = COURSE_MAP[i].cid;
+  // Clear and repopulate BF_COURSE
+  var keys = Object.keys(BF_COURSE);
+  for (var i = 0; i < keys.length; i++) delete BF_COURSE[keys[i]];
+  var nkeys = Object.keys(newBFC);
+  for (var i = 0; i < nkeys.length; i++) BF_COURSE[nkeys[i]] = newBFC[nkeys[i]];
+  // Rebuild COURSE_OPTS from unique label+color combos
+  var seen = {}, newOpts = [];
+  for (var i = 0; i < COURSE_MAP.length; i++) {
+    var r = COURSE_MAP[i];
+    var key = r.label + '|' + r.color;
+    if (!seen[key]) { seen[key] = 1; newOpts.push({label:r.label, cid:r.cid, color:r.color}); }
+  }
+  COURSE_OPTS.length = 0;
+  for (var i = 0; i < newOpts.length; i++) COURSE_OPTS.push(newOpts[i]);
+}
+syncBfCourseFromMap();
+
+// renderCourseMap moved to course_extra_js block
+
+function addCourseMap() {
+  var bfName = (document.getElementById('cm-bfname').value||'').trim();
+  var cidSel = document.getElementById('cm-cid').value;
+  var cid    = cidSel === '_new' ? (document.getElementById('cm-cid-new').value||'').trim() : cidSel;
+  var label  = (document.getElementById('cm-label').value||'').trim();
+  var color  = document.getElementById('cm-color').value;
+  if (!bfName||!label||!cid) { alert('請填寫所有欄位'); return; }
+  COURSE_MAP.push({bfName:bfName, cid:cid, label:label, color:color});
+  localStorage.setItem('courseMap', JSON.stringify(COURSE_MAP));
+  syncBfCourseFromMap();
+  renderCourseMap();
+  document.getElementById('cm-bfname').value='';
+  document.getElementById('cm-label').value='';
+  document.getElementById('cm-cid-new').value='';
+  document.getElementById('cm-cid-new').style.display='none';
+  document.getElementById('cm-cid').value='pa';
+}
+
+function delCourseMap(idx) {
+  COURSE_MAP.splice(idx,1);
+  localStorage.setItem('courseMap', JSON.stringify(COURSE_MAP));
+  syncBfCourseFromMap();
+  renderCourseMap();
+}
+
+function resetCourseMap() {
+  if(!confirm('確定還原課程對照預設值？')) return;
+  COURSE_MAP = JSON.parse(JSON.stringify(COURSE_MAP_DEFAULT));
+  localStorage.removeItem('courseMap');
+  syncBfCourseFromMap();
+  renderCourseMap();
+}
+
+// ===== COURSE PRICING =====
+function loadCoursePricing() {
+  return JSON.parse(localStorage.getItem('coursePricing') || '{}');
+}
+// Load saved pricing, fall back to defaults
+var COURSE_PRICING_DEFAULT = {"x_pn": {"maxPax": 6, "stdPax": 5, "price": 850}, "x_pa": {"maxPax": 6, "stdPax": 5, "price": 850}, "x_pb": {"maxPax": 6, "stdPax": 5, "price": 850}, "x_yc": {"maxPax": 6, "stdPax": 5, "price": 850}, "x_yd": {"maxPax": 6, "stdPax": 5, "price": 850}, "x_ce": {"maxPax": 6, "stdPax": 5, "price": 850}, "x_cf": {"maxPax": 18, "stdPax": 16, "price": 850}, "x_fz": {"maxPax": 6, "stdPax": 3, "price": 400}, "x_wp": {"maxPax": 12, "stdPax": 10, "price": 600}, "b_pn": {"maxPax": 6, "stdPax": 5, "price": 850}, "b_pa": {"maxPax": 6, "stdPax": 5, "price": 850}, "b_pb": {"maxPax": 6, "stdPax": 5, "price": 850}, "b_yc": {"maxPax": 6, "stdPax": 5, "price": 850}, "b_yd": {"maxPax": 6, "stdPax": 5, "price": 850}, "b_ce": {"maxPax": 6, "stdPax": 5, "price": 850}, "b_cf": {"maxPax": 24, "stdPax": 22, "price": 850}, "b_fz": {"maxPax": 6, "stdPax": 3, "price": 400}, "b_wp": {"maxPax": 15, "stdPax": 13, "price": 600}};
+var COURSE_PRICING = (function(){ var s=localStorage.getItem('coursePricing'); return s ? JSON.parse(s) : JSON.parse(JSON.stringify(COURSE_PRICING_DEFAULT)); })();
+// Keys: "vk_cid" -> {maxPax, stdPax, price}
+var curPriceVenue = 'x';
+
+function setPriceTab(vk) {
+  curPriceVenue = vk;
+  var bx = document.getElementById('price-tab-x');
+  var bb = document.getElementById('price-tab-b');
+  if (bx) { bx.style.background = vk==='x' ? 'var(--ibg)' : ''; bx.style.color = vk==='x' ? 'var(--itx)' : ''; }
+  if (bb) { bb.style.background = vk==='b' ? 'var(--ibg)' : ''; bb.style.color = vk==='b' ? 'var(--itx)' : ''; }
+  renderCoursePricing();
+}
+
+function renderCoursePricing() {
+  renderCoursePricingForVenue('x');
+  renderCoursePricingForVenue('b');
+}
+
+function renderCoursePricingForVenue(vk) {
+  var tbodyId = 'course-pricing-body-' + vk;
+  var tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+  var COURSE_GROUP = ['pn','pa','pb','yc','yd','ce','cf'];
+  var NONCOS_GROUP = ['fz','wp'];
+  var CID_NAMES = {pa:'親子A',pb:'親子B',pn:'親子N',yc:'幼兒C',yd:'幼兒D',ce:'兒童E',cf:'兒童F',fz:'自游時光',wp:'水上樂園'};
+  var inpSt = 'width:68px;padding:3px 5px;border:.5px solid var(--bd2);border-radius:4px;font-size:12px;text-align:right';
+  function makeRow(cid) {
+    var key = vk + '_' + cid;
+    var p = COURSE_PRICING[key] || {};
+    return '<tr>'
+      + '<td style="font-size:12px">' + (CID_NAMES[cid]||cid) + '</td>'
+      + '<td><input type="number" min="0" value="' + (p.maxPax!==undefined?p.maxPax:'') + '" placeholder="—"'
+      + ' style="' + inpSt + '" onchange="saveCoursePricing(\''+ vk +'\',\''+ cid +'\',\'maxPax\',this.value)"></td>'
+      + '<td><input type="number" min="0" value="' + (p.stdPax!==undefined?p.stdPax:'') + '" placeholder="—"'
+      + ' style="' + inpSt + '" onchange="saveCoursePricing(\''+ vk +'\',\''+ cid +'\',\'stdPax\',this.value)"></td>'
+      + '<td><input type="number" min="0" value="' + (p.price!==undefined?p.price:'') + '" placeholder="—"'
+      + ' style="' + inpSt + '" onchange="saveCoursePricing(\''+ vk +'\',\''+ cid +'\',\'price\',this.value)"></td>'
+      + '</tr>';
+  }
+  var hdrSt = '<tr style="background:var(--bg2)"><td colspan="4" style="font-size:11px;font-weight:600;color:var(--tx2);padding:5px 8px">';
+  var h = hdrSt + '課程</td></tr>';
+  for (var i=0;i<COURSE_GROUP.length;i++) h += makeRow(COURSE_GROUP[i]);
+  h += hdrSt + '非課程</td></tr>';
+  for (var i=0;i<NONCOS_GROUP.length;i++) h += makeRow(NONCOS_GROUP[i]);
+  tbody.innerHTML = h;
+}
+
+
+function saveCoursePricing(vk, cid, field, val) {
+  var key = vk + '_' + cid;
+  if (!COURSE_PRICING[key]) COURSE_PRICING[key] = {};
+  var num = parseFloat(val);
+  if (val === '' || isNaN(num)) delete COURSE_PRICING[key][field];
+  else COURSE_PRICING[key][field] = num;
+  localStorage.setItem('coursePricing', JSON.stringify(COURSE_PRICING));
+}
+
+// ===== COLOR PRESETS for course map =====
+var COLOR_PRESETS = ['#185FA5','#378ADD','#7B3F9E','#1D9E75','#0F6E56','#639922','#854F0B','#993556','#534AB7','#D85A30','#E24B4A','#EF9F27','#888780'];
+
+function renderColorPresets() {
+  var el = document.getElementById('color-presets');
+  if (!el) return;
+  var h = '';
+  COLOR_PRESETS.forEach(function(c) {
+    h += '<div onclick="document.getElementById(\'cm-color\').value=\'' + c + '\'" '
+      + 'style="width:18px;height:18px;border-radius:3px;background:' + c + ';cursor:pointer;border:.5px solid rgba(0,0,0,.2)" title="' + c + '"></div>';
+  });
+  el.innerHTML = h;
+}
+
+// ===== COURSE CID SELECT =====
+function onCmCidChange() {
+  var sel = document.getElementById('cm-cid');
+  var newInp = document.getElementById('cm-cid-new');
+  if (sel.value === '_new') {
+    newInp.style.display = '';
+    newInp.focus();
+  } else {
+    newInp.style.display = 'none';
+  }
+}
+
+// ===== COURSE MAP EDIT IN-LINE =====
+function renderCourseMap() {
+  var tbody = document.getElementById('course-map-body');
+  if (!tbody) return;
+  renderColorPresets();
+  renderCoursePricing();
+  var CID_NAMES = {pa:'親子A',pb:'親子B',pn:'親子N',yc:'幼兒C',yd:'幼兒D',ce:'兒童E',cf:'兒童F',fz:'自游時光',wp:'水上樂園'};
+  var h = '';
+  COURSE_MAP.forEach(function(r, i) {
+    h += '<tr id="cm-row-' + i + '">'
+      + '<td style="font-size:12px">' + r.bfName + '</td>'
+      + '<td style="font-size:12px">' + (CID_NAMES[r.cid]||r.cid) + '</td>'
+      + '<td><span style="display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:4px;color:#fff;background:' + r.color + ';font-size:11px;font-weight:500">' + r.label + '</span></td>'
+      + '<td><div style="width:18px;height:18px;border-radius:3px;background:' + r.color + ';border:.5px solid var(--bd2)"></div></td>'
+      + '<td style="white-space:nowrap">'
+      +   '<button class="btn" style="padding:2px 7px;font-size:11px;margin-right:3px" onclick="editCourseMap(' + i + ')">編輯</button>'
+      +   '<button class="btn red" style="padding:2px 7px;font-size:11px" onclick="delCourseMap(' + i + ')">刪除</button>'
+      + '</td>'
+      + '</tr>';
+  });
+  tbody.innerHTML = h || '<tr><td colspan="5" style="text-align:center;color:var(--tx3)">（尚無對照）</td></tr>';
+}
+
+function editCourseMap(idx) {
+  var r = COURSE_MAP[idx];
+  var row = document.getElementById('cm-row-' + idx);
+  if (!row) return;
+  var CID_OPTS = ['pa','pb','pn','yc','yd','ce','cf','fz','wp'];
+  var CID_NAMES = {pa:'親子A',pb:'親子B',pn:'親子N',yc:'幼兒C',yd:'幼兒D',ce:'兒童E',cf:'兒童F',fz:'自游時光',wp:'水上樂園'};
+  var cidSel = '<select id="edit-cid-' + idx + '" style="font-size:11px;width:90px">';
+  CID_OPTS.forEach(function(c) { cidSel += '<option value="' + c + '"' + (c===r.cid?' selected':'') + '>' + (CID_NAMES[c]||c) + '</option>'; });
+  cidSel += '</select>';
+  row.innerHTML = '<td><input id="edit-bf-' + idx + '" value="' + r.bfName.replace(/"/g,'&quot;') + '" style="font-size:11px;width:170px"></td>'
+    + '<td>' + cidSel + '</td>'
+    + '<td><input id="edit-lbl-' + idx + '" value="' + r.label + '" style="font-size:11px;width:60px"></td>'
+    + '<td><input type="color" id="edit-clr-' + idx + '" value="' + r.color + '" style="width:32px;height:24px;padding:1px;border:.5px solid var(--bd2);border-radius:3px"></td>'
+    + '<td><button class="btn pri" style="padding:2px 7px;font-size:11px;margin-right:3px" onclick="saveCourseMapEdit(' + idx + ')">儲存</button>'
+    + '<button class="btn" style="padding:2px 7px;font-size:11px" onclick="renderCourseMap()">取消</button></td>';
+}
+
+function saveCourseMapEdit(idx) {
+  COURSE_MAP[idx].bfName = document.getElementById('edit-bf-' + idx).value.trim();
+  COURSE_MAP[idx].cid    = document.getElementById('edit-cid-' + idx).value;
+  COURSE_MAP[idx].label  = document.getElementById('edit-lbl-' + idx).value.trim();
+  COURSE_MAP[idx].color  = document.getElementById('edit-clr-' + idx).value;
+  localStorage.setItem('courseMap', JSON.stringify(COURSE_MAP));
+  syncBfCourseFromMap();
+  renderCourseMap();
+}
+
+// ===== REVENUE / 產值預測 =====
+var revPaxMode = 'max'; // 'max' or 'std'
+var revVisible = false;
+
+function toggleRevDetail() {
+  revVisible = !revVisible;
+  var sec = document.getElementById('rev-detail-section');
+  var btn = document.getElementById('rev-detail-btn');
+  if (sec) sec.classList.toggle('hidden', !revVisible);
+  if (btn) btn.textContent = revVisible ? '隱藏產値預測明細' : '顯示產値預測明細';
+  if (revVisible) renderRevenue();
+}
+
+function setRevPax(mode) {
+  revPaxMode = mode;
+  var bMax = document.getElementById('rev-pax-max');
+  var bStd = document.getElementById('rev-pax-std');
+  if (bMax) { bMax.style.background = mode==='max' ? 'var(--ibg)' : ''; bMax.style.color = mode==='max' ? 'var(--itx)' : ''; }
+  if (bStd) { bStd.style.background = mode==='std' ? 'var(--ibg)' : ''; bStd.style.color = mode==='std' ? 'var(--itx)' : ''; }
+  renderRevenue();
+}
+
+function renderRevenue() {
+  var el = document.getElementById('revenue-content');
+  if (!el) return;
+
+  var v  = document.getElementById('hv-sel').value;
+  var yr = document.getElementById('hy-sel').value || '2026';
+  var mo = parseInt(document.getElementById('hm-sel').value || '4');
+  var ym = yr + '-' + mo;
+  var paxField = revPaxMode === 'max' ? 'maxPax' : 'stdPax';
+
+  var vks = v === 'all' ? ['x', 'b'] : [v];
+  var CID_NAMES = {pa:'親子A',pb:'親子B',pn:'親子N',yc:'幼兒C',yd:'幼兒D',ce:'兒童E',cf:'兒童F',fz:'自游時光',wp:'水上樂園'};
+
+  // Aggregate: per cid, count sessions
+  var cidCount = {};
+  var days = getDaysInMonth(parseInt(yr), mo);
+  for (var vi = 0; vi < vks.length; vi++) {
+    var vk = vks[vi];
+    var vData = (HD[ym] || {})[vk] || {};
+    for (var di = 0; di < days.length; di++) {
+      var ds = fmtDate(days[di]);
+      var sm = vData[ds] || {};
+      var sls = getDateSlots(ds);
+      for (var si = 0; si < sls.length; si++) {
+        var cids = sm[sls[si]] || [];
+        for (var ci = 0; ci < cids.length; ci++) {
+          var cid = cids[ci];
+          if (!cidCount[vk]) cidCount[vk] = {};
+          cidCount[vk][cid] = (cidCount[vk][cid] || 0) + 1;
+        }
+      }
+    }
+  }
+
+  // Build table rows per venue
+  var h = '';
+  var grandTotal = 0;
+
+  for (var vi = 0; vi < vks.length; vi++) {
+    var vk = vks[vi];
+    var counts = cidCount[vk] || {};
+    var cids = Object.keys(counts);
+    if (!cids.length) continue;
+
+    if (vks.length > 1) h += '<div style="font-size:12px;font-weight:500;color:var(--tx2);margin-bottom:6px">' + VENUES[vk].name + '</div>';
+
+    h += '<table class="htable" style="max-width:600px;margin-bottom:' + (vi < vks.length-1 ? '14px' : '0') + '">'
+      + '<thead><tr>'
+      + '<th>課程</th>'
+      + '<th>開班數</th>'
+      + '<th>' + (revPaxMode==='max' ? '最大' : '標準') + '人次/班</th>'
+      + '<th>預估總人次</th>'
+      + '<th>客單價</th>'
+      + '<th>預估產值</th>'
+      + '</tr></thead><tbody>';
+
+    var venueTotal = 0;
+    for (var ci = 0; ci < cids.length; ci++) {
+      var cid = cids[ci];
+      var sessions = counts[cid];
+      var priceKey = vk + '_' + cid;
+      var pricing = COURSE_PRICING[priceKey] || {};
+      var pax   = pricing[paxField] || 0;
+      var price = pricing.price || 0;
+      var totalPax = sessions * pax;
+      var revenue  = totalPax * price;
+      venueTotal += revenue;
+      grandTotal += revenue;
+
+      h += '<tr>'
+        + '<td style="font-size:12px">' + (CID_NAMES[cid]||cid) + '</td>'
+        + '<td style="text-align:center">' + sessions + '</td>'
+        + '<td style="text-align:center">' + (pax||'—') + '</td>'
+        + '<td style="text-align:center">' + (pax ? totalPax : '—') + '</td>'
+        + '<td style="text-align:center">' + (price ? '$'+price : '—') + '</td>'
+        + '<td style="text-align:right;font-weight:500">' + (revenue ? '$'+revenue.toLocaleString() : '—') + '</td>'
+        + '</tr>';
+    }
+    h += '<tr style="background:var(--bg2);font-weight:600">'
+      + '<td colspan="5">合計</td>'
+      + '<td style="text-align:right">$' + venueTotal.toLocaleString() + '</td>'
+      + '</tr>';
+    h += '</tbody></table>';
+  }
+
+  if (v === 'all' && grandTotal) {
+    h += '<div style="font-size:13px;font-weight:600;margin-top:8px;text-align:right">兩館合計：$' + grandTotal.toLocaleString() + '</div>';
+  }
+
+  if (!h) {
+    h = '<p style="font-size:12px;color:var(--tx3)">本月尚無課程資料，或尚未在「班別設定」填入客單價。</p>';
+  }
+
+  el.innerHTML = h;
+}
+</script>
 </body>
 </html>
