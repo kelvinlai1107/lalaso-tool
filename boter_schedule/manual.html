@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boter 甜點師排程工具 — 使用說明書</title>
+<style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Microsoft JhengHei','PingFang TC',sans-serif; background:#f8f8f8; color:#333; font-size:15px; line-height:1.7; }
+
+    /* COVER */
+    .cover { background:linear-gradient(145deg,#fff5f7,#ffe0e8); min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px; page-break-after:always; }
+    .cover-logo { font-size:5rem; margin-bottom:16px; }
+    .cover-brand { font-size:3rem; font-weight:900; color:#c94f6a; letter-spacing:3px; }
+    .cover-sub { font-size:1.3rem; color:#888; margin:10px 0 40px; }
+    .cover-divider { width:60px; height:3px; background:#c94f6a; margin:0 auto 40px; border-radius:2px; }
+    .cover-info { background:#fff; border-radius:14px; padding:24px 40px; box-shadow:0 4px 20px rgba(201,79,106,.12); text-align:left; min-width:320px; }
+    .cover-info p { color:#555; margin:6px 0; font-size:0.95rem; }
+    .cover-info strong { color:#c94f6a; }
+
+    /* LAYOUT */
+    .page { max-width:860px; margin:0 auto; padding:40px 24px; }
+    h1.sec { font-size:1.6rem; font-weight:900; color:#c94f6a; border-bottom:3px solid #fce8ed; padding-bottom:10px; margin:48px 0 24px; display:flex; align-items:center; gap:10px; }
+    h1.sec .num { background:#c94f6a; color:#fff; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.9rem; flex-shrink:0; }
+    h2.sub { font-size:1.1rem; font-weight:700; color:#444; margin:24px 0 10px; display:flex; align-items:center; gap:8px; }
+    h2.sub::before { content:'▸'; color:#c94f6a; }
+
+    /* STEPS */
+    .steps { counter-reset:step; }
+    .step { display:flex; gap:14px; margin:10px 0; align-items:flex-start; }
+    .step-n { background:#c94f6a; color:#fff; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.82rem; font-weight:700; flex-shrink:0; margin-top:2px; }
+    .step-body { flex:1; }
+
+    /* CARDS */
+    .card { background:#fff; border-radius:12px; padding:20px 24px; margin:14px 0; box-shadow:0 2px 8px rgba(0,0,0,.06); border-left:4px solid #c94f6a; }
+    .card.blue { border-left-color:#0078d4; }
+    .card.green { border-left-color:#2e7d32; }
+    .card.orange { border-left-color:#e65100; }
+    .card.gray { border-left-color:#9e9e9e; }
+    .card-title { font-weight:700; color:#c94f6a; margin-bottom:6px; font-size:0.95rem; }
+    .card.blue .card-title { color:#0078d4; }
+    .card.green .card-title { color:#2e7d32; }
+    .card.orange .card-title { color:#e65100; }
+    .card.gray .card-title { color:#666; }
+
+    /* TABLE */
+    table { width:100%; border-collapse:collapse; margin:14px 0; font-size:0.9rem; }
+    th { background:#fce8ed; color:#c94f6a; padding:10px 12px; text-align:left; font-weight:700; }
+    td { padding:9px 12px; border-bottom:1px solid #f0f0f0; vertical-align:top; }
+    tr:last-child td { border-bottom:none; }
+    tr:nth-child(even) td { background:#fafafa; }
+
+    /* BADGES */
+    .bdg { display:inline-block; padding:2px 10px; border-radius:20px; font-size:0.8rem; font-weight:600; }
+    .bdg-pink { background:#fce8ed; color:#c94f6a; }
+    .bdg-blue { background:#e3f2fd; color:#0078d4; }
+    .bdg-green { background:#e8f5e9; color:#2e7d32; }
+    .bdg-orange { background:#fff3e0; color:#e65100; }
+    .bdg-gray { background:#f3f3f3; color:#666; }
+
+    /* TIPS */
+    .tip { background:#f0f4ff; border-radius:10px; padding:14px 18px; margin:14px 0; font-size:0.9rem; color:#3949ab; border-left:4px solid #3949ab; }
+    .tip strong { color:#283593; }
+    .warn { background:#fff8e1; border-left-color:#f57f17; color:#795548; }
+    .warn strong { color:#e65100; }
+    .tip-icon { font-size:1.1rem; margin-right:4px; }
+
+    /* KEY */
+    kbd { background:#f5f5f5; border:1px solid #ddd; border-radius:4px; padding:2px 7px; font-size:0.82rem; font-family:inherit; box-shadow:0 1px 0 #ccc; }
+
+    /* ICON ROW */
+    .icon-row { display:flex; flex-wrap:wrap; gap:12px; margin:14px 0; }
+    .icon-item { background:#fff; border:1px solid #eee; border-radius:10px; padding:12px 16px; display:flex; align-items:center; gap:10px; box-shadow:0 1px 4px rgba(0,0,0,.05); min-width:180px; flex:1; }
+    .icon-item .ic { font-size:1.4rem; }
+    .icon-item .ic-label { font-size:0.82rem; color:#555; }
+    .icon-item .ic-name { font-weight:700; font-size:0.92rem; }
+
+    /* FLOW */
+    .flow { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:12px 0; }
+    .flow-step { background:#fce8ed; color:#c94f6a; border-radius:8px; padding:6px 14px; font-size:0.88rem; font-weight:600; }
+    .flow-arrow { color:#ccc; font-size:1.2rem; }
+
+    /* STATUS BADGES */
+    .s-pending { background:#f3f3f3; color:#999; border-radius:8px; padding:2px 8px; font-size:0.82rem; font-weight:600; }
+    .s-pickup  { background:#e8f5e9; color:#2e7d32; border-radius:8px; padding:2px 8px; font-size:0.82rem; font-weight:600; }
+    .s-shipped { background:#e3f2fd; color:#1565c0; border-radius:8px; padding:2px 8px; font-size:0.82rem; font-weight:600; }
+
+    /* TOC */
+    .toc { background:#fff; border-radius:12px; padding:24px 28px; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+    .toc h3 { color:#c94f6a; font-size:1rem; margin-bottom:16px; letter-spacing:1px; }
+    .toc ol { padding-left:20px; }
+    .toc li { margin:8px 0; }
+    .toc a { color:#555; text-decoration:none; font-size:0.95rem; }
+    .toc a:hover { color:#c94f6a; }
+
+    /* PRINT */
+    @media print {
+        .cover { min-height:auto; padding:60px 40px; }
+        .page { padding:20px; }
+        h1.sec { margin-top:30px; }
+        .card, .toc { box-shadow:none; border:1px solid #eee; }
+    }
+    @page { margin:1.5cm; }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+    <div class="cover-logo">🎂</div>
+    <div class="cover-brand">Boter</div>
+    <div class="cover-sub">甜點師排程工具</div>
+    <div class="cover-divider"></div>
+    <div class="cover-info">
+        <p>📘 <strong>使用說明書</strong></p>
+        <p>👥 適用對象：甜點師 / 門市工作人員</p>
+        <p>🌐 工具網址：<strong>kelvinlai1107.github.io/lalaso-tool/boter_schedule</strong></p>
+        <p>💻 建議瀏覽器：Google Chrome</p>
+        <p>🔐 登入方式：公司 Microsoft 帳號</p>
+    </div>
+</div>
+
+<div class="page">
+
+<!-- TOC -->
+<div style="margin-top:40px; margin-bottom:48px;">
+    <div class="toc">
+        <h3>📋 目錄</h3>
+        <ol>
+            <li><a href="#s1">工具簡介</a></li>
+            <li><a href="#s2">登入工具</a></li>
+            <li><a href="#s3">畫面介面說明</a></li>
+            <li><a href="#s4">月曆導航：切換月份與日期</a></li>
+            <li><a href="#s5">匯入 Cyberbiz 訂單</a></li>
+            <li><a href="#s6">手動新增訂單</a></li>
+            <li><a href="#s7">編輯 / 刪除訂單</a></li>
+            <li><a href="#s8">快速更新取貨狀態</a></li>
+            <li><a href="#s9">自動儲存與手動儲存</a></li>
+            <li><a href="#s10">列印訂單</a></li>
+            <li><a href="#s11">品項清單管理</a></li>
+            <li><a href="#s12">常見問題 Q&amp;A</a></li>
+        </ol>
+    </div>
+</div>
+
+<!-- ── 1 ── -->
+<h1 class="sec" id="s1"><span class="num">1</span>工具簡介</h1>
+<p>Boter 甜點師排程工具是一套<strong>線上訂單管理系統</strong>，協助甜點師掌握每日出貨的訂單狀況。</p>
+<div class="icon-row" style="margin-top:16px">
+    <div class="icon-item"><span class="ic">📦</span><div><div class="ic-name">匯入 Cyberbiz 訂單</div><div class="ic-label">直接上傳 Excel 匯入</div></div></div>
+    <div class="icon-item"><span class="ic">📅</span><div><div class="ic-name">月份行程總覽</div><div class="ic-label">一頁看完整個月訂單</div></div></div>
+    <div class="icon-item"><span class="ic">☁</span><div><div class="ic-name">雲端同步</div><div class="ic-label">資料存在 SharePoint</div></div></div>
+    <div class="icon-item"><span class="ic">🖨</span><div><div class="ic-name">列印訂單</div><div class="ic-label">選日期區間列印</div></div></div>
+</div>
+
+<div class="tip" style="margin-top:20px">
+    <span class="tip-icon">ℹ️</span> 所有訂單資料儲存在公司的 <strong>SharePoint</strong> 雲端空間，多人操作時請避免同時編輯，以免資料覆蓋。
+</div>
+
+<!-- ── 2 ── -->
+<h1 class="sec" id="s2"><span class="num">2</span>登入工具</h1>
+
+<h2 class="sub">開啟工具</h2>
+<p>在 Chrome 瀏覽器網址列輸入：</p>
+<div class="card" style="margin:12px 0; font-family:monospace; font-size:1rem; color:#0078d4; border-left-color:#0078d4;">
+    kelvinlai1107.github.io/lalaso-tool/boter_schedule
+</div>
+
+<h2 class="sub">登入步驟</h2>
+<div class="steps">
+    <div class="step">
+        <div class="step-n">1</div>
+        <div class="step-body">看到 Boter 登入畫面，點擊藍色按鈕「<strong>使用 Microsoft 帳號登入</strong>」</div>
+    </div>
+    <div class="step">
+        <div class="step-n">2</div>
+        <div class="step-body">跳出 Microsoft 登入視窗，輸入<strong>公司 Email</strong>（例：name@lalaso.com.tw）與密碼</div>
+    </div>
+    <div class="step">
+        <div class="step-n">3</div>
+        <div class="step-body">首次登入時系統會詢問是否授予權限，點擊「<strong>接受</strong>」即可</div>
+    </div>
+    <div class="step">
+        <div class="step-n">4</div>
+        <div class="step-body">登入成功後自動跳回排程畫面，右上角顯示您的帳號首字母頭像</div>
+    </div>
+</div>
+
+<div class="card gray" style="margin-top:14px">
+    <div class="card-title">💡 登出方式</div>
+    點擊右上角<strong>圓形頭像</strong>，確認後即可登出。
+</div>
+
+<!-- ── 3 ── -->
+<h1 class="sec" id="s3"><span class="num">3</span>畫面介面說明</h1>
+
+<h2 class="sub">上方工具列</h2>
+<table>
+    <tr><th>按鈕</th><th>功能說明</th></tr>
+    <tr><td><strong>‹ ›</strong></td><td>切換到上一個月 / 下一個月</td></tr>
+    <tr><td><strong>📅 年月顯示</strong></td><td>點擊開啟月曆選擇器，可快速跳到指定月份</td></tr>
+    <tr><td><strong>今天</strong></td><td>回到當月，並自動滾動到今天</td></tr>
+    <tr><td><strong>📥 匯入 Cyberbiz</strong></td><td>上傳 Cyberbiz 匯出的 Excel 檔案</td></tr>
+    <tr><td><strong>＋ 新增訂單</strong></td><td>手動新增一筆訂單</td></tr>
+    <tr><td><strong>☁ 儲存</strong></td><td>手動儲存資料到 SharePoint（通常會自動儲存）</td></tr>
+    <tr><td><strong>🖨</strong></td><td>列印訂單（可選日期區間）</td></tr>
+    <tr><td><strong>📋</strong></td><td>品項清單管理</td></tr>
+    <tr><td><strong>⚙</strong></td><td>設定（SharePoint 路徑、清除資料）</td></tr>
+</table>
+
+<h2 class="sub">每日訂單欄位說明</h2>
+<table>
+    <tr><th>欄位</th><th>說明</th></tr>
+    <tr><td><strong>配送方式</strong></td><td><span class="bdg bdg-green">門市取貨</span> 或 <span class="bdg bdg-orange">黑貓冷凍宅配</span></td></tr>
+    <tr><td><strong>品項</strong></td><td>商品名稱（含款式）</td></tr>
+    <tr><td><strong>量</strong></td><td>數量</td></tr>
+    <tr><td><strong>訂單備註</strong></td><td>Cyberbiz 匯入的備註（客戶備註）</td></tr>
+    <tr><td><strong>商家備註</strong></td><td>內部使用的備註（自行填寫）</td></tr>
+    <tr><td><strong>收件人</strong></td><td>客戶姓名</td></tr>
+    <tr><td><strong>收件人電話</strong></td><td>客戶電話</td></tr>
+    <tr><td><strong>取貨狀態</strong></td><td>直接點選更新（見第 8 節）</td></tr>
+    <tr><td><strong>訂單編號</strong></td><td>Cyberbiz 訂單編號；🔴 小紅點 = 今日新增；<span style="background:#e65100;color:#fff;font-size:0.75rem;padding:1px 5px;border-radius:3px;font-weight:700;">異動</span> = 曾被編輯過</td></tr>
+    <tr><td><strong>✏ 🗑</strong></td><td>編輯 / 刪除訂單</td></tr>
+</table>
+
+<!-- ── 4 ── -->
+<h1 class="sec" id="s4"><span class="num">4</span>月曆導航：切換月份與日期</h1>
+
+<h2 class="sub">切換月份</h2>
+<div class="flow">
+    <span class="flow-step">點擊 ‹</span><span class="flow-arrow">→</span>
+    <span class="flow-step">上一個月</span>
+</div>
+<div class="flow">
+    <span class="flow-step">點擊 ›</span><span class="flow-arrow">→</span>
+    <span class="flow-step">下一個月</span>
+</div>
+<div class="flow">
+    <span class="flow-step">點擊「今天」</span><span class="flow-arrow">→</span>
+    <span class="flow-step">回到當月，自動滾到今天</span>
+</div>
+
+<h2 class="sub">月曆選擇器</h2>
+<p>點擊上方的 <strong>📅 年月</strong>，展開月曆彈窗：</p>
+<ul style="margin:10px 0 0 20px">
+    <li>使用彈窗內的 <strong>‹ ›</strong> 切換月份</li>
+    <li>點任意一天，即跳到該月份</li>
+    <li>當月日期有粉紅色背景標示，今天以<strong>紅字</strong>顯示</li>
+    <li>🔴 日期左上角小紅圈 = 今天新增的訂單</li>
+</ul>
+
+<div class="tip" style="margin-top:14px">
+    <span class="tip-icon">📌</span> 工具只顯示<strong>週一至週六</strong>，週日不出現。
+</div>
+
+<!-- ── 5 ── -->
+<h1 class="sec" id="s5"><span class="num">5</span>匯入 Cyberbiz 訂單</h1>
+
+<h2 class="sub">從 Cyberbiz 匯出 Excel</h2>
+<div class="flow">
+    <span class="flow-step">Cyberbiz 後台</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">訂單</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">訂單報表匯出</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">下載 Excel 檔</span>
+</div>
+<div class="tip warn" style="margin-top:10px">
+    <span class="tip-icon">⚠️</span> 匯出時建議勾選：<strong>訂單編號、收件人名稱、收件人電話、出貨方式、指定配送日期、商品名稱、商品款式、數量、備註</strong>
+</div>
+
+<h2 class="sub">匯入步驟</h2>
+<div class="steps">
+    <div class="step">
+        <div class="step-n">1</div>
+        <div class="step-body">點擊上方 <strong>📥 匯入 Cyberbiz</strong> 按鈕</div>
+    </div>
+    <div class="step">
+        <div class="step-n">2</div>
+        <div class="step-body">在彈窗中點擊上傳區域或直接<strong>拖曳 Excel 檔</strong>到灰框內</div>
+    </div>
+    <div class="step">
+        <div class="step-n">3</div>
+        <div class="step-body">系統顯示預覽清單：
+            <ul style="margin:6px 0 0 18px; font-size:0.9rem">
+                <li>🟩 <strong>綠色邊框</strong>：可匯入</li>
+                <li>🟧 <strong>橘色邊框</strong>：缺出貨日期，自動略過</li>
+                <li>⬜ <strong>灰色字體</strong>：訂單編號已存在，自動略過（不重複新增）</li>
+            </ul>
+        </div>
+    </div>
+    <div class="step">
+        <div class="step-n">4</div>
+        <div class="step-body">確認無誤後點擊 <strong>確認匯入</strong>，系統自動跳到訂單所在月份</div>
+    </div>
+    <div class="step">
+        <div class="step-n">5</div>
+        <div class="step-body">匯入完成後，Excel 檔案會<strong>自動備份</strong>到 SharePoint「CY訂單匯出」資料夾</div>
+    </div>
+</div>
+
+<div class="card green" style="margin-top:16px">
+    <div class="card-title">✅ 重複訂單處理</div>
+    每次匯入時，系統會自動比對訂單編號。<strong>已存在的訂單編號不會重複新增</strong>，可放心每日上傳最新的完整 Excel 檔。
+</div>
+
+<!-- ── 6 ── -->
+<h1 class="sec" id="s6"><span class="num">6</span>手動新增訂單</h1>
+
+<p>對於不在 Cyberbiz 的訂單（如電話預訂、現場訂購），可手動新增。</p>
+
+<h2 class="sub">新增步驟</h2>
+<div class="steps">
+    <div class="step">
+        <div class="step-n">1</div>
+        <div class="step-body">點擊 <strong>＋ 新增訂單</strong></div>
+    </div>
+    <div class="step">
+        <div class="step-n">2</div>
+        <div class="step-body">填寫以下欄位：</div>
+    </div>
+</div>
+
+<table style="margin-top:4px; margin-left:40px; width:calc(100% - 40px)">
+    <tr><th>欄位</th><th>說明</th><th>必填</th></tr>
+    <tr><td>出貨日期</td><td>訂單出貨日</td><td style="text-align:center">✅</td></tr>
+    <tr><td>配送方式</td><td>門市取貨 / 黑貓冷凍宅配 / 其他</td><td></td></tr>
+    <tr><td>品項（商品類別）</td><td>從下拉選單選擇商品類別</td><td style="text-align:center">✅</td></tr>
+    <tr><td>品項（商品名稱）</td><td>選完類別後再選商品名稱，或直接輸入</td><td style="text-align:center">✅</td></tr>
+    <tr><td>數量</td><td>預設為 1</td><td></td></tr>
+    <tr><td>取貨狀態</td><td>預設「未取貨」</td><td></td></tr>
+    <tr><td>收件人</td><td>客戶姓名</td><td></td></tr>
+    <tr><td>收件人電話</td><td>客戶電話</td><td></td></tr>
+    <tr><td>商家備註</td><td>內部備註（客戶看不到）</td><td></td></tr>
+</table>
+
+<div class="steps" style="margin-top:12px; margin-left:40px">
+    <div class="step">
+        <div class="step-n">3</div>
+        <div class="step-body">點擊 <strong>儲存訂單</strong>，資料自動儲存到 SharePoint</div>
+    </div>
+</div>
+
+<div class="tip" style="margin-top:14px">
+    <span class="tip-icon">💡</span> 品項選「<strong>其他</strong>」時，品項欄位自動填入「其他」並鎖定，請將品項說明填寫在<strong>商家備註</strong>欄位。
+</div>
+
+<!-- ── 7 ── -->
+<h1 class="sec" id="s7"><span class="num">7</span>編輯 / 刪除訂單</h1>
+
+<h2 class="sub">編輯訂單</h2>
+<div class="steps">
+    <div class="step">
+        <div class="step-n">1</div>
+        <div class="step-body">在訂單列表找到要修改的訂單，點擊右側 <strong>✏</strong> 編輯按鈕</div>
+    </div>
+    <div class="step">
+        <div class="step-n">2</div>
+        <div class="step-body">修改所需欄位後，點擊 <strong>儲存訂單</strong></div>
+    </div>
+    <div class="step">
+        <div class="step-n">3</div>
+        <div class="step-body">儲存後，如訂單原本是從 Cyberbiz 匯入（或任何訂單有資料變更），訂單編號旁會出現 <span style="background:#e65100;color:#fff;font-size:0.75rem;padding:1px 5px;border-radius:3px;font-weight:700;">異動</span> 標記，方便辨識已修改的訂單</div>
+    </div>
+</div>
+
+<div class="card orange" style="margin-top:14px">
+    <div class="card-title">⚠ 注意</div>
+    若只修改「取貨狀態」，<strong>不會</strong>出現異動標記。異動標記只在更改品項、數量、日期等實質內容時才會顯示。
+</div>
+
+<h2 class="sub">刪除訂單</h2>
+<p>點擊訂單右側 <strong>🗑</strong> 刪除按鈕，確認後該筆訂單即移除。<br>
+<strong style="color:#e53935">⚠ 刪除無法復原，請謹慎操作。</strong></p>
+
+<!-- ── 8 ── -->
+<h1 class="sec" id="s8"><span class="num">8</span>快速更新取貨狀態</h1>
+
+<p>不需要進入編輯頁面，直接在訂單列表點選「取貨狀態」下拉選單即可更新。</p>
+
+<table style="margin-top:14px">
+    <tr><th>狀態</th><th>顯示顏色</th><th>適用情境</th></tr>
+    <tr>
+        <td><span class="s-pending">未取貨</span></td>
+        <td>灰色</td>
+        <td>訂單尚未完成取貨 / 出貨（預設值）</td>
+    </tr>
+    <tr>
+        <td><span class="s-pickup">已自取</span></td>
+        <td>綠色</td>
+        <td>客戶已到門市自取</td>
+    </tr>
+    <tr>
+        <td><span class="s-shipped">已出貨</span></td>
+        <td>藍色</td>
+        <td>已安排宅配出貨</td>
+    </tr>
+</table>
+
+<div class="tip" style="margin-top:14px">
+    <span class="tip-icon">💡</span> 點擊下拉後立即自動儲存，<strong>不需另外按儲存鍵</strong>。
+</div>
+
+<!-- ── 9 ── -->
+<h1 class="sec" id="s9"><span class="num">9</span>自動儲存與手動儲存</h1>
+
+<h2 class="sub">自動儲存</h2>
+<p>每次新增、編輯、刪除訂單或更新取貨狀態後，系統會在 <strong>2 秒內自動儲存</strong>到 SharePoint。儲存期間上方按鈕會顯示「<strong>☁ 儲存中…</strong>」，完成後顯示「<strong>☁ 儲存</strong>」並出現成功提示。</p>
+
+<h2 class="sub">手動儲存</h2>
+<p>若需要立即儲存，點擊上方 <strong>☁ 儲存</strong> 按鈕即可。</p>
+
+<div class="card orange" style="margin-top:14px">
+    <div class="card-title">⚠ 儲存失敗時怎麼辦？</div>
+    若出現紅色「儲存失敗」提示，請確認網路連線正常，再點一次 ☁ 儲存。<br>
+    資料同時也會暫存在瀏覽器，不會遺失，重新整理後再儲存即可。
+</div>
+
+<!-- ── 10 ── -->
+<h1 class="sec" id="s10"><span class="num">10</span>列印訂單</h1>
+
+<div class="steps">
+    <div class="step">
+        <div class="step-n">1</div>
+        <div class="step-body">點擊上方 <strong>🖨</strong> 按鈕</div>
+    </div>
+    <div class="step">
+        <div class="step-n">2</div>
+        <div class="step-body">在彈窗中設定<strong>開始日期</strong>與<strong>結束日期</strong>（預設為當月）</div>
+    </div>
+    <div class="step">
+        <div class="step-n">3</div>
+        <div class="step-body">點擊 <strong>🖨 列印</strong>，開啟新視窗並自動叫出列印對話框</div>
+    </div>
+    <div class="step">
+        <div class="step-n">4</div>
+        <div class="step-body">選擇印表機與設定（建議選「A4 橫向」以容納所有欄位），確認列印</div>
+    </div>
+</div>
+
+<div class="tip">
+    <span class="tip-icon">💡</span> 列印版面只顯示有訂單的日期，無訂單的日期自動略過，節省紙張。
+</div>
+
+<!-- ── 11 ── -->
+<h1 class="sec" id="s11"><span class="num">11</span>品項清單管理</h1>
+
+<p>品項清單決定新增訂單時的下拉選單內容，以及每日訂單的<strong>排列順序</strong>。</p>
+
+<h2 class="sub">開啟品項清單</h2>
+<p>點擊右上角 <strong>📋</strong> 圖示</p>
+
+<h2 class="sub">品項結構說明</h2>
+<div class="card" style="margin-top:8px">
+    <div class="card-title">兩層結構</div>
+    <p>第一層：<strong>商品類別</strong>（例：無糖無麩質蛋糕‧暖暖系列）</p>
+    <p style="margin-left:20px">第二層：<strong>商品名稱</strong>（例：暖暖初食蛋糕｜蔬果原味）</p>
+</div>
+
+<h2 class="sub">可執行的操作</h2>
+<table>
+    <tr><th>操作</th><th>說明</th></tr>
+    <tr><td>↑ ↓</td><td>調整類別或品名的排序（影響每日訂單顯示順序）</td></tr>
+    <tr><td>✕</td><td>刪除類別或品名（需確認）</td></tr>
+    <tr><td>＋ 新增類別</td><td>在底部輸入框新增一個商品類別</td></tr>
+    <tr><td>＋ 新增品名</td><td>在各類別下方新增商品名稱</td></tr>
+    <tr><td>儲存</td><td>確認所有修改</td></tr>
+</table>
+
+<div class="tip warn">
+    <span class="tip-icon">⚠️</span> 調整品項順序後，每日訂單的排列順序也會跟著改變。修改完記得按<strong>儲存</strong>。
+</div>
+
+<!-- ── 12 ── -->
+<h1 class="sec" id="s12"><span class="num">12</span>常見問題 Q&amp;A</h1>
+
+<div class="card" style="margin-bottom:12px">
+    <div class="card-title">Q：登入後看不到任何訂單？</div>
+    可能是尚未匯入訂單，或資料還在從 SharePoint 載入中。等待幾秒後若仍無資料，可點擊 <strong>☁ 儲存</strong> 再重新整理頁面。
+</div>
+
+<div class="card" style="margin-bottom:12px">
+    <div class="card-title">Q：登入按鈕點了沒有反應？</div>
+    瀏覽器可能封鎖了彈出視窗。請查看網址列右側是否有「封鎖彈出視窗」提示，點擊後選擇「允許」即可。
+</div>
+
+<div class="card" style="margin-bottom:12px">
+    <div class="card-title">Q：匯入的訂單日期顯示不對？</div>
+    請確認 Cyberbiz 匯出的 Excel 中「指定配送日期」欄位格式為 <strong>YYYY/MM/DD</strong> 或 <strong>YYYY-MM-DD</strong>。
+</div>
+
+<div class="card" style="margin-bottom:12px">
+    <div class="card-title">Q：儲存失敗怎麼辦？</div>
+    <ol style="margin-top:6px; padding-left:20px">
+        <li>確認目前使用公司 Microsoft 帳號（非個人帳號）登入</li>
+        <li>確認網路連線正常</li>
+        <li>嘗試重新整理頁面後再操作</li>
+        <li>若持續失敗，聯繫管理人員確認 SharePoint 權限</li>
+    </ol>
+</div>
+
+<div class="card" style="margin-bottom:12px">
+    <div class="card-title">Q：訂單旁邊的「異動」標記是什麼？</div>
+    代表這筆訂單是從 Cyberbiz 匯入後、曾被<strong>手動修改過</strong>（品項、日期、數量等）。只修改「取貨狀態」不會出現此標記。
+</div>
+
+<div class="card" style="margin-bottom:12px">
+    <div class="card-title">Q：日期數字左上角的小紅圈是什麼意思？</div>
+    代表<strong>今天有新增（匯入或手動新增）的訂單</strong>，明天之後小紅圈會消失。
+</div>
+
+<div class="card" style="margin-bottom:12px">
+    <div class="card-title">Q：怎麼重新整理最新資料？</div>
+    按瀏覽器的 <kbd>F5</kbd> 或 <kbd>Ctrl</kbd>+<kbd>R</kbd> 重新整理頁面，系統會自動從 SharePoint 重新載入最新資料。
+</div>
+
+<!-- FOOTER -->
+<div style="margin-top:60px; padding:24px; background:#fff; border-radius:12px; text-align:center; color:#aaa; font-size:0.85rem; box-shadow:0 1px 4px rgba(0,0,0,.06);">
+    <div style="font-size:1.5rem; margin-bottom:8px;">🎂</div>
+    <div style="font-weight:700; color:#c94f6a; font-size:1rem; margin-bottom:4px;">Boter 甜點師排程工具</div>
+    <div>如有問題請聯繫系統管理人員</div>
+</div>
+
+</div><!-- end page -->
+</body>
+</html>
