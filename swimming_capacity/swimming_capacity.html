@@ -181,8 +181,7 @@ input[type=text]:focus{border-color:var(--itx)}
   <div class="nav-children" id="nav-settings-children">
     <div class="nav-item sub" id="nav-teachers" onclick="switchTab('teachers')">教師名單</div>
     <div class="nav-item sub" id="nav-course" onclick="switchTab('course')">班別設定</div>
-    <div class="nav-item sub" id="nav-bftime" onclick="switchTab('bftime')">匯入時段對照</div>
-    <div class="nav-item sub" id="nav-slots" onclick="switchTab('slots')">產能分析時段</div>
+    <div class="nav-item sub" id="nav-bftime" onclick="switchTab('bftime')">時段對照設定</div>
     <div class="nav-item sub" id="nav-capstd" onclick="switchTab('capstd')">產能標準設定</div>
     <div class="nav-item sub" id="nav-sp" onclick="switchTab('sp')">SharePoint 設定</div>
   </div>
@@ -407,19 +406,23 @@ input[type=text]:focus{border-color:var(--itx)}
 <!-- BFTIME -->
 <div id="tab-bftime" class="hidden">
 <div class="card">
-  <div class="sec">匯入時段對照</div>
-  <p style="font-size:12px;color:var(--tx2);margin-bottom:12px">
-    Bookfast 課程時間欄位 → 分析工具時段的對應。可新增、編輯、刪除。
+  <div class="sec">時段對照設定</div>
+  <p style="font-size:12px;color:var(--tx2);margin-bottom:6px">
+    Bookfast 課程時間 → 分析工具時段的對應。「適用日」決定此映射在哪幾天有效，並自動產生產能分析的時段清單。
   </p>
-  <table class="htable" id="bftime-table" style="max-width:480px;margin-bottom:12px">
-    <thead><tr>
-      <th style="width:160px">Bookfast 時間</th>
-      <th style="width:140px">對應時段</th>
-      <th style="width:90px">操作</th>
-    </tr></thead>
-    <tbody id="bftime-body"></tbody>
-  </table>
-  <div style="display:grid;grid-template-columns:160px 140px auto;gap:6px;align-items:end;max-width:480px;margin-bottom:10px">
+  <div style="overflow-x:auto;margin-bottom:12px">
+    <table class="htable" id="bftime-table">
+      <thead><tr>
+        <th style="white-space:nowrap">Bookfast 時間</th>
+        <th>對應時段</th>
+        <th style="min-width:130px">適用日</th>
+        <th style="min-width:120px">備註</th>
+        <th>操作</th>
+      </tr></thead>
+      <tbody id="bftime-body"></tbody>
+    </table>
+  </div>
+  <div style="display:grid;grid-template-columns:155px 110px auto;gap:6px;align-items:end;max-width:430px;margin-bottom:6px">
     <div>
       <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">Bookfast 時間</div>
       <input type="text" id="bft-key" placeholder="09:20~10:00" style="width:100%">
@@ -431,53 +434,19 @@ input[type=text]:focus{border-color:var(--itx)}
     </div>
     <button class="btn pri" onclick="addBfTime()">新增</button>
   </div>
-  <div class="row">
+  <p style="font-size:11px;color:var(--tx3);margin-bottom:10px">新增後在表格中點按鈕切換適用日，填寫備註。</p>
+  <div class="row" style="margin-bottom:14px">
     <button class="btn" onclick="resetBfTime()">還原預設值</button>
+  </div>
+  <div style="background:var(--bg2);border:.5px solid var(--bd);border-radius:6px;padding:10px">
+    <div style="font-size:11px;font-weight:600;color:var(--tx2);margin-bottom:5px">自動產生的產能分析時段（依適用日）：</div>
+    <div id="bft-derived-slots" style="font-size:11px;color:var(--tx3);line-height:1.9">—</div>
   </div>
 </div>
 </div>
 
-<!-- SLOTS -->
-<div id="tab-slots" class="hidden">
-<div class="card">
-  <div class="sec">產能分析時段設定</div>
-  <p style="font-size:12px;color:var(--tx2);margin-bottom:12px">
-    設定產能計算時每天有哪些時段。修改後立即套用。
-  </p>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;max-width:700px">
-    <div>
-      <div style="font-size:12px;font-weight:500;color:var(--tx2);margin-bottom:6px">週二～週五</div>
-      <div id="slot-weekday-list" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px"></div>
-      <div style="display:flex;gap:6px">
-        <input type="text" id="slot-wd-inp" placeholder="例如 14:30" style="width:90px"
-          onkeydown="if(event.key==='Enter')addSlot('weekday')">
-        <button class="btn pri" style="padding:5px 8px" onclick="addSlot('weekday')">新增</button>
-      </div>
-    </div>
-    <div>
-      <div style="font-size:12px;font-weight:500;color:var(--tx2);margin-bottom:6px">週六</div>
-      <div id="slot-saturday-list" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px"></div>
-      <div style="display:flex;gap:6px">
-        <input type="text" id="slot-sat-inp" placeholder="例如 13:30" style="width:90px"
-          onkeydown="if(event.key==='Enter')addSlot('saturday')">
-        <button class="btn pri" style="padding:5px 8px" onclick="addSlot('saturday')">新增</button>
-      </div>
-    </div>
-    <div>
-      <div style="font-size:12px;font-weight:500;color:var(--tx2);margin-bottom:6px">週日</div>
-      <div id="slot-sunday-list" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px"></div>
-      <div style="display:flex;gap:6px">
-        <input type="text" id="slot-sun-inp" placeholder="例如 13:30" style="width:90px"
-          onkeydown="if(event.key==='Enter')addSlot('sunday')">
-        <button class="btn pri" style="padding:5px 8px" onclick="addSlot('sunday')">新增</button>
-      </div>
-    </div>
-  </div>
-  <div class="row" style="margin-top:12px">
-    <button class="btn" onclick="resetSlots()">還原預設時段</button>
-  </div>
-</div>
-</div>
+<!-- SLOTS (merged into bftime; kept as empty placeholder) -->
+<div id="tab-slots" class="hidden"></div>
 
 <!-- CAPSTD -->
 <div id="tab-capstd" class="hidden">
@@ -491,7 +460,7 @@ input[type=text]:focus{border-color:var(--itx)}
     <button id="cap-vtab-b" class="sub-tab" onclick="switchCapVk('b')">北屯館（5班）</button>
   </div>
   <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;align-items:center;border-bottom:1px solid var(--bd);padding-bottom:8px">
-    <button id="cap-dtab-wd"  class="sub-tab active" onclick="switchCapDt('wd')">平日(二~五)</button>
+    <button id="cap-dtab-wd"  class="sub-tab active" onclick="switchCapDt('wd')">週二~週五</button>
     <button id="cap-dtab-sat" class="sub-tab" onclick="switchCapDt('sat')">週六</button>
     <button id="cap-dtab-sun" class="sub-tab" onclick="switchCapDt('sun')">週日</button>
     <button id="cap-dtab-exc" class="sub-tab" onclick="switchCapDt('exc')">例外設定</button>
@@ -650,6 +619,68 @@ function loadBfTime() {
 }
 var BF_TIME = JSON.parse(JSON.stringify(BF_TIME_DEFAULT));
 loadBfTime();
+
+// BF_TIME_META stores note + applicable day types for each BF_TIME entry
+// {rawT: {note:'', days:['wd','sat','sun']}}
+var BF_TIME_META = {};
+function defaultDaysForSlot(sl) {
+  var inWd  = WEEKDAY_SLOTS_DEFAULT.indexOf(sl) >= 0;
+  var inSat = SATURDAY_SLOTS_DEFAULT.indexOf(sl) >= 0;
+  var inSun = SUNDAY_SLOTS_DEFAULT.indexOf(sl) >= 0;
+  var days = [];
+  if (inWd)  days.push('wd');
+  if (inSat) days.push('sat');
+  if (inSun) days.push('sun');
+  return days.length ? days : ['wd','sat','sun'];
+}
+function loadBfTimeMeta() {
+  var saved = localStorage.getItem('bfTimeMeta');
+  if (saved) { try { BF_TIME_META = JSON.parse(saved); } catch(e){ BF_TIME_META={}; } }
+  // Ensure all current BF_TIME keys have meta
+  var rawTs = Object.keys(BF_TIME);
+  for (var i = 0; i < rawTs.length; i++) {
+    var rt = rawTs[i];
+    if (!BF_TIME_META[rt]) {
+      var sl0 = (BF_TIME[rt] || [])[0] || '';
+      var days0 = sl0 ? defaultDaysForSlot(sl0) : ['wd','sat','sun'];
+      // If slotSettings was customized, check current WEEKDAY_SLOTS instead of defaults
+      if (!saved && sl0) {
+        var inWd2 = WEEKDAY_SLOTS.indexOf(sl0) >= 0;
+        var inSat2 = SATURDAY_SLOTS.indexOf(sl0) >= 0;
+        var inSun2 = SUNDAY_SLOTS.indexOf(sl0) >= 0;
+        var d2 = [];
+        if (inWd2) d2.push('wd'); if (inSat2) d2.push('sat'); if (inSun2) d2.push('sun');
+        if (d2.length) days0 = d2;
+      }
+      BF_TIME_META[rt] = {note:'', days:days0};
+    }
+  }
+  saveBfTimeMeta();
+}
+function saveBfTimeMeta() {
+  localStorage.setItem('bfTimeMeta', JSON.stringify(BF_TIME_META));
+  deriveSlotLists();
+}
+function deriveSlotLists() {
+  var wdSet = {}, satSet = {}, sunSet = {};
+  var rawTs = Object.keys(BF_TIME);
+  for (var i = 0; i < rawTs.length; i++) {
+    var rt2 = rawTs[i];
+    var slots2 = BF_TIME[rt2];
+    var meta2 = BF_TIME_META[rt2] || {};
+    var days2 = (meta2.days && meta2.days.length) ? meta2.days : ['wd','sat','sun'];
+    for (var si2 = 0; si2 < slots2.length; si2++) {
+      var sl2 = slots2[si2];
+      if (days2.indexOf('wd')  >= 0) wdSet[sl2]  = true;
+      if (days2.indexOf('sat') >= 0) satSet[sl2] = true;
+      if (days2.indexOf('sun') >= 0) sunSet[sl2] = true;
+    }
+  }
+  WEEKDAY_SLOTS  = Object.keys(wdSet).sort();
+  SATURDAY_SLOTS = Object.keys(satSet).sort();
+  SUNDAY_SLOTS   = Object.keys(sunSet).sort();
+}
+loadBfTimeMeta();
 
 var CNAME_TO_CID = {
   '親子A':'pa','親子B':'pb','親子N':'pn',
@@ -1671,6 +1702,12 @@ function processFile(file) {
           ds = String(rawD).trim();
         }
         if (!/\d{4}\/\d{2}\/\d{2}/.test(ds)) continue;
+        // 依 BF_TIME_META 適用日過濾（例：14:30 只適用平日）
+        var dtWd3 = new Date(ds.replace(/\//g,'-')).getDay();
+        var dtType3 = dtWd3 >= 1 && dtWd3 <= 5 ? 'wd' : dtWd3 === 6 ? 'sat' : 'sun';
+        var bfMeta3 = BF_TIME_META[rawT] || {};
+        var bfDays3 = (bfMeta3.days && bfMeta3.days.length) ? bfMeta3.days : ['wd','sat','sun'];
+        if (bfDays3.indexOf(dtType3) < 0) continue;
         // 以 date+bfTime+cid+授課老師+vk 去重：同班多位學員只算一班，不同老師=不同班
         var insVal = ciIns >= 0 ? String(row[ciIns]).trim() : '';
         var seenKey = ds + '|' + rawT + '|' + cid + '|' + (insVal || '_') + '|' + vk;
@@ -1739,7 +1776,6 @@ function switchTab(t) {
   if (t === 'import')   renderImpHist();
   if (t === 'teachers') renderTeachers();
   if (t === 'bftime')   renderBfTimeTable();
-  if (t === 'slots')    renderSlotLists();
   if (t === 'capstd')   renderCapEditor();
   if (t === 'sp')       initSpSettingsUI();
   if (t === 'course')   renderCourseMap();
@@ -2142,21 +2178,74 @@ function renderBfTimeTable() {
   var tbody = document.getElementById('bftime-body');
   if (!tbody) return;
   var keys = Object.keys(BF_TIME).sort();
+  var DAY_OPTS = [{id:'wd',label:'二~五'},{id:'sat',label:'六'},{id:'sun',label:'日'}];
+  var INS = 'style="font-size:12px;padding:2px 4px;border:.5px solid var(--bd2);border-radius:3px;background:var(--bg);color:var(--tx)"';
   var html = '';
   for (var i = 0; i < keys.length; i++) {
     var k = keys[i], v = BF_TIME[k];
     var vStr = Array.isArray(v) ? v.join(',') : String(v);
-    var safeK = k.replace(/\\/g,'\\\\').replace(/"/g,'&quot;');
+    var meta = BF_TIME_META[k] || {note:'', days:['wd','sat','sun']};
+    var days = meta.days || ['wd','sat','sun'];
+    var note = (meta.note || '').replace(/'/g,'&#39;');
+    var safeK = k.replace(/\\/g,'\\\\').replace(/'/g,'&#39;');
+    var dayBtns = '';
+    for (var di = 0; di < DAY_OPTS.length; di++) {
+      var opt = DAY_OPTS[di];
+      var isOn = days.indexOf(opt.id) >= 0;
+      dayBtns += '<button onclick="toggleBfTimeMetaDay(\''+safeK+'\',\''+opt.id+'\')" '
+        +'style="padding:1px 5px;font-size:10px;border-radius:10px;border:.5px solid var(--bd2);cursor:pointer;margin-right:2px;'
+        +(isOn?'background:#3A6EBF;color:#fff;':'background:var(--bg3);color:var(--tx3);')+'">'+opt.label+'</button>';
+    }
     html += '<tr>'
-      + '<td style="font-family:monospace;font-size:12px">' + k + '</td>'
-      + '<td class="bft-val-cell" style="font-size:12px">' + vStr + '</td>'
+      + '<td style="font-family:monospace;font-size:12px;white-space:nowrap">' + k + '</td>'
+      + '<td><input type="text" value="'+vStr+'" '+INS+' style="width:85px;font-size:12px;padding:2px 4px;border:.5px solid var(--bd2);border-radius:3px;background:var(--bg);color:var(--tx)" '
+      +    'onchange="updateBfTimeVal(\''+safeK+'\',this.value)" onkeydown="if(event.key===\'Enter\')this.blur()"></td>'
+      + '<td style="white-space:nowrap">'+dayBtns+'</td>'
+      + '<td><input type="text" value="'+note+'" placeholder="備註" '
+      +    'style="width:110px;font-size:12px;padding:2px 4px;border:.5px solid var(--bd2);border-radius:3px;background:var(--bg);color:var(--tx)" '
+      +    'onblur="saveBfTimeNote(\''+safeK+'\',this.value)" onkeydown="if(event.key===\'Enter\')this.blur()"></td>'
       + '<td style="white-space:nowrap">'
-      +   '<button class="btn" style="padding:3px 7px;font-size:11px;margin-right:3px" onclick="editBfTime(this,&quot;' + safeK + '&quot;)">編輯</button>'
-      +   '<button class="btn red" style="padding:3px 7px;font-size:11px" onclick="delBfTime(&quot;' + safeK + '&quot;)">刪除</button>'
+      +   '<button class="btn red" style="padding:3px 7px;font-size:11px" onclick="delBfTime(\''+safeK+'\')">刪除</button>'
       + '</td>'
       + '</tr>';
   }
   tbody.innerHTML = html;
+  var ds = document.getElementById('bft-derived-slots');
+  if (ds) {
+    ds.innerHTML = '<b>週二~週五：</b>'+(WEEKDAY_SLOTS.join(' · ')||'（無）')
+      +'<br><b>週六：</b>'+(SATURDAY_SLOTS.join(' · ')||'（無）')
+      +'<br><b>週日：</b>'+(SUNDAY_SLOTS.join(' · ')||'（無）');
+  }
+}
+
+function updateBfTimeVal(k, rawVal) {
+  var v = rawVal.split(',').map(function(s){return s.trim();}).filter(Boolean);
+  if (!v.length) { alert('請填寫對應時段'); return; }
+  BF_TIME[k] = v;
+  localStorage.setItem('bfTimeMap', JSON.stringify(BF_TIME));
+  if (!BF_TIME_META[k]) BF_TIME_META[k] = {note:'', days: defaultDaysForSlot(v[0])};
+  saveBfTimeMeta();
+  renderBfTimeTable();
+}
+
+function toggleBfTimeMetaDay(k, day) {
+  if (!BF_TIME_META[k]) BF_TIME_META[k] = {note:'', days:['wd','sat','sun']};
+  var days = BF_TIME_META[k].days;
+  var idx = days.indexOf(day);
+  if (idx >= 0) {
+    if (days.length <= 1) { alert('至少需勾選一個適用日'); return; }
+    days.splice(idx, 1);
+  } else {
+    days.push(day);
+  }
+  saveBfTimeMeta();
+  renderBfTimeTable();
+}
+
+function saveBfTimeNote(k, val) {
+  if (!BF_TIME_META[k]) BF_TIME_META[k] = {note:'', days:['wd','sat','sun']};
+  BF_TIME_META[k].note = val;
+  saveBfTimeMeta();
 }
 
 function addBfTime() {
@@ -2166,44 +2255,29 @@ function addBfTime() {
   var v = vRaw.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
   BF_TIME[k] = v;
   localStorage.setItem('bfTimeMap', JSON.stringify(BF_TIME));
+  if (!BF_TIME_META[k]) BF_TIME_META[k] = {note:'', days: v.length ? defaultDaysForSlot(v[0]) : ['wd','sat','sun']};
+  saveBfTimeMeta();
   document.getElementById('bft-key').value = '';
   document.getElementById('bft-val').value = '';
   renderBfTimeTable();
 }
 
-function editBfTime(btn, k) {
-  var row = btn.closest('tr');
-  var valCell = row.querySelector('.bft-val-cell');
-  var currentVal = (BF_TIME[k] || []).join(',');
-  var inp = document.createElement('input');
-  inp.type = 'text';
-  inp.value = currentVal;
-  inp.style.cssText = 'width:100%;font-size:12px;padding:2px 6px;border:.5px solid var(--bd2);border-radius:4px;background:var(--bg);color:var(--tx)';
-  valCell.innerHTML = '';
-  valCell.appendChild(inp);
-  inp.focus();
-  btn.textContent = '儲存';
-  btn.onclick = function() {
-    var newVal = inp.value.trim().split(',').map(function(s){return s.trim();}).filter(Boolean);
-    if (!newVal.length) { alert('請填寫對應時段'); return; }
-    BF_TIME[k] = newVal;
-    localStorage.setItem('bfTimeMap', JSON.stringify(BF_TIME));
-    renderBfTimeTable();
-  };
-  inp.onkeydown = function(e) { if (e.key === 'Enter') btn.click(); if (e.key === 'Escape') renderBfTimeTable(); };
-}
-
 function delBfTime(k) {
   if (!confirm('確定刪除「' + k + '」這筆對照？')) return;
   delete BF_TIME[k];
+  delete BF_TIME_META[k];
   localStorage.setItem('bfTimeMap', JSON.stringify(BF_TIME));
+  saveBfTimeMeta();
   renderBfTimeTable();
 }
 
 function resetBfTime() {
   if (!confirm('確定還原所有時段對照為預設值？')) return;
   BF_TIME = JSON.parse(JSON.stringify(BF_TIME_DEFAULT));
-  localStorage.removeItem('bfTimeMap');
+  BF_TIME_META = {};
+  localStorage.setItem('bfTimeMap', JSON.stringify(BF_TIME));
+  localStorage.removeItem('bfTimeMeta');
+  loadBfTimeMeta();
   renderBfTimeTable();
 }
 
@@ -2377,7 +2451,10 @@ function buildCapTableForDt(vk, dt) {
   var sfx = dt==='sat'?'_sat':dt==='sun'?'_sun':'_wd';
   var slotArr = dt==='sat'?SATURDAY_SLOTS:dt==='sun'?SUNDAY_SLOTS:WEEKDAY_SLOTS;
   if (!slotArr||!slotArr.length) return '<p style="font-size:12px;color:var(--tx3)">此日型無配置時段</p>';
-  var h = '<div style="overflow-x:auto"><table class="htable" style="width:auto">';
+  var otherVk = vk==='x'?'b':'x';
+  var otherName = VENUES[otherVk].name;
+  var h = '<div style="margin-bottom:8px"><button class="btn" style="font-size:11px" onclick="copyFromOtherVenue(\''+dt+'\')">複製「'+otherName+'」的設定到此館</button></div>';
+  h += '<div style="overflow-x:auto"><table class="htable" style="width:auto">';
   h += '<thead><tr><th>時段</th>'
     + '<th style="text-align:center;background:#ddeeff;min-width:175px">最大產能</th>'
     + '<th style="text-align:center;background:#d4edda;min-width:175px">標準產能</th>'
@@ -2400,7 +2477,10 @@ function buildCapExceptions(vk) {
   var DOWS_ARR = ['mon','tue','wed','thu','fri'];
   var DOWS_LBL = ['週一','週二','週三','週四','週五'];
   var maxZ = VENUES[vk].zones;
-  var h = '<div style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap">';
+  var otherVkE = vk==='x'?'b':'x';
+  var otherNameE = VENUES[otherVkE].name;
+  var h = '<div style="margin-bottom:8px"><button class="btn" style="font-size:11px" onclick="copyFromOtherVenue(\'exc\')">複製「'+otherNameE+'」的例外設定到此館</button></div>';
+  h += '<div style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap">';
   for (var i=0;i<DOWS_ARR.length;i++) {
     var isAct = capEdExcDow===DOWS_ARR[i];
     h += '<button class="sub-tab'+(isAct?' active':'')+'" onclick="switchCapExcDow(\''+DOWS_ARR[i]+'\')">'+DOWS_LBL[i]+'</button>';
@@ -2451,7 +2531,11 @@ function buildCapCell(vk, std, sl, sfx, slotSfx, maxZ) {
   var hasFull = (counts['cf']||0)>0||(counts['wp']||0)>0;
   var paxF = std==='max'?'maxPax':'stdPax';
   var h = '<td style="padding:4px 5px;vertical-align:top">';
-  for (var ti=0;ti<CAP_TYPES.length;ti++) {
+  // Two-column layout: left = course types (nab/cde/cf), right = free types (fz/wp)
+  h += '<div style="display:flex;align-items:flex-start;gap:0">';
+  // Left column: indices 0,1,2 (nab, cde, cf)
+  h += '<div>';
+  for (var ti=0;ti<3;ti++) {
     var tp = CAP_TYPES[ti];
     var cnt = counts[tp.id]||0;
     var isFullType = (tp.id==='cf'||tp.id==='wp');
@@ -2465,6 +2549,25 @@ function buildCapCell(vk, std, sl, sfx, slotSfx, maxZ) {
       +'<span style="font-size:10px;color:'+(cnt>0?'var(--tx)':'var(--tx3)')+'">'+tp.label+'</span>'
       +'</div>';
   }
+  h += '</div>';
+  // Right column: indices 3,4 (fz, wp) with left border separator
+  h += '<div style="border-left:.5px solid var(--bd);padding-left:8px;margin-left:8px">';
+  for (var ti=3;ti<CAP_TYPES.length;ti++) {
+    var tp = CAP_TYPES[ti];
+    var cnt = counts[tp.id]||0;
+    var isFullType2 = (tp.id==='cf'||tp.id==='wp');
+    var canAdd2 = isFullType2?(!hasFull&&total===0):(!hasFull&&total<maxZ);
+    h += '<div style="display:flex;align-items:center;gap:3px;margin-bottom:2px">'
+      +'<button class="cap-step-btn"'+(cnt===0?' disabled':'')
+      +' onclick="stepCapType(\''+vk+'\',\''+std+'\',\''+sl+'\',\''+sfx+'\',\''+tp.id+'\',-1)">-</button>'
+      +'<span style="font-size:11px;min-width:14px;text-align:center;font-weight:'+(cnt>0?'600':'400')+';color:'+(cnt>0?'var(--tx)':'var(--tx3)')+'">'+cnt+'</span>'
+      +'<button class="cap-step-btn"'+(!canAdd2?' disabled':'')
+      +' onclick="stepCapType(\''+vk+'\',\''+std+'\',\''+sl+'\',\''+sfx+'\',\''+tp.id+'\',1)">+</button>'
+      +'<span style="font-size:10px;color:'+(cnt>0?'var(--tx)':'var(--tx3)')+'">'+tp.label+'</span>'
+      +'</div>';
+  }
+  h += '</div>';
+  h += '</div>';
   var totalPax = calcPaxFromTypes(vk, std, slotSfx, paxF);
   var pct = total>0?Math.round(total/maxZ*100):0;
   var barCol = total>=maxZ?'#E24B4A':total>0?'#1D9E75':'var(--tx3)';
@@ -2503,7 +2606,7 @@ function clearCapException(vk, dow, sl) {
   renderCapEditor();
 }
 function resetCapCfgCurrent() {
-  var dtLbls = {wd:'平日',sat:'週六',sun:'週日',exc:'例外'};
+  var dtLbls = {wd:'週二~週五',sat:'週六',sun:'週日',exc:'例外'};
   if (!confirm('確定清除 '+VENUES[capEdVk].name+' 此版本的「'+(dtLbls[capEdDt]||capEdDt)+'」產能設定？')) return;
   var sfxList = capEdDt==='sat'?['_sat']:capEdDt==='sun'?['_sun']:
                 capEdDt==='exc'?['_mon','_tue','_wed','_thu','_fri']:['_wd'];
@@ -2519,6 +2622,45 @@ function resetCapCfgCurrent() {
       }
     }
     saveCapConfig(capEdVk, stds2[si2], cfg3);
+  }
+  renderCapEditor();
+}
+function copyFromOtherVenue(dt) {
+  var fromVk = capEdVk==='x'?'b':'x';
+  var toVk = capEdVk;
+  var dtLbls2 = {wd:'週二~週五',sat:'週六',sun:'週日',exc:'例外'};
+  var fromName = VENUES[fromVk].name;
+  var toName = VENUES[toVk].name;
+  if (!confirm('確定從「'+fromName+'」複製「'+(dtLbls2[dt]||dt)+'」產能設定到「'+toName+'」？此操作將覆蓋目前版本的相關設定。')) return;
+  var sfxList = dt==='sat'?['_sat']:dt==='sun'?['_sun']:
+                dt==='exc'?['_mon','_tue','_wed','_thu','_fri']:['_wd'];
+  var stds2 = ['std','max'];
+  for (var si=0;si<stds2.length;si++) {
+    var std2 = stds2[si];
+    var fromCfg = getCapConfig(fromVk, std2);
+    var toCfg   = getCapConfig(toVk,   std2);
+    // Remove existing suffix keys from destination
+    var toKeys = Object.keys(toCfg);
+    for (var ki=0;ki<toKeys.length;ki++) {
+      var k = toKeys[ki];
+      for (var j=0;j<sfxList.length;j++) {
+        var sfj2 = sfxList[j];
+        if (k.length>=sfj2.length && k.slice(k.length-sfj2.length)===sfj2) { delete toCfg[k]; break; }
+      }
+    }
+    // Copy matching keys from source
+    var fromKeys = Object.keys(fromCfg);
+    for (var ki2=0;ki2<fromKeys.length;ki2++) {
+      var k2 = fromKeys[ki2];
+      for (var j2=0;j2<sfxList.length;j2++) {
+        var sfj3 = sfxList[j2];
+        if (k2.length>=sfj3.length && k2.slice(k2.length-sfj3.length)===sfj3) {
+          toCfg[k2] = JSON.parse(JSON.stringify(fromCfg[k2]));
+          break;
+        }
+      }
+    }
+    saveCapConfig(toVk, std2, toCfg);
   }
   renderCapEditor();
 }
@@ -2636,7 +2778,9 @@ function renderCapEditorForVenue(vk) {
         var hasFull = (counts['cf']||0) > 0 || (counts['wp']||0) > 0;
         var paxF = std==='max' ? 'maxPax' : 'stdPax';
         h += '<td style="padding:4px 5px;vertical-align:top">';
-        for (var ti=0;ti<CAP_TYPES.length;ti++) {
+        h += '<div style="display:flex;align-items:flex-start;gap:0">';
+        h += '<div>';
+        for (var ti=0;ti<3;ti++) {
           var tp = CAP_TYPES[ti];
           var cnt = counts[tp.id] || 0;
           var isFullType = (tp.id === 'cf' || tp.id === 'wp');
@@ -2650,6 +2794,23 @@ function renderCapEditorForVenue(vk) {
             + '<span style="font-size:10px;color:'+(cnt>0?'var(--tx)':'var(--tx3)')+'">'+ tp.label +'</span>'
             + '</div>';
         }
+        h += '</div>';
+        h += '<div style="border-left:.5px solid var(--bd);padding-left:8px;margin-left:8px">';
+        for (var ti=3;ti<CAP_TYPES.length;ti++) {
+          var tp = CAP_TYPES[ti];
+          var cnt = counts[tp.id] || 0;
+          var isFullType2 = (tp.id === 'cf' || tp.id === 'wp');
+          var canAddThis2 = isFullType2 ? (!hasFull && total === 0) : (!hasFull && total < maxZ);
+          h += '<div style="display:flex;align-items:center;gap:3px;margin-bottom:2px">'
+            + '<button class="cap-step-btn"' + (cnt===0?' disabled':'')
+            + ' onclick="stepCapType(\''+ vk +'\',\''+ std +'\',\''+ sl +'\',\''+ sfx +'\',\''+ tp.id +'\',-1)">-</button>'
+            + '<span style="font-size:11px;min-width:14px;text-align:center;font-weight:'+(cnt>0?'600':'400')+';color:'+(cnt>0?'var(--tx)':'var(--tx3)')+'">'+ cnt +'</span>'
+            + '<button class="cap-step-btn"' + (!canAddThis2?' disabled':'')
+            + ' onclick="stepCapType(\''+ vk +'\',\''+ std +'\',\''+ sl +'\',\''+ sfx +'\',\''+ tp.id +'\',1)">+</button>'
+            + '<span style="font-size:10px;color:'+(cnt>0?'var(--tx)':'var(--tx3)')+'">'+ tp.label +'</span>'
+            + '</div>';
+        }
+        h += '</div></div>';
         var totalPax = calcPaxFromTypes(vk, std, slotSfx, paxF);
         var pct = total > 0 ? Math.round(total/maxZ*100) : 0;
         var barCol = total >= maxZ ? '#E24B4A' : total > 0 ? '#1D9E75' : 'var(--tx3)';
