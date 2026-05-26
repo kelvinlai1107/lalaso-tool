@@ -180,8 +180,7 @@ input[type=text]:focus{border-color:var(--itx)}
   </div>
   <div class="nav-children" id="nav-settings-children">
     <div class="nav-item sub" id="nav-teachers" onclick="switchTab('teachers')">教師名單</div>
-    <div class="nav-item sub" id="nav-course" onclick="switchTab('course')">班別設定</div>
-    <div class="nav-item sub" id="nav-bftime" onclick="switchTab('bftime')">時段對照設定</div>
+    <div class="nav-item sub" id="nav-bfconfig" onclick="switchTab('bfconfig')">Bookfast對照設定</div>
     <div class="nav-item sub" id="nav-capstd" onclick="switchTab('capstd')">產能標準設定</div>
     <div class="nav-item sub" id="nav-sp" onclick="switchTab('sp')">SharePoint 設定</div>
   </div>
@@ -307,143 +306,110 @@ input[type=text]:focus{border-color:var(--itx)}
 </div>
 </div>
 
-<!-- COURSE SETTINGS -->
-<div id="tab-course" class="hidden">
+<!-- BFCONFIG (Bookfast對照設定：班別設定 + 時段設定) -->
+<div id="tab-bfconfig" class="hidden">
 <div class="card">
-  <div class="sec">班別設定</div>
-  <p style="font-size:12px;color:var(--tx2);margin-bottom:12px">
-    設定 Bookfast E欄課程名稱、分析工具課程、排課矩陣標籤的對應，以及每個課程的最大人次與客單價。
-  </p>
-
-  <!-- Part A: Course Map Table -->
-  <div style="font-size:12px;font-weight:500;color:var(--tx2);margin-bottom:8px">班別設定</div>
-  <div style="overflow-x:auto;margin-bottom:16px">
-    <table class="htable" id="course-map-table">
-      <thead><tr>
-        <th style="min-width:180px">Bookfast E欄課程名稱</th>
-        <th style="min-width:100px">分析工具課程</th>
-        <th style="min-width:80px">排課標籤</th>
-        <th style="min-width:60px">顏色</th>
-        <th style="min-width:80px">操作</th>
-      </tr></thead>
-      <tbody id="course-map-body"></tbody>
-    </table>
+  <div style="display:flex;border-bottom:1.5px solid var(--bd);margin-bottom:14px">
+    <button id="bfc-tab-class" class="sub-tab active" onclick="switchBfcTab('class')">班別設定</button>
+    <button id="bfc-tab-slot"  class="sub-tab" onclick="switchBfcTab('slot')">時段設定</button>
   </div>
 
-  <!-- Add row -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 80px auto auto;gap:6px;align-items:end;max-width:700px;margin-bottom:8px">
-    <div>
-      <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">Bookfast E欄名稱</div>
-      <input type="text" id="cm-bfname" placeholder="【Ａ】親子游泳" style="width:100%">
-    </div>
-    <div>
-      <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">分析工具課程（現有或新課程代號）</div>
-      <div style="display:flex;gap:4px">
-        <select id="cm-cid" style="flex:1" onchange="onCmCidChange()">
-          <option value="pa">親子A</option>
-          <option value="pb">親子B</option>
-          <option value="pn">親子N</option>
-          <option value="yc">幼兒C</option>
-          <option value="yd">幼兒D</option>
-          <option value="ce">兒童E</option>
-          <option value="cf">兒童F</option>
-          <option value="fz">自游時光</option>
-          <option value="wp">水上樂園</option>
-          <option value="_new">＋ 新課程...</option>
-        </select>
-        <input type="text" id="cm-cid-new" placeholder="新代號" style="width:70px;display:none">
+  <!-- Panel: 班別設定 -->
+  <div id="bfc-panel-class">
+    <div style="display:grid;grid-template-columns:1fr 1fr 80px auto auto;gap:6px;align-items:end;max-width:700px;margin-bottom:8px">
+      <div>
+        <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">Bookfast E欄名稱</div>
+        <input type="text" id="cm-bfname" placeholder="【Ａ】親子游泳" style="width:100%">
       </div>
-    </div>
-    <div>
-      <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">標籤</div>
-      <input type="text" id="cm-label" placeholder="A" style="width:100%">
-    </div>
-    <div>
-      <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">顏色</div>
-      <div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap">
-        <input type="color" id="cm-color" value="#185FA5" style="width:32px;height:28px;padding:2px;border:.5px solid var(--bd2);border-radius:4px;cursor:pointer">
-        <div id="color-presets" style="display:flex;gap:3px;flex-wrap:wrap"></div>
+      <div>
+        <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">分析工具課程（現有或新課程代號）</div>
+        <div style="display:flex;gap:4px">
+          <select id="cm-cid" style="flex:1" onchange="onCmCidChange()">
+            <option value="pa">親子A</option>
+            <option value="pb">親子B</option>
+            <option value="pn">親子N</option>
+            <option value="yc">幼兒C</option>
+            <option value="yd">幼兒D</option>
+            <option value="ce">兒童E</option>
+            <option value="cf">兒童F</option>
+            <option value="fz">自游時光</option>
+            <option value="wp">水上樂園</option>
+            <option value="_new">＋ 新課程...</option>
+          </select>
+          <input type="text" id="cm-cid-new" placeholder="新代號" style="width:70px;display:none">
+        </div>
       </div>
+      <div>
+        <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">標籤</div>
+        <input type="text" id="cm-label" placeholder="A" style="width:100%">
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">顏色</div>
+        <div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap">
+          <input type="color" id="cm-color" value="#185FA5" style="width:32px;height:28px;padding:2px;border:.5px solid var(--bd2);border-radius:4px;cursor:pointer">
+          <div id="color-presets" style="display:flex;gap:3px;flex-wrap:wrap"></div>
+        </div>
+      </div>
+      <button class="btn pri" onclick="addCourseMap()">新增</button>
     </div>
-    <button class="btn pri" onclick="addCourseMap()">新增</button>
-  </div>
-  <div class="row" style="margin-bottom:24px">
-    <button class="btn" onclick="resetCourseMap()">還原預設值</button>
-  </div>
-
-  <!-- Part B: Course Pricing & Capacity -->
-  <div style="font-size:12px;font-weight:500;color:var(--tx2);margin-bottom:8px">班別人次與客單價設定</div>
-  <p style="font-size:11px;color:var(--tx3);margin-bottom:10px">設定每個班別的人次與客單價，兩館分開設定。</p>
-  <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start">
-    <div>
-      <div style="font-size:12px;font-weight:500;margin-bottom:6px">西屯館</div>
-      <table class="htable" style="width:360px">
-        <thead><tr>
-          <th>班別</th>
-          <th style="width:72px;text-align:right">最大人次</th>
-          <th style="width:72px;text-align:right">標準人次</th>
-          <th style="width:86px;text-align:right">客單價（元）</th>
-        </tr></thead>
-        <tbody id="course-pricing-body-x"></tbody>
-      </table>
+    <div class="row" style="margin-bottom:12px">
+      <button class="btn" onclick="resetCourseMap()">還原預設值</button>
     </div>
-    <div>
-      <div style="font-size:12px;font-weight:500;margin-bottom:6px">北屯館</div>
-      <table class="htable" style="width:360px">
+    <div style="overflow-x:auto">
+      <table class="htable" id="course-map-table">
         <thead><tr>
-          <th>班別</th>
-          <th style="width:72px;text-align:right">最大人次</th>
-          <th style="width:72px;text-align:right">標準人次</th>
-          <th style="width:86px;text-align:right">客單價（元）</th>
+          <th style="min-width:180px">Bookfast E欄課程名稱</th>
+          <th style="min-width:100px">分析工具課程</th>
+          <th style="min-width:80px">排課標籤</th>
+          <th style="min-width:60px">顏色</th>
+          <th style="min-width:80px">操作</th>
         </tr></thead>
-        <tbody id="course-pricing-body-b"></tbody>
+        <tbody id="course-map-body"></tbody>
       </table>
     </div>
   </div>
-</div>
-</div>
 
-<!-- BFTIME -->
-<div id="tab-bftime" class="hidden">
-<div class="card">
-  <div class="sec">時段對照設定</div>
-  <p style="font-size:12px;color:var(--tx2);margin-bottom:6px">
-    Bookfast 課程時間 → 分析工具時段的對應。「適用日」決定此映射在哪幾天有效，並自動產生產能分析的時段清單。
-  </p>
-  <div style="overflow-x:auto;margin-bottom:12px">
-    <table class="htable" id="bftime-table">
-      <thead><tr>
-        <th style="white-space:nowrap">Bookfast 時間</th>
-        <th>對應時段</th>
-        <th style="min-width:130px">適用日</th>
-        <th style="min-width:120px">備註</th>
-        <th>操作</th>
-      </tr></thead>
-      <tbody id="bftime-body"></tbody>
-    </table>
-  </div>
-  <div style="display:grid;grid-template-columns:155px 110px auto;gap:6px;align-items:end;max-width:430px;margin-bottom:6px">
-    <div>
-      <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">Bookfast 時間</div>
-      <input type="text" id="bft-key" placeholder="09:20~10:00" style="width:100%">
+  <!-- Panel: 時段設定 -->
+  <div id="bfc-panel-slot" class="hidden">
+    <div style="display:grid;grid-template-columns:155px 110px auto;gap:6px;align-items:end;max-width:430px;margin-bottom:6px">
+      <div>
+        <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">Bookfast 時間</div>
+        <input type="text" id="bft-key" placeholder="09:20~10:00" style="width:100%">
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">對應時段（逗號分隔）</div>
+        <input type="text" id="bft-val" placeholder="09:30" style="width:100%"
+          onkeydown="if(event.key==='Enter')addBfTime()">
+      </div>
+      <button class="btn pri" onclick="addBfTime()">新增</button>
     </div>
-    <div>
-      <div style="font-size:11px;color:var(--tx2);margin-bottom:3px">對應時段（逗號分隔）</div>
-      <input type="text" id="bft-val" placeholder="09:30" style="width:100%"
-        onkeydown="if(event.key==='Enter')addBfTime()">
+    <p style="font-size:11px;color:var(--tx3);margin-bottom:8px">新增後在表格中點按鈕切換適用日，填寫備註。</p>
+    <div class="row" style="margin-bottom:12px">
+      <button class="btn" onclick="resetBfTime()">還原預設值</button>
     </div>
-    <button class="btn pri" onclick="addBfTime()">新增</button>
-  </div>
-  <p style="font-size:11px;color:var(--tx3);margin-bottom:10px">新增後在表格中點按鈕切換適用日，填寫備註。</p>
-  <div class="row" style="margin-bottom:14px">
-    <button class="btn" onclick="resetBfTime()">還原預設值</button>
-  </div>
-  <div style="background:var(--bg2);border:.5px solid var(--bd);border-radius:6px;padding:10px">
-    <div style="font-size:11px;font-weight:600;color:var(--tx2);margin-bottom:5px">自動產生的產能分析時段（依適用日）：</div>
-    <div id="bft-derived-slots" style="font-size:11px;color:var(--tx3);line-height:1.9">—</div>
+    <div style="overflow-x:auto;margin-bottom:12px">
+      <table class="htable" id="bftime-table">
+        <thead><tr>
+          <th style="white-space:nowrap">Bookfast 時間</th>
+          <th>對應時段</th>
+          <th style="min-width:130px">適用日</th>
+          <th style="min-width:120px">備註</th>
+          <th>操作</th>
+        </tr></thead>
+        <tbody id="bftime-body"></tbody>
+      </table>
+    </div>
+    <div style="background:var(--bg2);border:.5px solid var(--bd);border-radius:6px;padding:10px">
+      <div style="font-size:11px;font-weight:600;color:var(--tx2);margin-bottom:5px">自動產生的產能分析時段（依適用日）：</div>
+      <div id="bft-derived-slots" style="font-size:11px;color:var(--tx3);line-height:1.9">—</div>
+    </div>
   </div>
 </div>
 </div>
+<!-- COURSE / BFTIME stubs (kept for switchTab compat) -->
+<div id="tab-course" class="hidden"></div>
+
+<div id="tab-bftime" class="hidden"></div>
 
 <!-- SLOTS (merged into bftime; kept as empty placeholder) -->
 <div id="tab-slots" class="hidden"></div>
@@ -460,11 +426,12 @@ input[type=text]:focus{border-color:var(--itx)}
     <button id="cap-vtab-b" class="sub-tab" onclick="switchCapVk('b')">北屯館（5班）</button>
   </div>
   <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;align-items:center;border-bottom:1px solid var(--bd);padding-bottom:8px">
-    <button id="cap-dtab-wd"  class="sub-tab active" onclick="switchCapDt('wd')">週二~週五</button>
-    <button id="cap-dtab-sat" class="sub-tab" onclick="switchCapDt('sat')">週六</button>
-    <button id="cap-dtab-sun" class="sub-tab" onclick="switchCapDt('sun')">週日</button>
-    <button id="cap-dtab-exc" class="sub-tab" onclick="switchCapDt('exc')">例外設定</button>
-    <button class="btn red" style="padding:3px 10px;font-size:11px;margin-left:auto" onclick="resetCapCfgCurrent()">清除此頁</button>
+    <button id="cap-dtab-wd"      class="sub-tab active" onclick="switchCapDt('wd')">週二~週五課程</button>
+    <button id="cap-dtab-sat"     class="sub-tab" onclick="switchCapDt('sat')">週六課程</button>
+    <button id="cap-dtab-sun"     class="sub-tab" onclick="switchCapDt('sun')">週日課程</button>
+    <button id="cap-dtab-exc"     class="sub-tab" onclick="switchCapDt('exc')">例外設定</button>
+    <button id="cap-dtab-pricing" class="sub-tab" onclick="switchCapDt('pricing')">班別人次與客單價</button>
+    <button id="cap-reset-btn" class="btn red" style="padding:3px 10px;font-size:11px;margin-left:auto" onclick="resetCapCfgCurrent()">清除此頁</button>
   </div>
   <div id="cap-editor-main"></div>
 </div>
@@ -719,6 +686,7 @@ var capEdVerIdX = null;
 var capEdVerIdB = null;
 var capEdDt     = 'wd';
 var capEdExcDow = 'thu';
+var bfcActiveTab = 'class';
 
 var schedData = JSON.parse(localStorage.getItem('ssd') || '{}');
 // Teachers split by venue
@@ -1761,7 +1729,7 @@ function renderImpHist() {
 
 // ===== TAB SWITCH =====
 function switchTab(t) {
-  var ids = ['schedule','history','import','teachers','bftime','slots','capstd','sp','course'];
+  var ids = ['schedule','history','import','teachers','bfconfig','bftime','slots','capstd','sp','course'];
   for (var i = 0; i < ids.length; i++) {
     var el = document.getElementById('tab-' + ids[i]);
     if (el) el.classList.toggle('hidden', ids[i] !== t);
@@ -1775,10 +1743,9 @@ function switchTab(t) {
   if (t === 'history')  { updateHistCtrl(); renderHistory(); }
   if (t === 'import')   renderImpHist();
   if (t === 'teachers') renderTeachers();
-  if (t === 'bftime')   renderBfTimeTable();
+  if (t === 'bfconfig') renderBfConfig();
   if (t === 'capstd')   renderCapEditor();
   if (t === 'sp')       initSpSettingsUI();
-  if (t === 'course')   renderCourseMap();
 }
 
 // ===== INIT =====
@@ -2368,18 +2335,23 @@ function renderCapEditor() {
     if (bv) bv.className = 'sub-tab'+(vArr[i]===capEdVk?' active':'');
   }
   // Day-type tabs
-  var dArr = ['wd','sat','sun','exc'];
+  var dArr = ['wd','sat','sun','exc','pricing'];
   for (var i=0;i<dArr.length;i++) {
     var bd = document.getElementById('cap-dtab-'+dArr[i]);
     if (bd) bd.className = 'sub-tab'+(dArr[i]===capEdDt?' active':'');
   }
-  // Version bar
+  // Version bar and reset btn: hide for pricing tab
+  var isPricing = (capEdDt === 'pricing');
   var va = document.getElementById('cap-ver-area');
-  if (va) va.innerHTML = buildCapVersionBar(capEdVk);
+  if (va) va.innerHTML = isPricing ? '' : buildCapVersionBar(capEdVk);
+  var resetBtn = document.getElementById('cap-reset-btn');
+  if (resetBtn) resetBtn.classList.toggle('hidden', isPricing);
   // Main area
   var ma = document.getElementById('cap-editor-main');
   if (!ma) return;
-  if (capEdDt === 'exc') {
+  if (isPricing) {
+    ma.innerHTML = buildCapPricingHtml(capEdVk);
+  } else if (capEdDt === 'exc') {
     ma.innerHTML = buildCapExceptions(capEdVk);
   } else {
     ma.innerHTML = buildCapTableForDt(capEdVk, capEdDt);
@@ -2427,6 +2399,39 @@ function deleteCapVersion() {
   saveCapVersions(capEdVk, versions);
   setCapEdVerIdFor(capEdVk, versions[Math.max(0,idx-1)].id);
   renderCapEditor();
+}
+function buildCapPricingHtml(vk) {
+  var COURSE_GROUP = ['pn','pa','pb','yc','yd','ce','cf'];
+  var NONCOS_GROUP = ['fz','wp'];
+  var CID_NAMES = {pa:'親子A',pb:'親子B',pn:'親子N',yc:'幼兒C',yd:'幼兒D',ce:'兒童E',cf:'兒童F',fz:'自游時光',wp:'水上樂園'};
+  var inpSt = 'width:68px;padding:3px 5px;border:.5px solid var(--bd2);border-radius:4px;font-size:12px;text-align:right';
+  function makeRow(cid) {
+    var key = vk + '_' + cid;
+    var p = COURSE_PRICING[key] || {};
+    return '<tr>'
+      + '<td style="font-size:12px">' + (CID_NAMES[cid]||cid) + '</td>'
+      + '<td><input type="number" min="0" value="' + (p.maxPax!==undefined?p.maxPax:'') + '" placeholder="—"'
+      + ' style="' + inpSt + '" onchange="saveCoursePricing(\''+ vk +'\',\''+ cid +'\',\'maxPax\',this.value)"></td>'
+      + '<td><input type="number" min="0" value="' + (p.stdPax!==undefined?p.stdPax:'') + '" placeholder="—"'
+      + ' style="' + inpSt + '" onchange="saveCoursePricing(\''+ vk +'\',\''+ cid +'\',\'stdPax\',this.value)"></td>'
+      + '<td><input type="number" min="0" value="' + (p.price!==undefined?p.price:'') + '" placeholder="—"'
+      + ' style="' + inpSt + '" onchange="saveCoursePricing(\''+ vk +'\',\''+ cid +'\',\'price\',this.value)"></td>'
+      + '</tr>';
+  }
+  var hdrSt = '<tr style="background:var(--bg2)"><td colspan="4" style="font-size:11px;font-weight:600;color:var(--tx2);padding:5px 8px">';
+  var h = '<p style="font-size:11px;color:var(--tx3);margin-bottom:10px">設定每個班別的人次與客單價。</p>';
+  h += '<table class="htable" style="width:360px"><thead><tr>'
+    + '<th>班別</th>'
+    + '<th style="width:72px;text-align:right">最大人次</th>'
+    + '<th style="width:72px;text-align:right">標準人次</th>'
+    + '<th style="width:86px;text-align:right">客單價（元）</th>'
+    + '</tr></thead><tbody>';
+  h += hdrSt + '課程</td></tr>';
+  for (var i=0;i<COURSE_GROUP.length;i++) h += makeRow(COURSE_GROUP[i]);
+  h += hdrSt + '非課程</td></tr>';
+  for (var i=0;i<NONCOS_GROUP.length;i++) h += makeRow(NONCOS_GROUP[i]);
+  h += '</tbody></table>';
+  return h;
 }
 function buildCapVersionBar(vk) {
   var versions = loadCapVersions(vk);
@@ -2606,7 +2611,7 @@ function clearCapException(vk, dow, sl) {
   renderCapEditor();
 }
 function resetCapCfgCurrent() {
-  var dtLbls = {wd:'週二~週五',sat:'週六',sun:'週日',exc:'例外'};
+  var dtLbls = {wd:'週二~週五課程',sat:'週六課程',sun:'週日課程',exc:'例外'};
   if (!confirm('確定清除 '+VENUES[capEdVk].name+' 此版本的「'+(dtLbls[capEdDt]||capEdDt)+'」產能設定？')) return;
   var sfxList = capEdDt==='sat'?['_sat']:capEdDt==='sun'?['_sun']:
                 capEdDt==='exc'?['_mon','_tue','_wed','_thu','_fri']:['_wd'];
@@ -2628,7 +2633,7 @@ function resetCapCfgCurrent() {
 function copyFromOtherVenue(dt) {
   var fromVk = capEdVk==='x'?'b':'x';
   var toVk = capEdVk;
-  var dtLbls2 = {wd:'週二~週五',sat:'週六',sun:'週日',exc:'例外'};
+  var dtLbls2 = {wd:'週二~週五課程',sat:'週六課程',sun:'週日課程',exc:'例外'};
   var fromName = VENUES[fromVk].name;
   var toName = VENUES[toVk].name;
   if (!confirm('確定從「'+fromName+'」複製「'+(dtLbls2[dt]||dt)+'」產能設定到「'+toName+'」？此操作將覆蓋目前版本的相關設定。')) return;
@@ -2897,13 +2902,30 @@ function toggleSettings() {
 }
 // Auto-open settings group when a sub-tab is active
 function openSettingsIfSub(t) {
-  var subTabs = ['teachers','course','bftime','slots','capstd','sp'];
+  var subTabs = ['teachers','bfconfig','course','bftime','slots','capstd','sp'];
   if (subTabs.indexOf(t) >= 0) {
     var parent   = document.getElementById('nav-settings-parent');
     var children = document.getElementById('nav-settings-children');
     if (parent)   parent.classList.add('open');
     if (children) children.classList.add('open');
   }
+}
+// ===== BFCONFIG inner tabs =====
+function switchBfcTab(t) {
+  bfcActiveTab = t;
+  var panelIds = ['class','slot'];
+  for (var i=0; i<panelIds.length; i++) {
+    var btn   = document.getElementById('bfc-tab-'+panelIds[i]);
+    var panel = document.getElementById('bfc-panel-'+panelIds[i]);
+    if (btn)   btn.className = 'sub-tab' + (panelIds[i]===t ? ' active' : '');
+    if (panel) panel.classList.toggle('hidden', panelIds[i]!==t);
+  }
+  if (t === 'class') renderCourseMap();
+  if (t === 'slot')  renderBfTimeTable();
+}
+function renderBfConfig() {
+  if (bfcActiveTab === 'class') renderCourseMap();
+  else                          renderBfTimeTable();
 }
 
 // ===== COURSE MAP MANAGEMENT =====
