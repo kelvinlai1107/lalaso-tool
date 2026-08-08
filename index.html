@@ -974,6 +974,8 @@ function showTeacherManagerModal() {
     const fromReport = allRows.length > 0
       ? [...new Set(allRows.filter(r => r.teacher.includes('老師')).map(r => r.teacher))].sort()
       : [];
+    // All known teachers: persistent + report, deduplicated
+    const allKnown = [...new Set([...persistent, ...fromReport])].sort();
 
     const el = document.createElement('div');
     el.className = 'modal-overlay';
@@ -986,10 +988,10 @@ function showTeacherManagerModal() {
         </div>
         <div style="overflow-y:auto;flex:1;min-height:0;">
           <p style="font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.6;">
-            在此新增的老師名字會永久保留，並出現在 F 班分組選單中。
+            永久儲存的老師會跨月保留，出現在 F 班分組選單中。報表老師僅限本次分析使用。
           </p>
           <div class="field-group">
-            <div class="field-label">新增老師</div>
+            <div class="field-label">手動新增老師</div>
             <div style="display:flex;gap:8px;">
               <input class="field-input" id="tm-new" placeholder="例：小明　或　小明 老師" style="flex:1;">
               <button class="btn btn-outline btn-sm" onclick="addPersistentTeacher()" style="white-space:nowrap;flex-shrink:0;">＋ 新增</button>
@@ -997,24 +999,29 @@ function showTeacherManagerModal() {
             <div class="modal-error" id="m-err" style="margin-top:4px;"></div>
           </div>
           <div>
-            <div class="field-label" style="margin-bottom:8px;">已儲存的老師（${persistent.length} 位）</div>
-            ${persistent.length === 0
-              ? `<p style="font-size:13px;color:var(--text3);padding:8px 0;">尚未新增任何老師</p>`
-              : persistent.map(t => `
+            <div class="field-label" style="margin-bottom:8px;">所有老師（${allKnown.length} 位）</div>
+            ${allKnown.length === 0
+              ? `<p style="font-size:13px;color:var(--text3);padding:8px 0;">尚未有任何老師資料</p>`
+              : allKnown.map(t => {
+                  const inPersistent = persistent.includes(t);
+                  const inReport = fromReport.includes(t);
+                  let badge = '';
+                  if (inPersistent && inReport) badge = `<span style="font-size:11px;padding:1px 7px;background:var(--blue-bg);color:var(--blue-text);border-radius:99px;margin-left:6px;">已儲存・本月</span>`;
+                  else if (inPersistent) badge = `<span style="font-size:11px;padding:1px 7px;background:var(--surface3);color:var(--text2);border-radius:99px;margin-left:6px;">已永久儲存</span>`;
+                  else badge = `<span style="font-size:11px;padding:1px 7px;background:var(--blue-bg);color:var(--blue-text);border-radius:99px;margin-left:6px;">本月報表</span>`;
+                  const actionBtn = inPersistent
+                    ? `<button onclick="removePersistentTeacher('${t.replace(/'/g,"\\'")}')\" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--red-text);padding:2px 8px;border-radius:4px;flex-shrink:0;">移除</button>`
+                    : `<button onclick="savePersistentTeacher('${t.replace(/'/g,"\\'")}')\" style="background:none;border:1px solid var(--border);cursor:pointer;font-size:12px;color:var(--text2);padding:2px 8px;border-radius:4px;flex-shrink:0;">永久儲存</button>`;
+                  return `
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;">
-                  <span style="font-size:13px;">${t}</span>
-                  <button onclick="removePersistentTeacher('${t.replace(/'/g,"\\'")}')\"
-                    style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--red-text);padding:2px 6px;border-radius:4px;">移除</button>
-                </div>`).join('')
+                  <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;">
+                    <span style="font-size:13px;">${t}</span>${badge}
+                  </div>
+                  ${actionBtn}
+                </div>`;
+                }).join('')
             }
           </div>
-          ${fromReport.length > 0 ? `
-            <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
-              <div class="field-label" style="margin-bottom:8px;">本月報表中的老師（已自動可用）</div>
-              <div style="display:flex;flex-wrap:wrap;gap:6px;">
-                ${fromReport.map(t => `<span style="font-size:12px;padding:2px 10px;background:var(--blue-bg);color:var(--blue-text);border-radius:99px;">${t.replace(' 老師','')}</span>`).join('')}
-              </div>
-            </div>` : ''}
         </div>
         <div class="modal-actions" style="justify-content:flex-end;flex-shrink:0;margin-top:1rem;">
           <button class="btn btn-primary" onclick="closeTeacherManager()">完成</button>
@@ -1036,6 +1043,11 @@ function showTeacherManagerModal() {
     savePersistentTeachers(list);
     render();
   };
+  window.__savePersistentTeacher = (name) => {
+    const list = loadPersistentTeachers();
+    if (!list.includes(name)) { list.push(name); savePersistentTeachers(list); }
+    render();
+  };
   window.__removePersistentTeacher = (name) => {
     const list = loadPersistentTeachers().filter(t => t !== name);
     savePersistentTeachers(list);
@@ -1047,6 +1059,7 @@ function showTeacherManagerModal() {
   };
 }
 function addPersistentTeacher() { window.__addPersistentTeacher && window.__addPersistentTeacher(); }
+function savePersistentTeacher(name) { window.__savePersistentTeacher && window.__savePersistentTeacher(name); }
 function removePersistentTeacher(name) { window.__removePersistentTeacher && window.__removePersistentTeacher(name); }
 function closeTeacherManager() { window.__closeTeacherManager && window.__closeTeacherManager(); }
 
