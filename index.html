@@ -623,6 +623,14 @@ function showModalError(msg) {
   if (el) { el.textContent = msg; el.style.display = 'block'; }
 }
 
+function formatDateWithWeekday(dateStr) {
+  // dateStr: "2026/07/10" or "2026/7/10"
+  const days = ['日','一','二','三','四','五','六'];
+  const d = new Date(dateStr.replace(/\//g, '-'));
+  if (isNaN(d)) return dateStr;
+  return `${dateStr}(${days[d.getDay()]})`;
+}
+
 function showStopConfirmModal({ store, rows, counter, canBack, onBack, onOk }) {
   const existing = document.getElementById('__modal');
   if (existing) existing.remove();
@@ -631,7 +639,7 @@ function showStopConfirmModal({ store, rows, counter, canBack, onBack, onOk }) {
     const note = r.note && r.note !== 'NaN' ? r.note.replace(/\\n/g, ' ').replace(/,\s*/g, '、').trim() : '—';
     const tdBase = "padding:8px 12px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);";
     return `<tr>
-      <td style="${tdBase}white-space:nowrap">${r.date}</td>
+      <td style="${tdBase}white-space:nowrap">${formatDateWithWeekday(r.date)}</td>
       <td style="${tdBase}white-space:nowrap">${r.time}</td>
       <td style="${tdBase}white-space:nowrap">${r.course}</td>
       <td style="${tdBase}white-space:nowrap">${r.teacher}</td>
