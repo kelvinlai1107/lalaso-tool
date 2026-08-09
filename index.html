@@ -726,7 +726,7 @@ function showTrialModal({ counter, canBack, info, prev, onOk, onSkip, onBack }) 
 
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:1.25rem;font-size:13px;line-height:2;">
         <div style="display:grid;grid-template-columns:5em 1fr;gap:2px 8px;">
-          <span style="color:var(--text2);">日期</span><span style="font-weight:600;">${info.date}</span>
+          <span style="color:var(--text2);">日期</span><span style="font-weight:600;">${formatDateWithWeekday(info.date)}</span>
           <span style="color:var(--text2);">時間</span><span>${info.time}　<span style="color:var(--text2);font-size:12px;">${info.store}</span></span>
           <span style="color:var(--text2);">課程</span><span style="font-weight:600;">${info.course}</span>
           <span style="color:var(--text2);">授課老師</span><span style="color:var(--text2);">${info.teacher}</span>
@@ -905,7 +905,7 @@ function showFSplitModal({ counter, r, needsThree, prev, canBack, onBack, onOk }
       </div>
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:1.25rem;font-size:13px;line-height:2;">
         <div style="display:grid;grid-template-columns:5em 1fr;gap:2px 8px;">
-          <span style="color:var(--text2);">日期</span><span>${r.date}</span>
+          <span style="color:var(--text2);">日期</span><span>${formatDateWithWeekday(r.date)}</span>
           <span style="color:var(--text2);">時間</span><span>${r.time}　<span style="color:var(--text2);font-size:12px;">${r.store}</span></span>
           <span style="color:var(--text2);">原授課老師</span><span style="font-weight:600;">${r.teacher}</span>
           <span style="color:var(--text2);">預約人數</span><span style="font-weight:600;color:var(--blue-text);">${r.booked} 人</span>
@@ -1161,7 +1161,7 @@ function renderResult() {
           <table class="stop">
             <thead><tr><th>日期</th><th>時間</th><th>課程</th><th>老師</th><th>預約人數</th></tr></thead>
             <tbody>${storeStopRows.map(r => `<tr>
-              <td>${r.date}</td><td>${r.time}</td><td>${r.course}</td>
+              <td>${formatDateWithWeekday(r.date)}</td><td>${r.time}</td><td>${r.course}</td>
               <td><span class="badge">停課</span> ${r.teacher}</td>
               <td>${r.booked}</td>
             </tr>`).join('')}</tbody>
