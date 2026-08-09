@@ -629,13 +629,14 @@ function showStopConfirmModal({ store, rows, counter, canBack, onBack, onOk }) {
 
   const rowsHtml = rows.map(({ i, r }) => {
     const note = r.note && r.note !== 'NaN' ? r.note.replace(/\\n/g, ' ').replace(/,\s*/g, '、').trim() : '—';
+    const tdBase = "padding:8px 12px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);";
     return `<tr>
-      <td style="white-space:nowrap">${r.date}</td>
-      <td style="white-space:nowrap">${r.time}</td>
-      <td style="white-space:nowrap">${r.course}</td>
-      <td style="white-space:nowrap">${r.teacher}</td>
-      <td style="color:var(--text2);font-size:12px;">${note}</td>
-      <td style="text-align:center;">
+      <td style="${tdBase}white-space:nowrap">${r.date}</td>
+      <td style="${tdBase}white-space:nowrap">${r.time}</td>
+      <td style="${tdBase}white-space:nowrap">${r.course}</td>
+      <td style="${tdBase}white-space:nowrap">${r.teacher}</td>
+      <td style="${tdBase}color:var(--text2);font-size:12px;">${note}</td>
+      <td style="${tdBase}text-align:center;border-right:none;">
         <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:var(--text2);white-space:nowrap;">
           <input type="checkbox" id="stop-skip-${i}" style="width:14px;height:14px;cursor:pointer;">
           略過停課
