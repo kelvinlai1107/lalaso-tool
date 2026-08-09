@@ -545,28 +545,15 @@ function processNextSpecial() {
 
   } else if (item.type === 'deep_once') {
     const deepCount = Object.values(specialAnswers).filter(a => a.type === 'deep_pending').length;
-    showModal({
-      title: '【深水體驗】— 多師共同授課',
+    showDeepWaterModal({
       counter: `${specialIdx + 1} / ${specialQueue.length}`,
-      desc: `本月共有 ${deepCount} 堂深水體驗課（西屯館＋北屯館合併計算）。\n\n兩館同時上課、同樣學員、同樣老師，只需輸入一次。\n老師的館別歸屬將依該老師平常主要授課館別自動判斷。\n\n請輸入：`,
-      fields: [
-        { id: 'students', label: '學員總人數（兩館合計）', placeholder: '例：12',
-          defaultVal: deepWaterAnswer ? String(deepWaterAnswer.students) : '' },
-        { id: 'teachers', label: '授課老師英文名（用 , 或 、 分隔，不限大小寫）',
-          placeholder: '例：ee, ruby, cooper　或　ee、ruby、cooper',
-          defaultVal: deepWaterAnswer ? deepWaterAnswer.teachers.split(',').map(t => t.trim().replace(' 老師','')).join(', ') : '' }
-      ],
+      deepCount,
+      prevStudents: deepWaterAnswer ? deepWaterAnswer.students : '',
+      prevTeachers: deepWaterAnswer ? deepWaterAnswer.teachers : '',
       canBack,
       onBack() { specialIdx--; processNextSpecial(); },
-      onOk(vals, close) {
-        const { matched, unmatched } = resolveTeachers(vals.teachers);
-        if (unmatched.length > 0) {
-          showModalError(`找不到老師「${unmatched.join('、')}」，請確認英文名是否正確`);
-          return;
-        }
-        if (matched.length === 0) { showModalError('請至少輸入一位老師'); return; }
-        close();
-        deepWaterAnswer = { students: parseInt(vals.students) || 0, teachers: matched.join(', ') };
+      onOk({ students, teachers }) {
+        deepWaterAnswer = { students, teachers };
         Object.keys(specialAnswers).forEach(i => {
           if (specialAnswers[i].type === 'deep_pending') {
             specialAnswers[i] = { type: 'deep', students: deepWaterAnswer.students, teachers: deepWaterAnswer.teachers };
@@ -973,6 +960,145 @@ function showFSplitModal({ counter, r, needsThree, prev, canBack, onBack, onOk }
 function fSplitOk() { window.__fSplitOk && window.__fSplitOk(); }
 function fSplitBack() { window.__fSplitBack && window.__fSplitBack(); }
 function toggleFTeacher(id) { window.__toggleFTeacher && window.__toggleFTeacher(id); }
+
+// ─── 深水體驗 Modal ───────────────────────────────────────────
+function showDeepWaterModal({ counter, deepCount, prevStudents, prevTeachers, canBack, onBack, onOk }) {
+  const existing = document.getElementById('__modal');
+  if (existing) existing.remove();
+
+  // 已選老師清單（陣列）
+  let selected = prevTeachers ? prevTeachers.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+  function render() {
+    const ex = document.getElementById('__modal');
+    if (ex) ex.remove();
+    const allTeachers = getAllTeachers();
+    const available = allTeachers.filter(t => !selected.includes(t));
+    const opts = available.map(t =>
+      `<option value="${t}">${t.replace(' 老師','')}</option>`).join('');
+
+    const el = document.createElement('div');
+    el.className = 'modal-overlay';
+    el.id = '__modal';
+    el.innerHTML = `
+      <div class="modal" style="max-width:500px;max-height:90vh;display:flex;flex-direction:column;">
+        <div class="modal-header" style="flex-shrink:0;">
+          <div class="modal-title">【深水體驗】— 多師共同授課</div>
+          <div class="modal-counter">${counter}</div>
+        </div>
+        <div style="overflow-y:auto;flex:1;min-height:0;">
+          <p style="font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.6;">
+            本月共有 <strong>${deepCount}</strong> 堂深水體驗課（西屯館＋北屯館合併計算）。<br>
+            兩館同時上課、同樣學員、同樣老師，只需輸入一次。<br>
+            老師的館別歸屬將依該老師平常主要授課館別自動判斷。
+          </p>
+          <div class="field-group">
+            <div class="field-label">學員總人數（兩館合計）</div>
+            <input class="field-input" id="dw-students" type="number" min="1" placeholder="例：12"
+              value="${prevStudents || ''}">
+          </div>
+          <div class="field-group">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+              <div class="field-label" style="margin-bottom:0;">授課老師</div>
+              <button type="button" onclick="dwToggleCustom()"
+                id="dw-toggle-btn"
+                style="font-size:11px;padding:2px 8px;border-radius:var(--radius-sm);background:transparent;border:0.5px solid var(--border2);cursor:pointer;color:var(--text2);">
+                ＋ 自行輸入
+              </button>
+            </div>
+            <!-- 下拉選單 -->
+            <div id="dw-sel-wrap" style="display:flex;gap:8px;margin-bottom:8px;">
+              <select class="field-input" id="dw-sel" style="cursor:pointer;flex:1;">
+                <option value="">— 從清單選擇老師 —</option>
+                ${opts}
+              </select>
+              <button class="btn btn-outline btn-sm" onclick="dwAddFromSel()" style="flex-shrink:0;white-space:nowrap;">加入</button>
+            </div>
+            <!-- 自行輸入（預設隱藏）-->
+            <div id="dw-custom-wrap" style="display:none;gap:8px;margin-bottom:8px;">
+              <div style="display:flex;gap:8px;">
+                <input class="field-input" id="dw-custom-inp" placeholder="輸入老師名稱（自動補「老師」）" style="flex:1;">
+                <button class="btn btn-outline btn-sm" onclick="dwAddCustom()" style="flex-shrink:0;white-space:nowrap;">加入</button>
+              </div>
+            </div>
+            <!-- 已選老師標籤 -->
+            <div id="dw-tags" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px;">
+              ${selected.length === 0
+                ? `<span style="font-size:12px;color:var(--text3);">尚未選擇老師</span>`
+                : selected.map(t => `
+                  <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:var(--blue-bg);color:var(--blue-text);border-radius:99px;font-size:13px;">
+                    ${t.replace(' 老師','')}
+                    <button onclick="dwRemoveTeacher('${t.replace(/'/g,"\\'")}')\"
+                      style="background:none;border:none;cursor:pointer;color:var(--blue-text);font-size:14px;line-height:1;padding:0;margin-left:2px;">×</button>
+                  </span>`).join('')
+              }
+            </div>
+            <div class="modal-error" id="m-err" style="margin-top:6px;"></div>
+          </div>
+        </div>
+        <div class="modal-actions" style="justify-content:space-between;flex-shrink:0;">
+          ${canBack ? `<button class="btn btn-outline" onclick="dwBack()">← 上一步</button>` : '<div></div>'}
+          <button class="btn btn-primary" onclick="dwOk()">確認</button>
+        </div>
+      </div>`;
+    document.body.appendChild(el);
+  }
+
+  render();
+
+  window.__dwToggleCustom = () => {
+    const sel = document.getElementById('dw-sel-wrap');
+    const cus = document.getElementById('dw-custom-wrap');
+    const btn = document.getElementById('dw-toggle-btn');
+    if (cus.style.display === 'none') {
+      sel.style.display = 'none'; cus.style.display = 'flex'; btn.textContent = '從清單選擇';
+    } else {
+      sel.style.display = 'flex'; cus.style.display = 'none'; btn.textContent = '＋ 自行輸入';
+    }
+  };
+  window.__dwAddFromSel = () => {
+    const sel = document.getElementById('dw-sel');
+    const val = sel.value;
+    if (!val) return;
+    if (!selected.includes(val)) selected.push(val);
+    render();
+  };
+  window.__dwAddCustom = () => {
+    const inp = document.getElementById('dw-custom-inp');
+    let name = inp.value.trim();
+    if (!name) return;
+    if (!name.endsWith('老師')) name = `${name} 老師`;
+    if (!selected.includes(name)) selected.push(name);
+    // 存入持久化名單
+    const persistent = loadPersistentTeachers();
+    if (!persistent.includes(name)) { persistent.push(name); savePersistentTeachers(persistent); }
+    render();
+  };
+  window.__dwRemoveTeacher = (name) => {
+    selected = selected.filter(t => t !== name);
+    render();
+  };
+  window.__dwOk = () => {
+    const studentsVal = document.getElementById('dw-students')?.value?.trim();
+    const students = parseInt(studentsVal) || 0;
+    if (!students || students < 1) { showModalError('請輸入學員總人數'); return; }
+    if (selected.length === 0) { showModalError('請至少選擇一位老師'); return; }
+    const el = document.getElementById('__modal');
+    if (el) el.remove();
+    onOk({ students, teachers: selected.join(', ') });
+  };
+  window.__dwBack = () => {
+    const el = document.getElementById('__modal');
+    if (el) el.remove();
+    onBack && onBack();
+  };
+}
+function dwToggleCustom() { window.__dwToggleCustom && window.__dwToggleCustom(); }
+function dwAddFromSel() { window.__dwAddFromSel && window.__dwAddFromSel(); }
+function dwAddCustom() { window.__dwAddCustom && window.__dwAddCustom(); }
+function dwRemoveTeacher(n) { window.__dwRemoveTeacher && window.__dwRemoveTeacher(n); }
+function dwOk() { window.__dwOk && window.__dwOk(); }
+function dwBack() { window.__dwBack && window.__dwBack(); }
 
 // ─── 老師名單管理 Modal ────────────────────────────────────────
 function showTeacherManagerModal() {
