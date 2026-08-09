@@ -632,11 +632,11 @@ function showStopConfirmModal({ store, rows, counter, canBack, onBack, onOk }) {
     return `<tr>
       <td style="white-space:nowrap">${r.date}</td>
       <td style="white-space:nowrap">${r.time}</td>
-      <td>${r.course}</td>
+      <td style="white-space:nowrap">${r.course}</td>
       <td style="white-space:nowrap">${r.teacher}</td>
       <td style="color:var(--text2);font-size:12px;">${note}</td>
       <td style="text-align:center;">
-        <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:var(--text2);">
+        <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:var(--text2);white-space:nowrap;">
           <input type="checkbox" id="stop-skip-${i}" style="width:14px;height:14px;cursor:pointer;">
           略過停課
         </label>
