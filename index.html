@@ -1764,14 +1764,15 @@ function fmt(v) {
 function renderAdjSection(stores) {
   const el = document.getElementById('adj-section');
   if (!el) return;
-  // 取各館老師清單
-  const firstStore = stores[0] || '';
-  const teachers = (window.__exportData?.[firstStore]?.teachers || []);
-  const teacherOpts = teachers.map(t => `<option value="${t}">${t.replace(' 老師','')}</option>`).join('');
+
   const storeOpts = stores.map(s => `<option value="${s}">${s}</option>`).join('');
+  const firstStore = stores[0] || '';
+  const teachers = window.__exportData?.[firstStore]?.teachers || [];
+  const teacherOpts = teachers.map(t => `<option value="${t}">${t.replace(' 老師','')}</option>`).join('');
   const catOpts = CAT_ORDER.map(c => `<option value="${c}">${c}</option>`).join('');
 
   const adjList = window.__adjustments || [];
+  const hasAdj = adjList.length > 0;
   const adjChips = adjList.map((a, idx) => `
     <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;
       background:var(--surface2);border:0.5px solid var(--border2);border-radius:99px;font-size:12px;">
@@ -1782,99 +1783,143 @@ function renderAdjSection(stores) {
         style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;line-height:1;padding:0;margin-left:2px;">×</button>
     </span>`).join('');
 
+  const memoRequired = hasAdj
+    ? `<span style="color:#e53e3e;margin-left:3px;">* 必填</span>` : '';
+
   el.innerHTML = `
     <div style="border-top:1.5px solid var(--border);padding-top:1.5rem;margin-top:2rem;">
-      <div style="font-size:14px;font-weight:700;margin-bottom:12px;">✏ 手動調整數字</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px;">
+      <div style="font-size:14px;font-weight:700;margin-bottom:14px;">✏ 手動調整數字</div>
+
+      <!-- 選擇目標 -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px;">
         <div>
           <div style="font-size:11px;color:var(--text2);margin-bottom:3px;">館別</div>
-          <select id="adj-store" class="field-input" style="padding:6px 10px;min-width:90px;" onchange="adjStoreChange()">
-            ${storeOpts}
-          </select>
+          <select id="adj-store" class="field-input" style="padding:6px 10px;min-width:90px;"
+            onchange="adjOnStoreChange()">${storeOpts}</select>
         </div>
         <div>
           <div style="font-size:11px;color:var(--text2);margin-bottom:3px;">老師</div>
-          <select id="adj-teacher" class="field-input" style="padding:6px 10px;min-width:100px;">
-            ${teacherOpts}
-          </select>
+          <select id="adj-teacher" class="field-input" style="padding:6px 10px;min-width:100px;"
+            onchange="adjRefreshCurrent()">${teacherOpts}</select>
         </div>
         <div>
           <div style="font-size:11px;color:var(--text2);margin-bottom:3px;">課程類別</div>
-          <select id="adj-cat" class="field-input" style="padding:6px 10px;min-width:90px;">
-            ${catOpts}
-          </select>
+          <select id="adj-cat" class="field-input" style="padding:6px 10px;min-width:90px;"
+            onchange="adjRefreshCurrent()">${catOpts}</select>
         </div>
-        <div>
-          <div style="font-size:11px;color:var(--text2);margin-bottom:3px;">人次</div>
-          <input id="adj-people" type="number" class="field-input"
-            style="width:70px;padding:6px 10px;" min="0" step="0.1" placeholder="人次">
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--text2);margin-bottom:3px;">堂數</div>
-          <input id="adj-sessions" type="number" class="field-input"
-            style="width:65px;padding:6px 10px;" min="0" placeholder="堂數">
-        </div>
-        <button class="btn btn-outline btn-sm" onclick="applyAdj()"
-          style="align-self:flex-end;height:36px;">套用</button>
       </div>
-      ${adjChips ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">${adjChips}</div>` : ''}
+
+      <!-- 目前值 + 調整量 -->
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:8px;">目前值</div>
+        <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
+          <span style="font-size:15px;font-weight:600;min-width:130px;" id="adj-cur-display">—</span>
+          <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+            <div>
+              <div style="font-size:11px;color:var(--text2);margin-bottom:3px;">調整人次（可填負數）</div>
+              <input id="adj-delta-people" type="number" class="field-input" step="0.1"
+                style="width:100px;padding:6px 10px;" placeholder="例：-7" oninput="adjUpdatePreview()">
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--text2);margin-bottom:3px;">調整堂數（可填負數）</div>
+              <input id="adj-delta-sessions" type="number" class="field-input"
+                style="width:90px;padding:6px 10px;" placeholder="例：0" oninput="adjUpdatePreview()">
+            </div>
+            <div id="adj-preview" style="font-size:13px;color:var(--text2);padding-bottom:8px;min-width:90px;"></div>
+            <button class="btn btn-outline btn-sm" onclick="applyAdj()" style="height:36px;">套用</button>
+          </div>
+        </div>
+      </div>
+
+      ${adjChips ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">${adjChips}</div>` : ''}
+
       <div>
-        <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">備註（儲存後顯示於歷史紀錄）</div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">備註${memoRequired}（儲存後顯示於歷史紀錄）</div>
         <textarea id="adj-memo" class="field-input"
           style="width:100%;min-height:64px;resize:vertical;font-size:13px;padding:8px 10px;"
-          placeholder="例：Joanne 代課 Ruby 2 堂，人次已手動調整…"
+          placeholder="例：Gaga 西屯暑期班病假共7人次，因會發予補課券，故手動扣除人次。"
           oninput="window.__memo=this.value">${(window.__memo||'').replace(/</g,'&lt;')}</textarea>
       </div>
     </div>`;
+
+  // 初始化目前值顯示
+  adjRefreshCurrent();
 }
 
-function adjStoreChange() {
+function adjOnStoreChange() {
   const store = document.getElementById('adj-store')?.value;
   if (!store) return;
   const teachers = window.__exportData?.[store]?.teachers || [];
   const el = document.getElementById('adj-teacher');
   if (el) el.innerHTML = teachers.map(t => `<option value="${t}">${t.replace(' 老師','')}</option>`).join('');
+  adjRefreshCurrent();
+}
+
+function adjRefreshCurrent() {
+  const store = document.getElementById('adj-store')?.value;
+  const teacher = document.getElementById('adj-teacher')?.value;
+  const cat = document.getElementById('adj-cat')?.value;
+  const display = document.getElementById('adj-cur-display');
+  if (display) {
+    const d = store && teacher && cat ? window.__exportData?.[store]?.stat?.[teacher]?.[cat] : null;
+    display.textContent = d ? `${fmt(d.people)} 人次 / ${d.sessions} 堂` : '—';
+  }
+  // 清空 delta 和預覽
+  const dp = document.getElementById('adj-delta-people');
+  const ds = document.getElementById('adj-delta-sessions');
+  if (dp) dp.value = '';
+  if (ds) ds.value = '';
+  const prev = document.getElementById('adj-preview');
+  if (prev) prev.innerHTML = '';
+}
+
+function adjUpdatePreview() {
+  const store = document.getElementById('adj-store')?.value;
+  const teacher = document.getElementById('adj-teacher')?.value;
+  const cat = document.getElementById('adj-cat')?.value;
+  const dp = parseFloat(document.getElementById('adj-delta-people')?.value || '0');
+  const ds = parseInt(document.getElementById('adj-delta-sessions')?.value || '0');
+  const prev = document.getElementById('adj-preview');
+  if (!prev) return;
+  const d = store && teacher && cat ? window.__exportData?.[store]?.stat?.[teacher]?.[cat] : null;
+  if (!d) { prev.innerHTML = ''; return; }
+  const newP = Math.max(0, d.people + (isNaN(dp) ? 0 : dp));
+  const newS = Math.max(0, d.sessions + (isNaN(ds) ? 0 : ds));
+  prev.innerHTML = `→ <strong>${fmt(newP)}</strong> 人次 / <strong>${newS}</strong> 堂`;
 }
 
 function applyAdj() {
   const store = document.getElementById('adj-store')?.value;
   const teacher = document.getElementById('adj-teacher')?.value;
   const cat = document.getElementById('adj-cat')?.value;
-  const newP = parseFloat(document.getElementById('adj-people')?.value);
-  const newS = parseInt(document.getElementById('adj-sessions')?.value);
+  const dp = parseFloat(document.getElementById('adj-delta-people')?.value);
+  const ds = parseInt(document.getElementById('adj-delta-sessions')?.value);
   if (!store || !teacher || !cat) { alert('請選擇館別、老師及課程類別'); return; }
-  if (isNaN(newP) || isNaN(newS)) { alert('請輸入有效的人次和堂數數字'); return; }
+  if (isNaN(dp) && isNaN(ds)) { alert('請輸入至少一個調整量（人次或堂數）'); return; }
 
-  // 記錄舊值
-  const oldData = window.__exportData?.[store]?.stat?.[teacher]?.[cat];
-  const oldP = oldData?.people ?? 0;
-  const oldS = oldData?.sessions ?? 0;
+  const d = window.__exportData?.[store]?.stat?.[teacher]?.[cat];
+  if (!d) { alert('找不到對應的老師/課程資料'); return; }
 
-  // 更新該館 stat
-  if (!window.__exportData[store]) return;
-  if (!window.__exportData[store].stat[teacher]) {
-    window.__exportData[store].stat[teacher] = {};
-    CAT_ORDER.forEach(c => window.__exportData[store].stat[teacher][c] = { people: 0, sessions: 0 });
-  }
-  window.__exportData[store].stat[teacher][cat].people = newP;
-  window.__exportData[store].stat[teacher][cat].sessions = newS;
+  const oldP = d.people;
+  const oldS = d.sessions;
+  const newP = Math.max(0, oldP + (isNaN(dp) ? 0 : dp));
+  const newS = Math.max(0, oldS + (isNaN(ds) ? 0 : ds));
 
-  // 記錄調整
+  d.people = newP;
+  d.sessions = newS;
+
   (window.__adjustments = window.__adjustments || []).push({
     store, teacher, cat, oldPeople: oldP, oldSessions: oldS, newPeople: newP, newSessions: newS
   });
 
-  // 重建合計
   const stores = Object.keys(window.__exportData).filter(s => s !== '合計');
   rebuildCombinedExportData(stores);
 
-  // 重繪 stat 表格（不動停課紀錄）
   const statBox = document.getElementById('statbox-' + store);
   if (statBox) statBox.innerHTML = buildHistoryStoreTable({ data: window.__exportData }, store);
   const combinedBox = document.getElementById('statbox-__combined__');
   if (combinedBox) combinedBox.innerHTML = buildHistoryStoreTable({ data: window.__exportData }, '合計');
 
-  // 重繪調整區塊（保留 memo 內容）
   renderAdjSection(stores);
 }
 
@@ -2007,6 +2052,13 @@ function saveMonthData() {
   // 讀取備註（優先從 textarea 取即時值）
   const memoEl = document.getElementById('adj-memo');
   const note = (memoEl ? memoEl.value.trim() : '') || (window.__memo || '');
+  // 若有手動調整，備註必填
+  if ((window.__adjustments || []).length > 0 && !note) {
+    alert('有手動調整的月份，請先填寫備註說明再儲存。');
+    if (memoEl) { memoEl.focus(); memoEl.style.outline = '2px solid #e53e3e'; }
+    return;
+  }
+  if (memoEl) memoEl.style.outline = '';
   const record = { month: `${m[1]}-${m[2].padStart(2,'0')}`, title: reportTitle, data, note, adjustments: window.__adjustments || [], savedAt: new Date().toISOString() };
   try {
     localStorage.setItem(key, JSON.stringify(record));
@@ -2096,22 +2148,26 @@ function renderMonthlyView() {
       ${buildHistoryStoreTable(rec, s)}
     </div>`).join('');
 
+  // 備註和調整紀錄放在頁籤「上方」，一打開就看到
   const noteHtml = rec.note ? `
-    <div style="margin-top:1.5rem;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);border-left:3px solid var(--border2);">
+    <div style="margin-bottom:10px;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);border-left:3px solid var(--border2);">
       <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;">📝 備註</div>
       <div style="font-size:13px;color:var(--text);white-space:pre-wrap;">${rec.note.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
     </div>` : '';
   const adjHtml = rec.adjustments?.length ? `
-    <div style="margin-top:6px;padding:6px 14px;font-size:12px;color:var(--text2);background:var(--row-alt);border-radius:var(--radius-sm);">
-      <span style="font-weight:600;">手動調整：</span>${rec.adjustments.map(a =>
-        `${a.store} ${a.teacher.replace(' 老師','')} ${a.cat}　${a.oldPeople}→${a.newPeople}人次 / ${a.oldSessions}→${a.newSessions}堂`
-      ).join('　｜　')}
+    <div style="margin-bottom:14px;padding:8px 14px;font-size:12px;color:var(--text2);background:var(--row-alt);border-radius:var(--radius-sm);">
+      <span style="font-weight:600;">手動調整紀錄：</span>
+      <div style="margin-top:4px;display:flex;flex-direction:column;gap:3px;">
+        ${rec.adjustments.map(a =>
+          `<span>${a.store} ${a.teacher.replace(' 老師','')} ${a.cat}：${fmt(a.oldPeople)} → <strong>${fmt(a.newPeople)}</strong> 人次 ／ ${a.oldSessions} → <strong>${a.newSessions}</strong> 堂</span>`
+        ).join('')}
+      </div>
     </div>` : '';
   document.getElementById('monthly-content').innerHTML = `
-    <div style="font-size:14px;font-weight:600;margin-bottom:1rem;color:var(--text2);">${rec.title || month}</div>
+    <div style="font-size:14px;font-weight:600;margin-bottom:12px;color:var(--text2);">${rec.title || month}</div>
+    ${noteHtml}${adjHtml}
     <div class="store-tabs">${tabs}</div>
-    ${panels}
-    ${noteHtml}${adjHtml}`;
+    ${panels}`;
 }
 
 function switchMonthlyTab(idx, el) {
