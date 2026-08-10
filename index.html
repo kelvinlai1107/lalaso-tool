@@ -1911,6 +1911,9 @@ function applyAdj() {
   (window.__adjustments = window.__adjustments || []).push({
     store, teacher, cat, oldPeople: oldP, oldSessions: oldS, newPeople: newP, newSessions: newS
   });
+  // DOM 計數器：保證儲存驗證可靠讀取
+  const adjEl = document.getElementById('adj-section');
+  if (adjEl) adjEl.dataset.adjCount = window.__adjustments.length;
 
   const stores = Object.keys(window.__exportData).filter(s => s !== '合計');
   rebuildCombinedExportData(stores);
@@ -1921,6 +1924,9 @@ function applyAdj() {
   if (combinedBox) combinedBox.innerHTML = buildHistoryStoreTable({ data: window.__exportData }, '合計');
 
   renderAdjSection(stores);
+  // renderAdjSection 重繪後同步計數器
+  const adjEl2 = document.getElementById('adj-section');
+  if (adjEl2) adjEl2.dataset.adjCount = window.__adjustments.length;
 }
 
 function removeAdj(idx) {
@@ -1944,6 +1950,9 @@ function removeAdj(idx) {
   if (combinedBox) combinedBox.innerHTML = buildHistoryStoreTable({ data: window.__exportData }, '合計');
 
   renderAdjSection(stores);
+  // renderAdjSection 重繪後同步計數器
+  const adjEl = document.getElementById('adj-section');
+  if (adjEl) adjEl.dataset.adjCount = (window.__adjustments || []).length;
 }
 
 function rebuildCombinedExportData(stores) {
@@ -2049,16 +2058,25 @@ function saveMonthData() {
   const m = reportTitle.match(/(\d{4})[\/\-](\d{1,2})/);
   if (!m) { alert('無法從報表標題解析年月，請確認報表格式'); return; }
   const key = `lalaso_month_${m[1]}-${m[2].padStart(2,'0')}`;
-  // 讀取備註（優先從 textarea 取即時值）
+  // 讀取備註（直接從 textarea 取即時值）
   const memoEl = document.getElementById('adj-memo');
-  const note = (memoEl ? memoEl.value.trim() : '') || (window.__memo || '');
-  // 若有手動調整，備註必填
-  if ((window.__adjustments || []).length > 0 && !note) {
-    alert('有手動調整的月份，請先填寫備註說明再儲存。');
-    if (memoEl) { memoEl.focus(); memoEl.style.outline = '2px solid #e53e3e'; }
+  const note = memoEl ? memoEl.value.trim() : (window.__memo || '').trim();
+  // 三重保險：DOM 計數 + window 變數 + DOM chips 按鈕
+  const adjSection = document.getElementById('adj-section');
+  const domCount = parseInt(adjSection?.dataset.adjCount || '0');
+  const winCount = (window.__adjustments || []).length;
+  const chipCount = document.querySelectorAll('#adj-section button[onclick^="removeAdj"]').length;
+  const hasAdj = domCount > 0 || winCount > 0 || chipCount > 0;
+  if (hasAdj && !note) {
+    alert('⚠ 有手動調整的月份，必須填寫備註說明調整原因才能儲存！');
+    if (memoEl) {
+      memoEl.style.border = '2px solid #e53e3e';
+      memoEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => memoEl.focus(), 400);
+    }
     return;
   }
-  if (memoEl) memoEl.style.outline = '';
+  if (memoEl) memoEl.style.border = '';
   const record = { month: `${m[1]}-${m[2].padStart(2,'0')}`, title: reportTitle, data, note, adjustments: window.__adjustments || [], savedAt: new Date().toISOString() };
   try {
     localStorage.setItem(key, JSON.stringify(record));
