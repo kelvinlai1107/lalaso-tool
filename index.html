@@ -2054,13 +2054,15 @@ function showView(v) {
 function saveMonthData() {
   const data = window.__exportData;
   if (!data) { alert('請先完成分析再儲存'); return; }
-  // Extract month key from reportTitle e.g. "2026/01/01~..." → "2026-01"
   const m = reportTitle.match(/(\d{4})[\/\-](\d{1,2})/);
   if (!m) { alert('無法從報表標題解析年月，請確認報表格式'); return; }
-  const key = `lalaso_month_${m[1]}-${m[2].padStart(2,'0')}`;
-  // 讀取備註（直接從 textarea 取即時值）
+  const month = `${m[1]}-${m[2].padStart(2,'0')}`;
+  const key = `lalaso_month_${month}`;
+
+  // 讀取備註
   const memoEl = document.getElementById('adj-memo');
   const note = memoEl ? memoEl.value.trim() : (window.__memo || '').trim();
+
   // 三重保險：DOM 計數 + window 變數 + DOM chips 按鈕
   const adjSection = document.getElementById('adj-section');
   const domCount = parseInt(adjSection?.dataset.adjCount || '0');
@@ -2077,13 +2079,38 @@ function saveMonthData() {
     return;
   }
   if (memoEl) memoEl.style.border = '';
-  const record = { month: `${m[1]}-${m[2].padStart(2,'0')}`, title: reportTitle, data, note, adjustments: window.__adjustments || [], savedAt: new Date().toISOString() };
+
+  // 組合完整紀錄（含備註與手動調整）
+  const record = {
+    month, title: reportTitle, data,
+    note: note || '',
+    adjustments: window.__adjustments || [],
+    savedAt: new Date().toISOString()
+  };
+
+  // 本地儲存
   try {
     localStorage.setItem(key, JSON.stringify(record));
-    document.getElementById('btn-save').textContent = '✓ 已儲存';
-    setTimeout(() => { document.getElementById('btn-save').textContent = '💾 儲存本月數據'; }, 2000);
-  } catch(e) {
-    alert('儲存失敗（瀏覽器儲存空間不足）');
+  } catch(e) { alert('本地儲存失敗（瀏覽器儲存空間不足）'); return; }
+
+  const btn = document.getElementById('btn-save');
+
+  // 若已連線 SharePoint，同步上傳
+  if (spAccessToken) {
+    btn.textContent = '☁️ 上傳中…'; btn.disabled = true;
+    saveToSharePoint(month, record)
+      .then(() => {
+        btn.textContent = '✓ 已儲存至 SharePoint';
+        setTimeout(() => { btn.textContent = '💾 儲存本月數據'; btn.disabled = false; }, 2500);
+      })
+      .catch(e => {
+        btn.textContent = '⚠ 本地已存，SharePoint 失敗'; btn.disabled = false;
+        alert(`SharePoint 儲存失敗：${e.message}`);
+        console.error(e);
+      });
+  } else {
+    btn.textContent = '✓ 已儲存（本地）';
+    setTimeout(() => { btn.textContent = '💾 儲存本月數據'; }, 2000);
   }
 }
 
@@ -2883,38 +2910,6 @@ async function spSyncAll() {
 
 // ─── Override saveMonthData to also push to SharePoint ────────
 const _origSaveMonthData = saveMonthData;
-function saveMonthData() {
-  // run local save first
-  const data = window.__exportData;
-  if (!data) { alert('請先完成分析再儲存'); return; }
-  const m = reportTitle.match(/(\d{4})[\/\-](\d{1,2})/);
-  if (!m) { alert('無法從報表標題解析年月，請確認報表格式'); return; }
-  const month = `${m[1]}-${m[2].padStart(2,'0')}`;
-  const key = `lalaso_month_${month}`;
-  const record = { month, title: reportTitle, data, savedAt: new Date().toISOString() };
-  try {
-    localStorage.setItem(key, JSON.stringify(record));
-  } catch(e) { alert('本地儲存失敗（瀏覽器儲存空間不足）'); return; }
-
-  const btn = document.getElementById('btn-save');
-  // If SharePoint connected, also push there
-  if (spAccessToken) {
-    btn.textContent = '☁️ 上傳中…'; btn.disabled = true;
-    saveToSharePoint(month, record)
-      .then(() => {
-        btn.textContent = '✓ 已儲存至 SharePoint';
-        setTimeout(() => { btn.textContent = '💾 儲存本月數據'; btn.disabled = false; }, 2500);
-      })
-      .catch(e => {
-        btn.textContent = '⚠ 本地已存，SharePoint 失敗'; btn.disabled = false;
-        alert(`SharePoint 儲存失敗：${e.message}`);
-        console.error(e);
-      });
-  } else {
-    btn.textContent = '✓ 已儲存（本地）';
-    setTimeout(() => { btn.textContent = '💾 儲存本月數據'; }, 2000);
-  }
-}
 
 // ─── Init on page load ────────────────────────────────────────
 (async function initSp() {
