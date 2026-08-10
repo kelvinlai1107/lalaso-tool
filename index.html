@@ -233,6 +233,7 @@
     <div class="notice-wrap" id="notices"></div>
     <div class="store-tabs" id="store-tabs"></div>
     <div id="store-panels"></div>
+    <div id="adj-section"></div>
     <div id="stop-section" class="stop-section" style="display:none">
       <div class="section-title">停課紀錄</div>
       <div id="stop-table-wrap"></div>
@@ -370,7 +371,11 @@ function savePersistentTeachers(list) {
 }
 // 所有可用老師：報表中的 + 持久化名單
 function getAllTeachers() {
-  const fromReport = [...new Set(allRows.filter(r => r.teacher.includes('老師')).map(r => r.teacher))].sort();
+  // 包含 G 欄（授課老師）和 H 欄（代課老師）
+  const fromReport = [...new Set([
+    ...allRows.filter(r => r.teacher.includes('老師')).map(r => r.teacher),
+    ...allRows.filter(r => r.subTeacher && r.subTeacher.includes('老師')).map(r => r.subTeacher),
+  ])].sort();
   const persistent = loadPersistentTeachers();
   return [...new Set([...fromReport, ...persistent])].sort();
 }
@@ -431,6 +436,7 @@ function parseBookfast(rawRows, fname) {
     time:          String(r[idx['課程時間']] || ''),
     course:        String(r[idx['課程名稱']] || '').trim(),
     teacher:       String(r[idx['授課老師']] || '').trim(),
+    subTeacher:    String(r[idx['代課老師']] || '').trim(),  // H欄：有值代表此人為代課老師
     teacherStatus: String(r[idx['老師狀態']] || '').trim(),
     store:         String(r[idx['開課店別']] || '').trim(),
     booked:        Number(r[idx['預約總人數']]) || 0,
@@ -1324,11 +1330,12 @@ function renderResult() {
         return timeA.localeCompare(timeB);
       });
 
-    let html = buildStoreTable(s);
+    const tableHtml = buildStoreTable(s);
 
-    // 每個館別底下接自己的停課紀錄
+    // 停課紀錄 HTML（獨立保存，調整數字時不重繪）
+    let stopHtml = '';
     if (storeStopRows.length) {
-      html += `
+      stopHtml = `
         <div class="stop-section" style="margin-top:1.5rem;">
           <div class="section-title">停課紀錄</div>
           <table class="stop">
@@ -1342,11 +1349,19 @@ function renderResult() {
         </div>`;
     }
 
-    document.getElementById('panel-' + s).innerHTML = html;
+    // stat 表格包在 statbox 裡，調整後只重繪 statbox
+    document.getElementById('panel-' + s).innerHTML =
+      `<div id="statbox-${s}">${tableHtml}</div>${stopHtml}`;
   });
 
   // 合計 tab：合併所有館別
-  document.getElementById('panel-__combined__').innerHTML = buildCombinedTable(stores);
+  document.getElementById('panel-__combined__').innerHTML =
+    `<div id="statbox-__combined__">${buildCombinedTable(stores)}</div>`;
+
+  // 初始化手動調整狀態
+  window.__adjustments = [];
+  window.__memo = '';
+  renderAdjSection(stores);
 
   // 隱藏原本的全域停課區塊（改為各館顯示）
   document.getElementById('stop-section').style.display = 'none';
@@ -1360,9 +1375,11 @@ function renderResult() {
 function buildTeacherHomeStore() {
   const counts = {}; // { teacher: { store: n } }
   allRows.forEach(r => {
-    if (!r.teacher.includes('老師') || !r.store) return;
-    if (!counts[r.teacher]) counts[r.teacher] = {};
-    counts[r.teacher][r.store] = (counts[r.teacher][r.store] || 0) + 1;
+    // 若 H 欄有代課老師，以代課老師為準
+    const eff = (r.subTeacher && r.subTeacher.includes('老師')) ? r.subTeacher : r.teacher;
+    if (!eff.includes('老師') || !r.store) return;
+    if (!counts[eff]) counts[eff] = {};
+    counts[eff][r.store] = (counts[eff][r.store] || 0) + 1;
   });
   const home = {};
   Object.entries(counts).forEach(([t, stores]) => {
@@ -1374,11 +1391,12 @@ function buildTeacherHomeStore() {
 // ─── Build per-store table ────────────────────────────────────
 function buildStoreTable(store) {
   const teacherHome = buildTeacherHomeStore();
-  const rows = allRows.filter(r => r.store === store && r.teacher.includes('老師'));
+  // 若 H 欄（代課老師）有值，代課老師取代原班老師上課
+  const rows = allRows.filter(r => r.store === store && (r.teacher.includes('老師') || (r.subTeacher && r.subTeacher.includes('老師'))));
 
-  // Collect teachers belonging to this store
+  // Collect teachers belonging to this store（代課老師取代原班老師）
   // For deep water: include teachers whose home store is this store
-  let teacherSet = new Set(rows.map(r => r.teacher));
+  let teacherSet = new Set(rows.map(r => (r.subTeacher && r.subTeacher.includes('老師')) ? r.subTeacher : r.teacher));
 
   // Add extra teachers from F_split specials in this store
   allRows.forEach((r, i) => {
@@ -1430,16 +1448,19 @@ function buildStoreTable(store) {
     if (/【[ＦF]】兒童游泳/.test(r.course) && r.booked > 8 && sp && sp.type === 'F_split') {
       const splitN = sp.teacher3 ? 3 : 2;
       const share = Math.round(r.booked / splitN * 10) / 10;
-      ensureStat(r.teacher); stat[r.teacher][cat].people += share; stat[r.teacher][cat].sessions += 1;
+      // 若有代課老師，代課老師算第一位（取代原班老師）
+      const eff1 = (r.subTeacher && r.subTeacher.includes('老師')) ? r.subTeacher : r.teacher;
+      ensureStat(eff1); stat[eff1][cat].people += share; stat[eff1][cat].sessions += 1;
       ensureStat(sp.teacher2); stat[sp.teacher2][cat].people += share; stat[sp.teacher2][cat].sessions += 1;
       if (sp.teacher3) { ensureStat(sp.teacher3); stat[sp.teacher3][cat].people += share; stat[sp.teacher3][cat].sessions += 1; }
     } else if (/【\s*深水體驗\s*】|【\s*深水池課程\s*】/.test(r.course)) {
       // Skip here — deep water is handled separately below to avoid store-filter issues
     } else {
       if (r.booked > 0) {
-        ensureStat(r.teacher);
-        stat[r.teacher][cat].people += r.booked;
-        stat[r.teacher][cat].sessions += 1;
+        const eff = (r.subTeacher && r.subTeacher.includes('老師')) ? r.subTeacher : r.teacher;
+        ensureStat(eff);
+        stat[eff][cat].people += r.booked;
+        stat[eff][cat].sessions += 1;
       }
     }
   });
@@ -1579,7 +1600,9 @@ function buildCombinedTable(stores) {
   // Collect all teachers across all stores (same logic as buildStoreTable but for all)
   const teacherSet = new Set();
   allRows.forEach((r, i) => {
-    if (r.teacher.includes('老師')) teacherSet.add(r.teacher);
+    // 若 H 欄有代課老師，以代課老師為準
+    const effT = (r.subTeacher && r.subTeacher.includes('老師')) ? r.subTeacher : r.teacher;
+    if (effT.includes('老師')) teacherSet.add(effT);
     const sp = specialAnswers[i];
     if (!sp) return;
     if (sp.type === 'F_split' && sp.teacher2) {
@@ -1600,7 +1623,7 @@ function buildCombinedTable(stores) {
 
   stores.forEach(store => {
     // Rebuild per-store stat and merge
-    const rows = allRows.filter(r => r.store === store && r.teacher.includes('老師'));
+    const rows = allRows.filter(r => r.store === store && (r.teacher.includes('老師') || (r.subTeacher && r.subTeacher.includes('老師'))));
     rows.forEach(r => {
       const cat = matchCourse(r.course);
       if (!cat) return;
@@ -1612,16 +1635,18 @@ function buildCombinedTable(stores) {
       if (/【[ＦF]】兒童游泳/.test(r.course) && r.booked > 8 && sp?.type === 'F_split') {
         const splitN = sp.teacher3 ? 3 : 2;
         const share = Math.round(r.booked / splitN * 10) / 10;
-        ensureStat(r.teacher); stat[r.teacher][cat].people += share; stat[r.teacher][cat].sessions += 1;
+        const eff1 = (r.subTeacher && r.subTeacher.includes('老師')) ? r.subTeacher : r.teacher;
+        ensureStat(eff1); stat[eff1][cat].people += share; stat[eff1][cat].sessions += 1;
         ensureStat(sp.teacher2); stat[sp.teacher2][cat].people += share; stat[sp.teacher2][cat].sessions += 1;
         if (sp.teacher3) { ensureStat(sp.teacher3); stat[sp.teacher3][cat].people += share; stat[sp.teacher3][cat].sessions += 1; }
       } else if (/【\s*深水體驗\s*】|【\s*深水池課程\s*】/.test(r.course)) {
         // handled below
       } else {
         if (r.booked > 0) {
-          ensureStat(r.teacher);
-          stat[r.teacher][cat].people += r.booked;
-          stat[r.teacher][cat].sessions += 1;
+          const eff = (r.subTeacher && r.subTeacher.includes('老師')) ? r.subTeacher : r.teacher;
+          ensureStat(eff);
+          stat[eff][cat].people += r.booked;
+          stat[eff][cat].sessions += 1;
         }
       }
     });
@@ -1735,6 +1760,174 @@ function fmt(v) {
   return Number.isInteger(v) ? String(v) : v.toFixed(1);
 }
 
+// ─── 手動調整 & 備註 ──────────────────────────────────────────
+function renderAdjSection(stores) {
+  const el = document.getElementById('adj-section');
+  if (!el) return;
+  // 取各館老師清單
+  const firstStore = stores[0] || '';
+  const teachers = (window.__exportData?.[firstStore]?.teachers || []);
+  const teacherOpts = teachers.map(t => `<option value="${t}">${t.replace(' 老師','')}</option>`).join('');
+  const storeOpts = stores.map(s => `<option value="${s}">${s}</option>`).join('');
+  const catOpts = CAT_ORDER.map(c => `<option value="${c}">${c}</option>`).join('');
+
+  const adjList = window.__adjustments || [];
+  const adjChips = adjList.map((a, idx) => `
+    <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;
+      background:var(--surface2);border:0.5px solid var(--border2);border-radius:99px;font-size:12px;">
+      ${a.store} ${a.teacher.replace(' 老師','')} ${a.cat}：
+      ${fmt(a.oldPeople)}→<strong>${fmt(a.newPeople)}</strong>人次 /
+      ${a.oldSessions}→<strong>${a.newSessions}</strong>堂
+      <button onclick="removeAdj(${idx})"
+        style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;line-height:1;padding:0;margin-left:2px;">×</button>
+    </span>`).join('');
+
+  el.innerHTML = `
+    <div style="border-top:1.5px solid var(--border);padding-top:1.5rem;margin-top:2rem;">
+      <div style="font-size:14px;font-weight:700;margin-bottom:12px;">✏ 手動調整數字</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px;">
+        <div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:3px;">館別</div>
+          <select id="adj-store" class="field-input" style="padding:6px 10px;min-width:90px;" onchange="adjStoreChange()">
+            ${storeOpts}
+          </select>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:3px;">老師</div>
+          <select id="adj-teacher" class="field-input" style="padding:6px 10px;min-width:100px;">
+            ${teacherOpts}
+          </select>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:3px;">課程類別</div>
+          <select id="adj-cat" class="field-input" style="padding:6px 10px;min-width:90px;">
+            ${catOpts}
+          </select>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:3px;">人次</div>
+          <input id="adj-people" type="number" class="field-input"
+            style="width:70px;padding:6px 10px;" min="0" step="0.1" placeholder="人次">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:3px;">堂數</div>
+          <input id="adj-sessions" type="number" class="field-input"
+            style="width:65px;padding:6px 10px;" min="0" placeholder="堂數">
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="applyAdj()"
+          style="align-self:flex-end;height:36px;">套用</button>
+      </div>
+      ${adjChips ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">${adjChips}</div>` : ''}
+      <div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">備註（儲存後顯示於歷史紀錄）</div>
+        <textarea id="adj-memo" class="field-input"
+          style="width:100%;min-height:64px;resize:vertical;font-size:13px;padding:8px 10px;"
+          placeholder="例：Joanne 代課 Ruby 2 堂，人次已手動調整…"
+          oninput="window.__memo=this.value">${(window.__memo||'').replace(/</g,'&lt;')}</textarea>
+      </div>
+    </div>`;
+}
+
+function adjStoreChange() {
+  const store = document.getElementById('adj-store')?.value;
+  if (!store) return;
+  const teachers = window.__exportData?.[store]?.teachers || [];
+  const el = document.getElementById('adj-teacher');
+  if (el) el.innerHTML = teachers.map(t => `<option value="${t}">${t.replace(' 老師','')}</option>`).join('');
+}
+
+function applyAdj() {
+  const store = document.getElementById('adj-store')?.value;
+  const teacher = document.getElementById('adj-teacher')?.value;
+  const cat = document.getElementById('adj-cat')?.value;
+  const newP = parseFloat(document.getElementById('adj-people')?.value);
+  const newS = parseInt(document.getElementById('adj-sessions')?.value);
+  if (!store || !teacher || !cat) { alert('請選擇館別、老師及課程類別'); return; }
+  if (isNaN(newP) || isNaN(newS)) { alert('請輸入有效的人次和堂數數字'); return; }
+
+  // 記錄舊值
+  const oldData = window.__exportData?.[store]?.stat?.[teacher]?.[cat];
+  const oldP = oldData?.people ?? 0;
+  const oldS = oldData?.sessions ?? 0;
+
+  // 更新該館 stat
+  if (!window.__exportData[store]) return;
+  if (!window.__exportData[store].stat[teacher]) {
+    window.__exportData[store].stat[teacher] = {};
+    CAT_ORDER.forEach(c => window.__exportData[store].stat[teacher][c] = { people: 0, sessions: 0 });
+  }
+  window.__exportData[store].stat[teacher][cat].people = newP;
+  window.__exportData[store].stat[teacher][cat].sessions = newS;
+
+  // 記錄調整
+  (window.__adjustments = window.__adjustments || []).push({
+    store, teacher, cat, oldPeople: oldP, oldSessions: oldS, newPeople: newP, newSessions: newS
+  });
+
+  // 重建合計
+  const stores = Object.keys(window.__exportData).filter(s => s !== '合計');
+  rebuildCombinedExportData(stores);
+
+  // 重繪 stat 表格（不動停課紀錄）
+  const statBox = document.getElementById('statbox-' + store);
+  if (statBox) statBox.innerHTML = buildHistoryStoreTable({ data: window.__exportData }, store);
+  const combinedBox = document.getElementById('statbox-__combined__');
+  if (combinedBox) combinedBox.innerHTML = buildHistoryStoreTable({ data: window.__exportData }, '合計');
+
+  // 重繪調整區塊（保留 memo 內容）
+  renderAdjSection(stores);
+}
+
+function removeAdj(idx) {
+  const adjs = window.__adjustments || [];
+  const a = adjs[idx];
+  if (!a) return;
+
+  // 還原舊值
+  if (window.__exportData?.[a.store]?.stat?.[a.teacher]?.[a.cat]) {
+    window.__exportData[a.store].stat[a.teacher][a.cat].people = a.oldPeople;
+    window.__exportData[a.store].stat[a.teacher][a.cat].sessions = a.oldSessions;
+  }
+  adjs.splice(idx, 1);
+
+  const stores = Object.keys(window.__exportData).filter(s => s !== '合計');
+  rebuildCombinedExportData(stores);
+
+  const statBox = document.getElementById('statbox-' + a.store);
+  if (statBox) statBox.innerHTML = buildHistoryStoreTable({ data: window.__exportData }, a.store);
+  const combinedBox = document.getElementById('statbox-__combined__');
+  if (combinedBox) combinedBox.innerHTML = buildHistoryStoreTable({ data: window.__exportData }, '合計');
+
+  renderAdjSection(stores);
+}
+
+function rebuildCombinedExportData(stores) {
+  const allTeachers = [...new Set(stores.flatMap(s => window.__exportData[s]?.teachers || []))];
+  const combinedStat = {};
+  allTeachers.forEach(t => {
+    combinedStat[t] = {};
+    CAT_ORDER.forEach(c => combinedStat[t][c] = { people: 0, sessions: 0 });
+  });
+  stores.forEach(s => {
+    const sd = window.__exportData[s];
+    if (!sd) return;
+    (sd.teachers || []).forEach(t => {
+      CAT_ORDER.forEach(c => {
+        combinedStat[t][c].people += sd.stat[t]?.[c]?.people || 0;
+        combinedStat[t][c].sessions += sd.stat[t]?.[c]?.sessions || 0;
+      });
+    });
+  });
+  const finalTeachers = allTeachers
+    .filter(t => CAT_ORDER.some(c => (combinedStat[t]?.[c]?.people || 0) > 0 || (combinedStat[t]?.[c]?.sessions || 0) > 0))
+    .sort((a, b) => {
+      const ta = CAT_ORDER.reduce((s, c) => s + (combinedStat[a]?.[c]?.people || 0), 0);
+      const tb = CAT_ORDER.reduce((s, c) => s + (combinedStat[b]?.[c]?.people || 0), 0);
+      return tb - ta;
+    });
+  window.__exportData['合計'] = { teachers: finalTeachers, stat: combinedStat };
+}
+
 // ─── Tab switching ────────────────────────────────────────────
 function switchStore(store, el) {
   document.querySelectorAll('.stab').forEach(t => t.classList.remove('on'));
@@ -1773,6 +1966,10 @@ function exportCsv() {
 function resetView() {
   allRows = []; specialAnswers = {}; specialQueue = []; specialIdx = 0; deepWaterAnswer = null;
   window.__exportData = null;
+  window.__adjustments = [];
+  window.__memo = '';
+  const adjEl = document.getElementById('adj-section');
+  if (adjEl) adjEl.innerHTML = '';
   document.getElementById('fname').innerHTML = '';
   document.getElementById('btn-go').disabled = true;
   document.getElementById('notices').innerHTML = '';
@@ -1807,7 +2004,10 @@ function saveMonthData() {
   const m = reportTitle.match(/(\d{4})[\/\-](\d{1,2})/);
   if (!m) { alert('無法從報表標題解析年月，請確認報表格式'); return; }
   const key = `lalaso_month_${m[1]}-${m[2].padStart(2,'0')}`;
-  const record = { month: `${m[1]}-${m[2].padStart(2,'0')}`, title: reportTitle, data, savedAt: new Date().toISOString() };
+  // 讀取備註（優先從 textarea 取即時值）
+  const memoEl = document.getElementById('adj-memo');
+  const note = (memoEl ? memoEl.value.trim() : '') || (window.__memo || '');
+  const record = { month: `${m[1]}-${m[2].padStart(2,'0')}`, title: reportTitle, data, note, adjustments: window.__adjustments || [], savedAt: new Date().toISOString() };
   try {
     localStorage.setItem(key, JSON.stringify(record));
     document.getElementById('btn-save').textContent = '✓ 已儲存';
@@ -1896,10 +2096,22 @@ function renderMonthlyView() {
       ${buildHistoryStoreTable(rec, s)}
     </div>`).join('');
 
+  const noteHtml = rec.note ? `
+    <div style="margin-top:1.5rem;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);border-left:3px solid var(--border2);">
+      <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;">📝 備註</div>
+      <div style="font-size:13px;color:var(--text);white-space:pre-wrap;">${rec.note.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+    </div>` : '';
+  const adjHtml = rec.adjustments?.length ? `
+    <div style="margin-top:6px;padding:6px 14px;font-size:12px;color:var(--text2);background:var(--row-alt);border-radius:var(--radius-sm);">
+      <span style="font-weight:600;">手動調整：</span>${rec.adjustments.map(a =>
+        `${a.store} ${a.teacher.replace(' 老師','')} ${a.cat}　${a.oldPeople}→${a.newPeople}人次 / ${a.oldSessions}→${a.newSessions}堂`
+      ).join('　｜　')}
+    </div>` : '';
   document.getElementById('monthly-content').innerHTML = `
     <div style="font-size:14px;font-weight:600;margin-bottom:1rem;color:var(--text2);">${rec.title || month}</div>
     <div class="store-tabs">${tabs}</div>
-    ${panels}`;
+    ${panels}
+    ${noteHtml}${adjHtml}`;
 }
 
 function switchMonthlyTab(idx, el) {
