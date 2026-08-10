@@ -485,18 +485,40 @@ function startAnalysis() {
     if (rows.length) specialQueue.push({ type: 'stop_confirm', store: s, rows });
   });
 
-  let hasDeep = false;
+  // 分類收集各特殊案例
+  const fSplitItems = [], deepItems = [], trialItems = [];
   allRows.forEach((r, i) => {
     if (r.note.includes('停課')) return; // handled via stop_confirm
     if (/【[ＦF]】兒童游泳/.test(r.course) && r.booked > 8) {
-      specialQueue.push({ type: 'F_split', i, r });
+      fSplitItems.push({ type: 'F_split', i, r });
     } else if (/【\s*深水體驗\s*】|【\s*深水池課程\s*】/.test(r.course)) {
       specialAnswers[i] = { type: 'deep_pending' };
-      if (!hasDeep) { specialQueue.push({ type: 'deep_once' }); hasDeep = true; }
+      deepItems.push({ i, r });
     } else if (/[＃＊]體驗課/.test(r.teacher) || /^新\s*老師\d*$/.test(r.teacher.trim())) {
-      specialQueue.push({ type: 'trial', i, r });
+      trialItems.push({ type: 'trial', i, r });
     }
   });
+
+  // F班：西屯館優先，再北屯館，同館內按日期由遠到近
+  const storeOrder = ['西屯館', '北屯館'];
+  fSplitItems.sort((a, b) => {
+    const sa = storeOrder.indexOf(a.r.store), sb = storeOrder.indexOf(b.r.store);
+    const sd = (sa < 0 ? 99 : sa) - (sb < 0 ? 99 : sb);
+    if (sd !== 0) return sd;
+    const dd = String(a.r.date).localeCompare(String(b.r.date));
+    if (dd !== 0) return dd;
+    return String(a.r.time).split('~')[0].localeCompare(String(b.r.time).split('~')[0]);
+  });
+  fSplitItems.forEach(item => specialQueue.push(item));
+
+  // 深水體驗（一次輸入），附上所有日期供顯示
+  if (deepItems.length > 0) {
+    const deepDates = [...new Set(deepItems.map(d => d.r.date))].sort();
+    specialQueue.push({ type: 'deep_once', deepDates });
+  }
+
+  // 體驗課（保持原始順序）
+  trialItems.forEach(item => specialQueue.push(item));
 
   processNextSpecial();
 }
@@ -548,6 +570,7 @@ function processNextSpecial() {
     showDeepWaterModal({
       counter: `${specialIdx + 1} / ${specialQueue.length}`,
       deepCount,
+      deepDates: item.deepDates || [],
       prevStudents: deepWaterAnswer ? deepWaterAnswer.students : '',
       prevTeachers: deepWaterAnswer ? deepWaterAnswer.teachers : '',
       canBack,
@@ -962,7 +985,7 @@ function fSplitBack() { window.__fSplitBack && window.__fSplitBack(); }
 function toggleFTeacher(id) { window.__toggleFTeacher && window.__toggleFTeacher(id); }
 
 // ─── 深水體驗 Modal ───────────────────────────────────────────
-function showDeepWaterModal({ counter, deepCount, prevStudents, prevTeachers, canBack, onBack, onOk }) {
+function showDeepWaterModal({ counter, deepCount, deepDates, prevStudents, prevTeachers, canBack, onBack, onOk }) {
   const existing = document.getElementById('__modal');
   if (existing) existing.remove();
 
@@ -977,6 +1000,12 @@ function showDeepWaterModal({ counter, deepCount, prevStudents, prevTeachers, ca
     const opts = available.map(t =>
       `<option value="${t}">${t.replace(' 老師','')}</option>`).join('');
 
+    const datesHtml = (deepDates && deepDates.length > 0)
+      ? `<div style="font-size:12px;color:var(--text2);background:var(--row-alt);border-radius:var(--radius-sm);padding:6px 10px;margin-bottom:12px;line-height:1.8;">
+           📅 課程日期：${deepDates.map(d => `<span style="white-space:nowrap;">${formatDateWithWeekday(d)}</span>`).join('　')}
+         </div>`
+      : '';
+
     const el = document.createElement('div');
     el.className = 'modal-overlay';
     el.id = '__modal';
@@ -987,6 +1016,7 @@ function showDeepWaterModal({ counter, deepCount, prevStudents, prevTeachers, ca
           <div class="modal-counter">${counter}</div>
         </div>
         <div style="overflow-y:auto;flex:1;min-height:0;">
+          ${datesHtml}
           <p style="font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.6;">
             本月共有 <strong>${deepCount}</strong> 堂深水體驗課（西屯館＋北屯館合併計算）。<br>
             兩館同時上課、同樣學員、同樣老師，只需輸入一次。<br>
@@ -1222,13 +1252,27 @@ function renderResult() {
     return specialAnswers[idx]?.type !== 'stop_override';
   }).length;
   if (effectiveStopCount) notices.push({ type: 'warn', msg: `⚠ 本月有 ${effectiveStopCount} 堂課因停課排除計算，詳見各館停課紀錄` });
-  Object.values(specialAnswers).filter(a => a.type === 'F_split').forEach(a => {
+  // F班結果：按西屯→北屯→日期排序，每行顯示日期館別
+  const _fSplitOrder = ['西屯館', '北屯館'];
+  const _fEntries = Object.entries(specialAnswers).filter(([,a]) => a.type === 'F_split');
+  _fEntries.sort(([ia], [ib]) => {
+    const ra = allRows[parseInt(ia)], rb = allRows[parseInt(ib)];
+    const si = s => { const n = _fSplitOrder.indexOf(s); return n < 0 ? 99 : n; };
+    const sd = si(ra.store) - si(rb.store);
+    if (sd !== 0) return sd;
+    return String(ra.date).localeCompare(String(rb.date));
+  });
+  _fEntries.forEach(([idx, a]) => {
+    const r = allRows[parseInt(idx)];
+    const dateStr = formatDateWithWeekday(r.date);
+    const storeStr = r.store || '';
     if (a.teacher3) {
-      notices.push({ type: 'info', msg: `ℹ 【Ｆ】兒童游泳超過16人，三位老師均分人次（${a.teacher2}、${a.teacher3}）` });
+      notices.push({ type: 'info', msg: `ℹ ${storeStr} ${dateStr} 【Ｆ】兒童游泳超過16人，三位老師均分人次（${a.teacher2}、${a.teacher3}）` });
     } else {
-      notices.push({ type: 'info', msg: `ℹ 【Ｆ】兒童游泳超過8人，已加入第二位老師「${a.teacher2}」並平分人次` });
+      notices.push({ type: 'info', msg: `ℹ ${storeStr} ${dateStr} 【Ｆ】兒童游泳超過8人，已加入第二位老師「${a.teacher2}」並平分人次` });
     }
   });
+  // 深水體驗結果：顯示所有日期
   Object.values(specialAnswers).filter(a => a.type === 'deep').slice(0,1).forEach(() => {
     if (!deepWaterAnswer) return;
     const tList = deepWaterAnswer.teachers.split(',').map(t => t.trim()).filter(Boolean);
@@ -1240,7 +1284,10 @@ function renderResult() {
       grouped[h].push(t.replace(' 老師',''));
     });
     const groupStr = Object.entries(grouped).map(([s, ts]) => `${s}：${ts.join('、')}`).join('　');
-    notices.push({ type: 'info', msg: `ℹ 【深水體驗】${deepWaterAnswer.students} 位學員，${tList.length} 位老師，每人 ${(deepWaterAnswer.students / tList.length).toFixed(1)} 人次 ／ 館別歸屬 — ${groupStr}` });
+    const deepDatesList = [...new Set(
+      Object.entries(specialAnswers).filter(([,a]) => a.type === 'deep').map(([i]) => allRows[parseInt(i)].date)
+    )].sort().map(d => formatDateWithWeekday(d)).join('、');
+    notices.push({ type: 'info', msg: `ℹ 【深水體驗】${deepDatesList}　${deepWaterAnswer.students} 位學員，${tList.length} 位老師，每人 ${(deepWaterAnswer.students / tList.length).toFixed(1)} 人次 ／ 館別歸屬 — ${groupStr}` });
   });
   // 體驗課手動處理結果
   Object.entries(specialAnswers).filter(([,a]) => a.type === 'trial').forEach(([i, a]) => {
