@@ -374,7 +374,7 @@ function getAllTeachers() {
   // 包含 G 欄（授課老師）和 H 欄（代課老師）
   const fromReport = [...new Set([
     ...allRows.filter(r => r.teacher.includes('老師')).map(r => r.teacher),
-    ...allRows.filter(r => r.subTeacher && r.subTeacher.includes('老師')).map(r => r.subTeacher),
+    ...allRows.filter(r => r.subTeacher && r.subTeacher.trim()).map(r => r.subTeacher),
   ])].sort();
   const persistent = loadPersistentTeachers();
   return [...new Set([...fromReport, ...persistent])].sort();
@@ -1440,7 +1440,7 @@ function buildTeacherHomeStore() {
   const counts = {}; // { teacher: { store: n } }
   allRows.forEach(r => {
     // 若 H 欄有代課老師，以代課老師為準
-    const eff = (r.subTeacher && r.subTeacher.includes('老師')) ? r.subTeacher : r.teacher;
+    const eff = (r.subTeacher && r.subTeacher.trim()) ? r.subTeacher : r.teacher;
     if (!eff.includes('老師') || !r.store) return;
     if (!counts[eff]) counts[eff] = {};
     counts[eff][r.store] = (counts[eff][r.store] || 0) + 1;
@@ -1456,11 +1456,11 @@ function buildTeacherHomeStore() {
 function buildStoreTable(store) {
   const teacherHome = buildTeacherHomeStore();
   // 若 H 欄（代課老師）有值，代課老師取代原班老師上課
-  const rows = allRows.filter(r => r.store === store && (r.teacher.includes('老師') || (r.subTeacher && r.subTeacher.includes('老師'))));
+  const rows = allRows.filter(r => r.store === store && (r.teacher.includes('老師') || (r.subTeacher && r.subTeacher.trim())));
 
   // Collect teachers belonging to this store（代課老師取代原班老師）
   // For deep water: include teachers whose home store is this store
-  let teacherSet = new Set(rows.map(r => (r.subTeacher && r.subTeacher.includes('老師')) ? r.subTeacher : r.teacher));
+  let teacherSet = new Set(rows.map(r => (r.subTeacher && r.subTeacher.trim()) ? r.subTeacher : r.teacher));
 
   // Add extra teachers from F_split specials in this store
   allRows.forEach((r, i) => {
@@ -1513,7 +1513,7 @@ function buildStoreTable(store) {
       const splitN = (sp.teacher3 && sp.teacher3 !== '__absent__') ? 3 : 2;
       const share = Math.round(r.booked / splitN * 10) / 10;
       // 若有代課老師，代課老師算第一位（取代原班老師）
-      const eff1 = (r.subTeacher && r.subTeacher.includes('老師')) ? r.subTeacher : r.teacher;
+      const eff1 = (r.subTeacher && r.subTeacher.trim()) ? r.subTeacher : r.teacher;
       ensureStat(eff1); stat[eff1][cat].people += share; stat[eff1][cat].sessions += 1;
       ensureStat(sp.teacher2); stat[sp.teacher2][cat].people += share; stat[sp.teacher2][cat].sessions += 1;
       if (sp.teacher3 && sp.teacher3 !== '__absent__') { ensureStat(sp.teacher3); stat[sp.teacher3][cat].people += share; stat[sp.teacher3][cat].sessions += 1; }
@@ -1521,7 +1521,7 @@ function buildStoreTable(store) {
       // Skip here — deep water is handled separately below to avoid store-filter issues
     } else {
       if (r.booked > 0) {
-        const eff = (r.subTeacher && r.subTeacher.includes('老師')) ? r.subTeacher : r.teacher;
+        const eff = (r.subTeacher && r.subTeacher.trim()) ? r.subTeacher : r.teacher;
         ensureStat(eff);
         stat[eff][cat].people += r.booked;
         stat[eff][cat].sessions += 1;
@@ -1665,7 +1665,7 @@ function buildCombinedTable(stores) {
   const teacherSet = new Set();
   allRows.forEach((r, i) => {
     // 若 H 欄有代課老師，以代課老師為準
-    const effT = (r.subTeacher && r.subTeacher.includes('老師')) ? r.subTeacher : r.teacher;
+    const effT = (r.subTeacher && r.subTeacher.trim()) ? r.subTeacher : r.teacher;
     if (effT.includes('老師')) teacherSet.add(effT);
     const sp = specialAnswers[i];
     if (!sp) return;
@@ -1687,7 +1687,7 @@ function buildCombinedTable(stores) {
 
   stores.forEach(store => {
     // Rebuild per-store stat and merge
-    const rows = allRows.filter(r => r.store === store && (r.teacher.includes('老師') || (r.subTeacher && r.subTeacher.includes('老師'))));
+    const rows = allRows.filter(r => r.store === store && (r.teacher.includes('老師') || (r.subTeacher && r.subTeacher.trim())));
     rows.forEach(r => {
       const cat = matchCourse(r.course);
       if (!cat) return;
@@ -1699,7 +1699,7 @@ function buildCombinedTable(stores) {
       if (/【[ＦF]】兒童游泳/.test(r.course) && r.booked > 8 && sp?.type === 'F_split') {
         const splitN = (sp.teacher3 && sp.teacher3 !== '__absent__') ? 3 : 2;
         const share = Math.round(r.booked / splitN * 10) / 10;
-        const eff1 = (r.subTeacher && r.subTeacher.includes('老師')) ? r.subTeacher : r.teacher;
+        const eff1 = (r.subTeacher && r.subTeacher.trim()) ? r.subTeacher : r.teacher;
         ensureStat(eff1); stat[eff1][cat].people += share; stat[eff1][cat].sessions += 1;
         ensureStat(sp.teacher2); stat[sp.teacher2][cat].people += share; stat[sp.teacher2][cat].sessions += 1;
         if (sp.teacher3 && sp.teacher3 !== '__absent__') { ensureStat(sp.teacher3); stat[sp.teacher3][cat].people += share; stat[sp.teacher3][cat].sessions += 1; }
@@ -1707,7 +1707,7 @@ function buildCombinedTable(stores) {
         // handled below
       } else {
         if (r.booked > 0) {
-          const eff = (r.subTeacher && r.subTeacher.includes('老師')) ? r.subTeacher : r.teacher;
+          const eff = (r.subTeacher && r.subTeacher.trim()) ? r.subTeacher : r.teacher;
           ensureStat(eff);
           stat[eff][cat].people += r.booked;
           stat[eff][cat].sessions += 1;
