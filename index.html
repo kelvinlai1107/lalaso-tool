@@ -443,6 +443,23 @@ function parseBookfast(rawRows, fname) {
     arrived:       Number(r[idx['到課總人數']]) || 0,
     note:          String(r[idx['備註']] || ''),
   }));
+
+  // 建立「協同上課」老師 map：key = date_time_store，value = [teacher, ...]
+  window.__coTeachersMap = {};
+  dataRows.forEach(r => {
+    const course = String(r[idx['課程名稱']] || '').trim();
+    if (/【[ＦF]】協同上課/.test(course)) {
+      const date    = String(r[idx['課程日期']] || '').trim();
+      const time    = String(r[idx['課程時間']] || '').trim();
+      const store   = String(r[idx['開課店別']] || '').trim();
+      const teacher = String(r[idx['授課老師']] || '').trim();
+      if (!teacher || !teacher.includes('老師')) return;
+      const key = `${date}_${time}_${store}`;
+      if (!window.__coTeachersMap[key]) window.__coTeachersMap[key] = [];
+      window.__coTeachersMap[key].push(teacher);
+    }
+  });
+
   document.getElementById('fname').innerHTML = `<div class="file-ok">✓ ${fname}（${allRows.length} 筆資料）</div>`;
   document.getElementById('btn-go').disabled = false;
 }
@@ -885,8 +902,11 @@ function showFSplitModal({ counter, r, needsThree, prev, canBack, onBack, onOk }
   const allTeachers = getAllTeachers();
   const splitCount = needsThree ? 3 : 2;
   const share = Math.round(r.booked / splitCount * 10) / 10;
-  const prevT2 = prev?.teacher2 || '';
-  const prevT3 = prev?.teacher3 || '';
+  // 從協同上課 map 預帶老師（若使用者已手動改過則優先用手動值）
+  const coKey = `${r.date}_${r.time}_${r.store}`;
+  const coList = (window.__coTeachersMap || {})[coKey] || [];
+  const prevT2 = prev?.teacher2 || coList[0] || '';
+  const prevT3 = prev?.teacher3 || coList[1] || '';
 
   function makeTeacherField(fieldId, label, prevVal) {
     const isCustom = prevVal && !allTeachers.includes(prevVal);
