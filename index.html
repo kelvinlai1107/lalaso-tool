@@ -906,27 +906,40 @@ function showFSplitModal({ counter, r, needsThree, prev, canBack, onBack, onOk }
   const coKey = `${r.date}_${r.time}_${r.store}`;
   const coList = (window.__coTeachersMap || {})[coKey] || [];
   const prevT2 = prev?.teacher2 || coList[0] || '';
-  const prevT3 = prev?.teacher3 || coList[1] || '';
+  const rawT3 = prev?.teacher3 ?? (coList[1] || '');
+  const prevT3Absent = rawT3 === '__absent__';
+  const prevT3 = prevT3Absent ? '' : rawT3;
 
-  function makeTeacherField(fieldId, label, prevVal) {
+  function makeTeacherField(fieldId, label, prevVal, { showAbsent = false, initAbsent = false } = {}) {
     const isCustom = prevVal && !allTeachers.includes(prevVal);
     const opts = allTeachers.map(t =>
       `<option value="${t}" ${prevVal === t ? 'selected' : ''}>${t.replace(' 老師','')}</option>`).join('');
+    const absentBtnStyle = `font-size:11px;padding:2px 8px;border-radius:var(--radius-sm);cursor:pointer;
+      background:${initAbsent ? 'var(--red-light,#fff0f0)' : 'transparent'};
+      border:0.5px solid ${initAbsent ? '#e53e3e' : 'var(--border2)'};
+      color:${initAbsent ? '#e53e3e' : 'var(--text2)'};`;
     return `
-      <div class="field-group">
+      <div class="field-group" id="${fieldId}-group">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
           <div class="field-label" style="margin-bottom:0;">${label}</div>
-          <button type="button" id="btn-toggle-${fieldId}" onclick="toggleFTeacher('${fieldId}')"
-            style="font-size:11px;padding:2px 8px;border-radius:var(--radius-sm);background:transparent;border:0.5px solid var(--border2);cursor:pointer;color:var(--text2);">
-            ${isCustom ? '從清單選擇' : '＋ 自行輸入'}
-          </button>
+          <div style="display:flex;gap:6px;">
+            ${showAbsent ? `<button type="button" id="btn-absent-${fieldId}" onclick="fT3Absent('${fieldId}')"
+              style="${absentBtnStyle}">從缺</button>` : ''}
+            <button type="button" id="btn-toggle-${fieldId}" onclick="toggleFTeacher('${fieldId}')"
+              style="font-size:11px;padding:2px 8px;border-radius:var(--radius-sm);background:transparent;border:0.5px solid var(--border2);cursor:pointer;color:var(--text2);display:${initAbsent ? 'none' : ''};">
+              ${isCustom ? '從清單選擇' : '＋ 自行輸入'}
+            </button>
+          </div>
         </div>
-        <select class="field-input" id="${fieldId}-sel" style="cursor:pointer;display:${isCustom ? 'none' : 'block'};">
-          <option value="">— 請選擇老師 —</option>
-          ${opts}
-        </select>
-        <input class="field-input" id="${fieldId}-custom" placeholder="輸入老師名稱（自動補「老師」）"
-          style="display:${isCustom ? 'block' : 'none'};" value="${isCustom ? prevVal.replace(' 老師','') : ''}">
+        <div id="${fieldId}-selectors" style="display:${initAbsent ? 'none' : 'block'};">
+          <select class="field-input" id="${fieldId}-sel" style="cursor:pointer;display:${isCustom ? 'none' : 'block'};">
+            <option value="">— 請選擇老師 —</option>
+            ${opts}
+          </select>
+          <input class="field-input" id="${fieldId}-custom" placeholder="輸入老師名稱（自動補「老師」）"
+            style="display:${isCustom ? 'block' : 'none'};" value="${isCustom ? prevVal.replace(' 老師','') : ''}">
+        </div>
+        ${initAbsent ? `<div id="${fieldId}-absent-label" style="font-size:13px;color:#e53e3e;padding:6px 0;">從缺 — 此堂人次將由兩位老師平分</div>` : `<div id="${fieldId}-absent-label" style="display:none;font-size:13px;color:#e53e3e;padding:6px 0;">從缺 — 此堂人次將由兩位老師平分</div>`}
       </div>`;
   }
 
@@ -949,10 +962,10 @@ function showFSplitModal({ counter, r, needsThree, prev, canBack, onBack, onOk }
       </div>
       <p style="font-size:13px;color:var(--text2);margin-bottom:1.25rem;line-height:1.6;">
         師生比 1:8，預約超過 ${needsThree ? '16' : '8'} 人，需 <strong style="color:var(--text);">${needsThree ? '三' : '兩'}</strong> 位老師共同授課。<br>
-        每人各計 <strong style="color:var(--blue-text);">${share} 人次</strong>，各算 <strong>1 堂</strong>。
+        每人各計 <strong style="color:var(--blue-text);" id="f-share-display">${prevT3Absent ? Math.round(r.booked/2*10)/10 : share} 人次</strong>，各算 <strong>1 堂</strong>。
       </p>
       ${makeTeacherField('f-t2', '第二位老師', prevT2)}
-      ${needsThree ? makeTeacherField('f-t3', '第三位老師', prevT3) : ''}
+      ${needsThree ? makeTeacherField('f-t3', '第三位老師', prevT3, { showAbsent: true, initAbsent: prevT3Absent }) : ''}
       <div class="modal-error" id="m-err"></div>
       <div class="modal-actions" style="justify-content:space-between;">
         ${canBack ? `<button class="btn btn-outline" onclick="fSplitBack()">← 上一步</button>` : '<div></div>'}
@@ -990,19 +1003,47 @@ function showFSplitModal({ counter, r, needsThree, prev, canBack, onBack, onOk }
     if (!t2) { showModalError('請選擇或輸入第二位老師'); return; }
     let t3 = null;
     if (needsThree) {
-      t3 = getVal('f-t3');
-      if (!t3) { showModalError('請選擇或輸入第三位老師'); return; }
+      const absentBtn = document.getElementById('btn-absent-f-t3');
+      const isAbsent = absentBtn?.dataset.absent === '1';
+      if (isAbsent) {
+        t3 = '__absent__';
+      } else {
+        t3 = getVal('f-t3');
+        if (!t3) { showModalError('請選擇或輸入第三位老師，或點「從缺」'); return; }
+      }
     }
-    // 自行輸入的老師存入持久化名單
+    // 自行輸入的老師存入持久化名單（從缺不加入）
     const known = getAllTeachers();
     const persistent = loadPersistentTeachers();
     let changed = false;
-    [t2, t3].filter(Boolean).forEach(t => {
+    [t2, t3].filter(t => t && t !== '__absent__').forEach(t => {
       if (!known.includes(t) && !persistent.includes(t)) { persistent.push(t); changed = true; }
     });
     if (changed) savePersistentTeachers(persistent);
     el.remove();
     onOk(t2, t3);
+  };
+
+  window.__fT3Absent = (fieldId) => {
+    const absentBtn = document.getElementById(`btn-absent-${fieldId}`);
+    const toggleBtn = document.getElementById(`btn-toggle-${fieldId}`);
+    const selectors = document.getElementById(`${fieldId}-selectors`);
+    const absentLabel = document.getElementById(`${fieldId}-absent-label`);
+    const shareEl = document.getElementById('f-share-display');
+    const nowAbsent = absentBtn.dataset.absent !== '1';
+    absentBtn.dataset.absent = nowAbsent ? '1' : '0';
+    absentBtn.style.background = nowAbsent ? 'var(--red-light,#fff0f0)' : 'transparent';
+    absentBtn.style.border = `0.5px solid ${nowAbsent ? '#e53e3e' : 'var(--border2)'}`;
+    absentBtn.style.color = nowAbsent ? '#e53e3e' : 'var(--text2)';
+    selectors.style.display = nowAbsent ? 'none' : 'block';
+    toggleBtn.style.display = nowAbsent ? 'none' : '';
+    if (absentLabel) absentLabel.style.display = nowAbsent ? '' : 'none';
+    if (shareEl) {
+      const n = nowAbsent ? 2 : (needsThree ? 3 : 2);
+      shareEl.textContent = `${Math.round(r.booked / n * 10) / 10} 人次`;
+    }
+    const err = document.getElementById('m-err');
+    if (err) { err.textContent = ''; err.style.display = 'none'; }
   };
   window.__fSplitBack = () => { el.remove(); onBack && onBack(); };
 }
@@ -1292,8 +1333,10 @@ function renderResult() {
     const r = allRows[parseInt(idx)];
     const dateStr = formatDateWithWeekday(r.date);
     const storeStr = r.store || '';
-    if (a.teacher3) {
+    if (a.teacher3 && a.teacher3 !== '__absent__') {
       notices.push({ type: 'info', msg: `ℹ ${storeStr} ${dateStr} 【Ｆ】兒童游泳超過16人，三位老師均分人次（${a.teacher2}、${a.teacher3}）` });
+    } else if (a.teacher3 === '__absent__') {
+      notices.push({ type: 'info', msg: `ℹ ${storeStr} ${dateStr} 【Ｆ】兒童游泳超過16人（第三位老師從缺），兩位老師平分人次（${a.teacher2}）` });
     } else {
       notices.push({ type: 'info', msg: `ℹ ${storeStr} ${dateStr} 【Ｆ】兒童游泳超過8人，已加入第二位老師「${a.teacher2}」並平分人次` });
     }
@@ -1425,7 +1468,7 @@ function buildStoreTable(store) {
     if (!sp) return;
     if (sp.type === 'F_split') {
       teacherSet.add(sp.teacher2);
-      if (sp.teacher3) teacherSet.add(sp.teacher3);
+      if (sp.teacher3 && sp.teacher3 !== '__absent__') teacherSet.add(sp.teacher3);
     }
     if (sp.type === 'trial' && sp.teacher) {
       // 體驗課老師歸屬：看該筆記錄本身的開課館別
@@ -1466,13 +1509,13 @@ function buildStoreTable(store) {
     if (/[＃＊]體驗課/.test(r.teacher) || /^新\s*老師\d*$/.test(r.teacher.trim())) return;
 
     if (/【[ＦF]】兒童游泳/.test(r.course) && r.booked > 8 && sp && sp.type === 'F_split') {
-      const splitN = sp.teacher3 ? 3 : 2;
+      const splitN = (sp.teacher3 && sp.teacher3 !== '__absent__') ? 3 : 2;
       const share = Math.round(r.booked / splitN * 10) / 10;
       // 若有代課老師，代課老師算第一位（取代原班老師）
       const eff1 = (r.subTeacher && r.subTeacher.includes('老師')) ? r.subTeacher : r.teacher;
       ensureStat(eff1); stat[eff1][cat].people += share; stat[eff1][cat].sessions += 1;
       ensureStat(sp.teacher2); stat[sp.teacher2][cat].people += share; stat[sp.teacher2][cat].sessions += 1;
-      if (sp.teacher3) { ensureStat(sp.teacher3); stat[sp.teacher3][cat].people += share; stat[sp.teacher3][cat].sessions += 1; }
+      if (sp.teacher3 && sp.teacher3 !== '__absent__') { ensureStat(sp.teacher3); stat[sp.teacher3][cat].people += share; stat[sp.teacher3][cat].sessions += 1; }
     } else if (/【\s*深水體驗\s*】|【\s*深水池課程\s*】/.test(r.course)) {
       // Skip here — deep water is handled separately below to avoid store-filter issues
     } else {
@@ -1627,7 +1670,7 @@ function buildCombinedTable(stores) {
     if (!sp) return;
     if (sp.type === 'F_split' && sp.teacher2) {
       teacherSet.add(sp.teacher2);
-      if (sp.teacher3) teacherSet.add(sp.teacher3);
+      if (sp.teacher3 && sp.teacher3 !== '__absent__') teacherSet.add(sp.teacher3);
     }
     if (sp.type === 'trial' && sp.teacher) teacherSet.add(sp.teacher);
   });
@@ -1653,12 +1696,12 @@ function buildCombinedTable(stores) {
       if (sp?.type === 'trial' || sp?.type === 'trial_skip') return;
       if (/[＃＊]體驗課/.test(r.teacher) || /^新\s*老師\d*$/.test(r.teacher.trim())) return;
       if (/【[ＦF]】兒童游泳/.test(r.course) && r.booked > 8 && sp?.type === 'F_split') {
-        const splitN = sp.teacher3 ? 3 : 2;
+        const splitN = (sp.teacher3 && sp.teacher3 !== '__absent__') ? 3 : 2;
         const share = Math.round(r.booked / splitN * 10) / 10;
         const eff1 = (r.subTeacher && r.subTeacher.includes('老師')) ? r.subTeacher : r.teacher;
         ensureStat(eff1); stat[eff1][cat].people += share; stat[eff1][cat].sessions += 1;
         ensureStat(sp.teacher2); stat[sp.teacher2][cat].people += share; stat[sp.teacher2][cat].sessions += 1;
-        if (sp.teacher3) { ensureStat(sp.teacher3); stat[sp.teacher3][cat].people += share; stat[sp.teacher3][cat].sessions += 1; }
+        if (sp.teacher3 && sp.teacher3 !== '__absent__') { ensureStat(sp.teacher3); stat[sp.teacher3][cat].people += share; stat[sp.teacher3][cat].sessions += 1; }
       } else if (/【\s*深水體驗\s*】|【\s*深水池課程\s*】/.test(r.course)) {
         // handled below
       } else {
