@@ -1352,12 +1352,16 @@ function renderResult() {
     const r = allRows[parseInt(idx)];
     const dateStr = formatDateWithWeekday(r.date);
     const storeStr = r.store || '';
+    const booked = r.booked || 0;
     if (a.teacher3 && a.teacher3 !== '__absent__') {
-      notices.push({ type: 'info', msg: `ℹ ${storeStr} ${dateStr} 【Ｆ】兒童游泳超過16人，三位老師均分人次（${a.teacher2}、${a.teacher3}）` });
+      const perT = booked > 0 ? (booked / 3).toFixed(1) : '—';
+      notices.push({ type: 'info', msg: `ℹ ${storeStr} ${dateStr} 【Ｆ】兒童游泳 ${booked} 人，三位老師均分人次（${a.teacher2}、${a.teacher3}），每人 ${perT} 人次` });
     } else if (a.teacher3 === '__absent__') {
-      notices.push({ type: 'info', msg: `ℹ ${storeStr} ${dateStr} 【Ｆ】兒童游泳超過16人（第三位老師從缺），兩位老師平分人次（${a.teacher2}）` });
+      const perT = booked > 0 ? (booked / 2).toFixed(1) : '—';
+      notices.push({ type: 'info', msg: `ℹ ${storeStr} ${dateStr} 【Ｆ】兒童游泳 ${booked} 人（第三位老師從缺），兩位老師平分人次（${a.teacher2}），每人 ${perT} 人次` });
     } else {
-      notices.push({ type: 'info', msg: `ℹ ${storeStr} ${dateStr} 【Ｆ】兒童游泳超過8人，已加入第二位老師「${a.teacher2}」並平分人次` });
+      const perT = booked > 0 ? (booked / 2).toFixed(1) : '—';
+      notices.push({ type: 'info', msg: `ℹ ${storeStr} ${dateStr} 【Ｆ】兒童游泳 ${booked} 人，已加入第二位老師「${a.teacher2}」，每人 ${perT} 人次` });
     }
   });
   // 深水體驗結果：顯示所有日期
