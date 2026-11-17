@@ -512,8 +512,13 @@ function startAnalysis() {
   const fSplitItems = [], deepItems = [], trialItems = [];
   allRows.forEach((r, i) => {
     if (r.note.includes('停課')) return; // handled via stop_confirm
-    if (/【[ＦF]】兒童游泳/.test(r.course) && r.booked > 8) {
-      fSplitItems.push({ type: 'F_split', i, r });
+    if (/【[ＦF]】兒童游泳/.test(r.course)) {
+      // 以 EXCEL 協同上課行為準；沒有協同上課時沿用 >8 人的規則
+      const coKey = `${r.date}_${r.time}_${r.store}`;
+      const hasCoTeachers = !!((window.__coTeachersMap || {})[coKey]?.length);
+      if (hasCoTeachers || r.booked > 8) {
+        fSplitItems.push({ type: 'F_split', i, r });
+      }
     } else if (/【\s*深水體驗\s*】|【\s*深水池課程\s*】/.test(r.course)) {
       specialAnswers[i] = { type: 'deep_pending' };
       deepItems.push({ i, r });
@@ -573,7 +578,10 @@ function processNextSpecial() {
 
   } else if (item.type === 'F_split') {
     const prev = specialAnswers[item.i];
-    const needsThree = item.r.booked > 16;
+    // 以 EXCEL 協同上課筆數為主；無協同上課時沿用 >16 人的規則
+    const _coKey = `${item.r.date}_${item.r.time}_${item.r.store}`;
+    const _coList = (window.__coTeachersMap || {})[_coKey] || [];
+    const needsThree = _coList.length >= 2 || item.r.booked > 16;
     showFSplitModal({
       counter: `${specialIdx + 1} / ${specialQueue.length}`,
       r: item.r,
@@ -1519,7 +1527,7 @@ function buildStoreTable(store) {
     if (sp?.type === 'trial' || sp?.type === 'trial_skip') return;
     if (/[＃＊]體驗課/.test(r.teacher) || /^新\s*老師\d*$/.test(r.teacher.trim())) return;
 
-    if (/【[ＦF]】兒童游泳/.test(r.course) && r.booked > 8 && sp && sp.type === 'F_split') {
+    if (/【[ＦF]】兒童游泳/.test(r.course) && sp && sp.type === 'F_split') {
       const splitN = (sp.teacher3 && sp.teacher3 !== '__absent__') ? 3 : 2;
       const share = Math.round(r.booked / splitN * 10) / 10;
       // 若有代課老師，代課老師算第一位（取代原班老師）
