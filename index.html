@@ -589,7 +589,12 @@ function processNextSpecial() {
     });
 
   } else if (item.type === 'deep_once') {
-    const deepCount = Object.values(specialAnswers).filter(a => a.type === 'deep_pending').length;
+    // 以日期為 key 去重：同一天的深水課兩館一定一起上，視為同一堂
+    const deepCount = new Set(
+      Object.keys(specialAnswers)
+        .filter(i => specialAnswers[i].type === 'deep_pending')
+        .map(i => allRows[parseInt(i)].date)
+    ).size;
     showDeepWaterModal({
       counter: `${specialIdx + 1} / ${specialQueue.length}`,
       deepCount,
@@ -1096,7 +1101,7 @@ function showDeepWaterModal({ counter, deepCount, deepDates, prevStudents, prevT
               value="${prevStudents || ''}">
           </div>
           <div class="field-group">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
               <div class="field-label" style="margin-bottom:0;">授課老師</div>
               <button type="button" onclick="dwToggleCustom()"
                 id="dw-toggle-btn"
@@ -1104,22 +1109,30 @@ function showDeepWaterModal({ counter, deepCount, deepDates, prevStudents, prevT
                 ＋ 自行輸入
               </button>
             </div>
-            <!-- 下拉選單 -->
-            <div id="dw-sel-wrap" style="display:flex;gap:8px;margin-bottom:8px;">
-              <select class="field-input" id="dw-sel" style="cursor:pointer;flex:1;">
-                <option value="">— 從清單選擇老師 —</option>
-                ${opts}
-              </select>
-              <button class="btn btn-outline btn-sm" onclick="dwAddFromSel()" style="flex-shrink:0;white-space:nowrap;">加入</button>
-            </div>
+            <!-- 可選老師（點擊即加入）-->
+            ${available.length > 0 ? `
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;padding:8px;background:var(--row-alt);border-radius:var(--radius-sm);">
+              ${available.map(t => `
+                <button type="button" onclick="dwAddTeacher('${t.replace(/'/g,"\\'")}')"
+                  style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:99px;font-size:13px;cursor:pointer;
+                    background:transparent;border:1px solid var(--border2);color:var(--text1);
+                    transition:background 0.1s,border-color 0.1s;"
+                  onmouseover="this.style.background='var(--blue-bg)';this.style.borderColor='var(--blue-text)';this.style.color='var(--blue-text)';"
+                  onmouseout="this.style.background='transparent';this.style.borderColor='var(--border2)';this.style.color='var(--text1)';">
+                  ＋ ${t.replace(' 老師','')}
+                </button>`).join('')}
+            </div>` : ''}
             <!-- 自行輸入（預設隱藏）-->
-            <div id="dw-custom-wrap" style="display:none;gap:8px;margin-bottom:8px;">
+            <div id="dw-custom-wrap" style="display:none;gap:8px;margin-bottom:10px;">
               <div style="display:flex;gap:8px;">
                 <input class="field-input" id="dw-custom-inp" placeholder="輸入老師名稱（自動補「老師」）" style="flex:1;">
                 <button class="btn btn-outline btn-sm" onclick="dwAddCustom()" style="flex-shrink:0;white-space:nowrap;">加入</button>
               </div>
             </div>
             <!-- 已選老師標籤 -->
+            <div style="font-size:12px;color:var(--text2);margin-bottom:5px;">
+              已選 ${selected.length} 位：
+            </div>
             <div id="dw-tags" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px;">
               ${selected.length === 0
                 ? `<span style="font-size:12px;color:var(--text3);">尚未選擇老師</span>`
@@ -1145,20 +1158,16 @@ function showDeepWaterModal({ counter, deepCount, deepDates, prevStudents, prevT
   render();
 
   window.__dwToggleCustom = () => {
-    const sel = document.getElementById('dw-sel-wrap');
     const cus = document.getElementById('dw-custom-wrap');
     const btn = document.getElementById('dw-toggle-btn');
     if (cus.style.display === 'none') {
-      sel.style.display = 'none'; cus.style.display = 'flex'; btn.textContent = '從清單選擇';
+      cus.style.display = 'flex'; btn.textContent = '收起';
     } else {
-      sel.style.display = 'flex'; cus.style.display = 'none'; btn.textContent = '＋ 自行輸入';
+      cus.style.display = 'none'; btn.textContent = '＋ 自行輸入';
     }
   };
-  window.__dwAddFromSel = () => {
-    const sel = document.getElementById('dw-sel');
-    const val = sel.value;
-    if (!val) return;
-    if (!selected.includes(val)) selected.push(val);
+  window.__dwAddTeacher = (name) => {
+    if (!selected.includes(name)) selected.push(name);
     render();
   };
   window.__dwAddCustom = () => {
@@ -1192,6 +1201,7 @@ function showDeepWaterModal({ counter, deepCount, deepDates, prevStudents, prevT
   };
 }
 function dwToggleCustom() { window.__dwToggleCustom && window.__dwToggleCustom(); }
+function dwAddTeacher(n) { window.__dwAddTeacher && window.__dwAddTeacher(n); }
 function dwAddFromSel() { window.__dwAddFromSel && window.__dwAddFromSel(); }
 function dwAddCustom() { window.__dwAddCustom && window.__dwAddCustom(); }
 function dwRemoveTeacher(n) { window.__dwRemoveTeacher && window.__dwRemoveTeacher(n); }
@@ -1531,13 +1541,13 @@ function buildStoreTable(store) {
 
   // ── Deep water: handled once per unique session, independent of store filter ──
   // Count distinct deep-water sessions that have been answered
+  // 同一天的深水課兩館一定一起上，以日期為 key 去重即可
   const deepSessions = new Set();
   allRows.forEach((r, i) => {
     const sp = specialAnswers[i];
     if (!sp || sp.type !== 'deep') return;
     if (r.note.includes('停課')) return;
-    // Use date+time as session key to deduplicate (both stores share the same session)
-    deepSessions.add(`${r.date}|${r.time}`);
+    deepSessions.add(r.date);
   });
 
   if (deepWaterAnswer && deepSessions.size > 0) {
@@ -1733,7 +1743,8 @@ function buildCombinedTable(stores) {
       const sp = specialAnswers[i];
       if (!sp || sp.type !== 'deep') return;
       if (r.note.includes('停課')) return;
-      deepSessions.add(`${r.date}|${r.time}`);
+      // 同一天的深水課兩館一定一起上，以日期為 key 去重
+      deepSessions.add(r.date);
     });
     if (deepSessions.size > 0) {
       const tList = deepWaterAnswer.teachers.split(',').map(t => t.trim()).filter(Boolean);
