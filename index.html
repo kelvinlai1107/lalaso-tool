@@ -452,7 +452,11 @@ function parseBookfast(rawRows, fname) {
       const date    = String(r[idx['課程日期']] || '').trim();
       const time    = String(r[idx['課程時間']] || '').trim();
       const store   = String(r[idx['開課店別']] || '').trim();
-      const teacher = String(r[idx['授課老師']] || '').trim();
+      const rawTeacher = String(r[idx['授課老師']] || '').trim();
+      const subTeacher = String(r[idx['代課老師']] || '').trim();
+      const status     = String(r[idx['老師狀態']] || '').trim();
+      // I欄為「代課」時，以H欄代課老師為準
+      const teacher = (status === '代課' && subTeacher) ? subTeacher : rawTeacher;
       if (!teacher || !teacher.includes('老師')) return;
       const key = `${date}_${time}_${store}`;
       if (!window.__coTeachersMap[key]) window.__coTeachersMap[key] = [];
