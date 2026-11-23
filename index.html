@@ -922,12 +922,14 @@ function showFSplitModal({ counter, r, needsThree, prev, canBack, onBack, onOk }
   // 從協同上課 map 預帶老師（若使用者已手動改過則優先用手動值）
   const coKey = `${r.date}_${r.time}_${r.store}`;
   const coList = (window.__coTeachersMap || {})[coKey] || [];
-  const prevT2 = prev?.teacher2 || coList[0] || '';
+  const rawT2 = prev?.teacher2 || coList[0] || '';
+  const prevT2Absent = rawT2 === '__absent__';
+  const prevT2 = prevT2Absent ? '' : rawT2;
   const rawT3 = prev?.teacher3 ?? (coList[1] || '');
   const prevT3Absent = rawT3 === '__absent__';
   const prevT3 = prevT3Absent ? '' : rawT3;
 
-  function makeTeacherField(fieldId, label, prevVal, { showAbsent = false, initAbsent = false } = {}) {
+  function makeTeacherField(fieldId, label, prevVal, { showAbsent = false, initAbsent = false, absentLabel = '從缺 — 此堂人次將由兩位老師平分' } = {}) {
     const isCustom = prevVal && !allTeachers.includes(prevVal);
     const opts = allTeachers.map(t =>
       `<option value="${t}" ${prevVal === t ? 'selected' : ''}>${t.replace(' 老師','')}</option>`).join('');
@@ -956,7 +958,7 @@ function showFSplitModal({ counter, r, needsThree, prev, canBack, onBack, onOk }
           <input class="field-input" id="${fieldId}-custom" placeholder="輸入老師名稱（自動補「老師」）"
             style="display:${isCustom ? 'block' : 'none'};" value="${isCustom ? prevVal.replace(' 老師','') : ''}">
         </div>
-        ${initAbsent ? `<div id="${fieldId}-absent-label" style="font-size:13px;color:#e53e3e;padding:6px 0;">從缺 — 此堂人次將由兩位老師平分</div>` : `<div id="${fieldId}-absent-label" style="display:none;font-size:13px;color:#e53e3e;padding:6px 0;">從缺 — 此堂人次將由兩位老師平分</div>`}
+        ${initAbsent ? `<div id="${fieldId}-absent-label" style="font-size:13px;color:#e53e3e;padding:6px 0;">${absentLabel}</div>` : `<div id="${fieldId}-absent-label" style="display:none;font-size:13px;color:#e53e3e;padding:6px 0;">${absentLabel}</div>`}
       </div>`;
   }
 
@@ -979,9 +981,9 @@ function showFSplitModal({ counter, r, needsThree, prev, canBack, onBack, onOk }
       </div>
       <p style="font-size:13px;color:var(--text2);margin-bottom:1.25rem;line-height:1.6;">
         師生比 1:8，預約超過 ${needsThree ? '16' : '8'} 人，需 <strong style="color:var(--text);">${needsThree ? '三' : '兩'}</strong> 位老師共同授課。<br>
-        每人各計 <strong style="color:var(--blue-text);" id="f-share-display">${prevT3Absent ? Math.round(r.booked/2*10)/10 : share} 人次</strong>，各算 <strong>1 堂</strong>。
+        每人各計 <strong style="color:var(--blue-text);" id="f-share-display">${(() => { const t2a=prevT2Absent, t3a=prevT3Absent; const n=1+(t2a?0:1)+(needsThree?(t3a?0:1):0); return Math.round(r.booked/Math.max(1,n)*10)/10; })()} 人次</strong>，各算 <strong>1 堂</strong>。
       </p>
-      ${makeTeacherField('f-t2', '第二位老師', prevT2)}
+      ${makeTeacherField('f-t2', '第二位老師', prevT2, { showAbsent: true, initAbsent: prevT2Absent, absentLabel: needsThree ? '從缺 — 此堂人次將由兩位老師平分（原授課老師＋第三位老師）' : '從缺 — 此堂人次由原授課老師獨自計算' })}
       ${needsThree ? makeTeacherField('f-t3', '第三位老師', prevT3, { showAbsent: true, initAbsent: prevT3Absent }) : ''}
       <div class="modal-error" id="m-err"></div>
       <div class="modal-actions" style="justify-content:space-between;">
@@ -1016,8 +1018,15 @@ function showFSplitModal({ counter, r, needsThree, prev, canBack, onBack, onOk }
   };
 
   window.__fSplitOk = () => {
-    const t2 = getVal('f-t2');
-    if (!t2) { showModalError('請選擇或輸入第二位老師'); return; }
+    const t2AbsentBtn = document.getElementById('btn-absent-f-t2');
+    const t2IsAbsent = t2AbsentBtn?.dataset.absent === '1';
+    let t2;
+    if (t2IsAbsent) {
+      t2 = '__absent__';
+    } else {
+      t2 = getVal('f-t2');
+      if (!t2) { showModalError('請選擇或輸入第二位老師，或點「從缺」'); return; }
+    }
     let t3 = null;
     if (needsThree) {
       const absentBtn = document.getElementById('btn-absent-f-t3');
@@ -1056,7 +1065,12 @@ function showFSplitModal({ counter, r, needsThree, prev, canBack, onBack, onOk }
     toggleBtn.style.display = nowAbsent ? 'none' : '';
     if (absentLabel) absentLabel.style.display = nowAbsent ? '' : 'none';
     if (shareEl) {
-      const n = nowAbsent ? 2 : (needsThree ? 3 : 2);
+      // 讀取雙按鈕最終狀態計算分攤人次
+      const t2Btn = document.getElementById('btn-absent-f-t2');
+      const t3Btn = document.getElementById('btn-absent-f-t3');
+      const t2Absent = t2Btn ? t2Btn.dataset.absent === '1' : false;
+      const t3Absent = t3Btn ? t3Btn.dataset.absent === '1' : false;
+      const n = Math.max(1, 1 + (t2Absent ? 0 : 1) + (needsThree ? (t3Absent ? 0 : 1) : 0));
       shareEl.textContent = `${Math.round(r.booked / n * 10) / 10} 人次`;
     }
     const err = document.getElementById('m-err');
@@ -1357,16 +1371,23 @@ function renderResult() {
     const dateStr = formatDateWithWeekday(r.date);
     const storeStr = r.store || '';
     const booked = r.booked || 0;
-    if (a.teacher3 && a.teacher3 !== '__absent__') {
-      const perT = booked > 0 ? (booked / 3).toFixed(1) : '—';
-      notices.push({ type: 'info', msg: `ℹ ${storeStr} ${dateStr} 【Ｆ】兒童游泳 ${booked} 人，三位老師均分人次（${a.teacher2}、${a.teacher3}），每人 ${perT} 人次` });
-    } else if (a.teacher3 === '__absent__') {
-      const perT = booked > 0 ? (booked / 2).toFixed(1) : '—';
-      notices.push({ type: 'info', msg: `ℹ ${storeStr} ${dateStr} 【Ｆ】兒童游泳 ${booked} 人（第三位老師從缺），兩位老師平分人次（${a.teacher2}），每人 ${perT} 人次` });
+    const t2p = a.teacher2 && a.teacher2 !== '__absent__';
+    const t3p = a.teacher3 && a.teacher3 !== '__absent__';
+    const splitN = Math.max(1, 1 + (t2p ? 1 : 0) + (t3p ? 1 : 0));
+    const perT = booked > 0 ? (booked / splitN).toFixed(1) : '—';
+    let fMsg;
+    if (t2p && t3p) {
+      fMsg = `ℹ ${storeStr} ${dateStr} 【Ｆ】兒童游泳 ${booked} 人，三位老師均分人次（${a.teacher2}、${a.teacher3}），每人 ${perT} 人次`;
+    } else if (t2p && a.teacher3 === '__absent__') {
+      fMsg = `ℹ ${storeStr} ${dateStr} 【Ｆ】兒童游泳 ${booked} 人（第三位老師從缺），兩位老師平分人次（${a.teacher2}），每人 ${perT} 人次`;
+    } else if (t2p) {
+      fMsg = `ℹ ${storeStr} ${dateStr} 【Ｆ】兒童游泳 ${booked} 人，已加入第二位老師「${a.teacher2}」，每人 ${perT} 人次`;
+    } else if (a.teacher2 === '__absent__' && t3p) {
+      fMsg = `ℹ ${storeStr} ${dateStr} 【Ｆ】兒童游泳 ${booked} 人（第二位老師從缺），原授課老師與「${a.teacher3}」平分，每人 ${perT} 人次`;
     } else {
-      const perT = booked > 0 ? (booked / 2).toFixed(1) : '—';
-      notices.push({ type: 'info', msg: `ℹ ${storeStr} ${dateStr} 【Ｆ】兒童游泳 ${booked} 人，已加入第二位老師「${a.teacher2}」，每人 ${perT} 人次` });
+      fMsg = `ℹ ${storeStr} ${dateStr} 【Ｆ】兒童游泳 ${booked} 人（協同老師從缺），由原授課老師獨自計算（${booked} 人次）`;
     }
+    notices.push({ type: 'info', msg: fMsg });
   });
   // 深水體驗結果：顯示所有日期
   Object.values(specialAnswers).filter(a => a.type === 'deep').slice(0,1).forEach(() => {
@@ -1494,7 +1515,7 @@ function buildStoreTable(store) {
     const sp = specialAnswers[i];
     if (!sp) return;
     if (sp.type === 'F_split') {
-      teacherSet.add(sp.teacher2);
+      if (sp.teacher2 && sp.teacher2 !== '__absent__') teacherSet.add(sp.teacher2);
       if (sp.teacher3 && sp.teacher3 !== '__absent__') teacherSet.add(sp.teacher3);
     }
     if (sp.type === 'trial' && sp.teacher) {
@@ -1536,13 +1557,13 @@ function buildStoreTable(store) {
     if (/[＃＊]體驗課/.test(r.teacher) || /^新\s*老師\d*$/.test(r.teacher.trim())) return;
 
     if (/【[ＦF]】兒童游泳/.test(r.course) && sp && sp.type === 'F_split') {
-      const splitN = (sp.teacher3 && sp.teacher3 !== '__absent__') ? 3 : 2;
+      const fExtras = [sp.teacher2, sp.teacher3].filter(t => t && t !== '__absent__');
+      const splitN = Math.max(1, 1 + fExtras.length);
       const share = Math.round(r.booked / splitN * 10) / 10;
       // 若有代課老師，代課老師算第一位（取代原班老師）
       const eff1 = (r.subTeacher && r.subTeacher.trim()) ? r.subTeacher : r.teacher;
       ensureStat(eff1); stat[eff1][cat].people += share; stat[eff1][cat].sessions += 1;
-      ensureStat(sp.teacher2); stat[sp.teacher2][cat].people += share; stat[sp.teacher2][cat].sessions += 1;
-      if (sp.teacher3 && sp.teacher3 !== '__absent__') { ensureStat(sp.teacher3); stat[sp.teacher3][cat].people += share; stat[sp.teacher3][cat].sessions += 1; }
+      fExtras.forEach(t => { ensureStat(t); stat[t][cat].people += share; stat[t][cat].sessions += 1; });
     } else if (/【\s*深水體驗\s*】|【\s*深水池課程\s*】/.test(r.course)) {
       // Skip here — deep water is handled separately below to avoid store-filter issues
     } else {
@@ -1695,8 +1716,8 @@ function buildCombinedTable(stores) {
     if (effT.includes('老師')) teacherSet.add(effT);
     const sp = specialAnswers[i];
     if (!sp) return;
-    if (sp.type === 'F_split' && sp.teacher2) {
-      teacherSet.add(sp.teacher2);
+    if (sp.type === 'F_split') {
+      if (sp.teacher2 && sp.teacher2 !== '__absent__') teacherSet.add(sp.teacher2);
       if (sp.teacher3 && sp.teacher3 !== '__absent__') teacherSet.add(sp.teacher3);
     }
     if (sp.type === 'trial' && sp.teacher) teacherSet.add(sp.teacher);
@@ -1722,13 +1743,13 @@ function buildCombinedTable(stores) {
       if (r.note.includes('停課') && sp?.type !== 'stop_override') return;
       if (sp?.type === 'trial' || sp?.type === 'trial_skip') return;
       if (/[＃＊]體驗課/.test(r.teacher) || /^新\s*老師\d*$/.test(r.teacher.trim())) return;
-      if (/【[ＦF]】兒童游泳/.test(r.course) && r.booked > 8 && sp?.type === 'F_split') {
-        const splitN = (sp.teacher3 && sp.teacher3 !== '__absent__') ? 3 : 2;
+      if (/【[ＦF]】兒童游泳/.test(r.course) && sp?.type === 'F_split') {
+        const fExtras = [sp.teacher2, sp.teacher3].filter(t => t && t !== '__absent__');
+        const splitN = Math.max(1, 1 + fExtras.length);
         const share = Math.round(r.booked / splitN * 10) / 10;
         const eff1 = (r.subTeacher && r.subTeacher.trim()) ? r.subTeacher : r.teacher;
         ensureStat(eff1); stat[eff1][cat].people += share; stat[eff1][cat].sessions += 1;
-        ensureStat(sp.teacher2); stat[sp.teacher2][cat].people += share; stat[sp.teacher2][cat].sessions += 1;
-        if (sp.teacher3 && sp.teacher3 !== '__absent__') { ensureStat(sp.teacher3); stat[sp.teacher3][cat].people += share; stat[sp.teacher3][cat].sessions += 1; }
+        fExtras.forEach(t => { ensureStat(t); stat[t][cat].people += share; stat[t][cat].sessions += 1; });
       } else if (/【\s*深水體驗\s*】|【\s*深水池課程\s*】/.test(r.course)) {
         // handled below
       } else {
