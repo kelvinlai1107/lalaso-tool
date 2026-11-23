@@ -975,7 +975,7 @@ function showFSplitModal({ counter, r, needsThree, prev, canBack, onBack, onOk }
         <div style="display:grid;grid-template-columns:5em 1fr;gap:2px 8px;">
           <span style="color:var(--text2);">日期</span><span>${formatDateWithWeekday(r.date)}</span>
           <span style="color:var(--text2);">時間</span><span>${r.time}　<span style="color:var(--text2);font-size:12px;">${r.store}</span></span>
-          <span style="color:var(--text2);">${r.teacherStatus === '代課' && r.subTeacher ? '代課老師' : '授課老師'}</span><span style="font-weight:600;">${r.teacherStatus === '代課' && r.subTeacher ? `${r.subTeacher} <span style="font-size:11px;color:var(--yellow-text);background:var(--yellow-bg);padding:1px 6px;border-radius:99px;font-weight:400;">代課</span>` : r.teacher}</span>
+          ${r.teacherStatus === '代課' && r.subTeacher ? `<span style="color:var(--text2);">授課老師</span><span style="color:var(--text2);">${r.teacher}</span><span style="color:var(--text2);">代課老師</span><span style="font-weight:600;">${r.subTeacher} <span style="font-size:11px;color:var(--yellow-text);background:var(--yellow-bg);padding:1px 6px;border-radius:99px;font-weight:400;">代課</span></span>` : `<span style="color:var(--text2);">授課老師</span><span style="font-weight:600;">${r.teacher}</span>`}
           <span style="color:var(--text2);">預約人數</span><span style="font-weight:600;color:var(--blue-text);">${r.booked} 人</span>
         </div>
       </div>
