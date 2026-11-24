@@ -613,13 +613,14 @@ function processNextSpecial() {
       deepDates: item.deepDates || [],
       prevStudents: deepWaterAnswer ? deepWaterAnswer.students : '',
       prevTeachers: deepWaterAnswer ? deepWaterAnswer.teachers : '',
+      prevStoreOverrides: deepWaterAnswer ? deepWaterAnswer.storeOverrides : {},
       canBack,
       onBack() { specialIdx--; processNextSpecial(); },
-      onOk({ students, teachers }) {
-        deepWaterAnswer = { students, teachers };
+      onOk({ students, teachers, storeOverrides }) {
+        deepWaterAnswer = { students, teachers, storeOverrides };
         Object.keys(specialAnswers).forEach(i => {
           if (specialAnswers[i].type === 'deep_pending') {
-            specialAnswers[i] = { type: 'deep', students: deepWaterAnswer.students, teachers: deepWaterAnswer.teachers };
+            specialAnswers[i] = { type: 'deep', students: deepWaterAnswer.students, teachers: deepWaterAnswer.teachers, storeOverrides: deepWaterAnswer.storeOverrides };
           }
         });
         specialIdx++;
@@ -1084,12 +1085,14 @@ function toggleFTeacher(id) { window.__toggleFTeacher && window.__toggleFTeacher
 function fT3Absent(id) { window.__fT3Absent && window.__fT3Absent(id); }
 
 // ─── 深水體驗 Modal ───────────────────────────────────────────
-function showDeepWaterModal({ counter, deepCount, deepDates, prevStudents, prevTeachers, canBack, onBack, onOk }) {
+function showDeepWaterModal({ counter, deepCount, deepDates, prevStudents, prevTeachers, prevStoreOverrides, canBack, onBack, onOk }) {
   const existing = document.getElementById('__modal');
   if (existing) existing.remove();
 
   // 已選老師清單（陣列）
   let selected = prevTeachers ? prevTeachers.split(',').map(t => t.trim()).filter(Boolean) : [];
+  // 自行輸入老師的館別 { '老師名': '西屯館' }
+  let selectedStores = prevStoreOverrides ? { ...prevStoreOverrides } : {};
 
   function render() {
     const ex = document.getElementById('__modal');
@@ -1154,6 +1157,11 @@ function showDeepWaterModal({ counter, deepCount, deepDates, prevStudents, prevT
                 <input class="field-input" id="dw-custom-inp" placeholder="輸入老師名稱（自動補「老師」）" style="flex:1;">
                 <button class="btn btn-outline btn-sm" onclick="dwAddCustom()" style="flex-shrink:0;white-space:nowrap;">加入</button>
               </div>
+              <div style="display:flex;gap:12px;margin-top:6px;align-items:center;">
+                <span style="font-size:12px;color:var(--text2);flex-shrink:0;">館別歸屬：</span>
+                <label style="font-size:13px;cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="radio" name="dw-store" value="西屯館" checked> 西屯館</label>
+                <label style="font-size:13px;cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="radio" name="dw-store" value="北屯館"> 北屯館</label>
+              </div>
             </div>
             <!-- 已選老師標籤 -->
             <div style="font-size:12px;color:var(--text2);margin-bottom:5px;">
@@ -1162,12 +1170,14 @@ function showDeepWaterModal({ counter, deepCount, deepDates, prevStudents, prevT
             <div id="dw-tags" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px;">
               ${selected.length === 0
                 ? `<span style="font-size:12px;color:var(--text3);">尚未選擇老師</span>`
-                : selected.map(t => `
-                  <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:var(--blue-bg);color:var(--blue-text);border-radius:99px;font-size:13px;">
-                    ${t.replace(' 老師','')}
+                : selected.map(t => {
+                    const homeStore = selectedStores[t];
+                    const storeBadge = homeStore ? `<span style="font-size:10px;padding:1px 5px;border-radius:99px;background:rgba(0,0,0,0.15);margin-left:2px;">${homeStore === '西屯館' ? '西' : '北'}</span>` : '';
+                    return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:var(--blue-bg);color:var(--blue-text);border-radius:99px;font-size:13px;">
+                    ${t.replace(' 老師','')}${storeBadge}
                     <button onclick="dwRemoveTeacher('${t.replace(/'/g,"\\'")}')\"
                       style="background:none;border:none;cursor:pointer;color:var(--blue-text);font-size:14px;line-height:1;padding:0;margin-left:2px;">×</button>
-                  </span>`).join('')
+                  </span>`;}).join('')
               }
             </div>
             <div class="modal-error" id="m-err" style="margin-top:6px;"></div>
@@ -1202,6 +1212,9 @@ function showDeepWaterModal({ counter, deepCount, deepDates, prevStudents, prevT
     if (!name) return;
     if (!name.endsWith('老師')) name = `${name} 老師`;
     if (!selected.includes(name)) selected.push(name);
+    // 記錄館別（自行輸入的老師才需要）
+    const storeRadio = document.querySelector('input[name="dw-store"]:checked');
+    if (storeRadio) selectedStores[name] = storeRadio.value;
     // 存入持久化名單
     const persistent = loadPersistentTeachers();
     if (!persistent.includes(name)) { persistent.push(name); savePersistentTeachers(persistent); }
@@ -1209,6 +1222,7 @@ function showDeepWaterModal({ counter, deepCount, deepDates, prevStudents, prevT
   };
   window.__dwRemoveTeacher = (name) => {
     selected = selected.filter(t => t !== name);
+    delete selectedStores[name];
     render();
   };
   window.__dwOk = () => {
@@ -1218,7 +1232,7 @@ function showDeepWaterModal({ counter, deepCount, deepDates, prevStudents, prevT
     if (selected.length === 0) { showModalError('請至少選擇一位老師'); return; }
     const el = document.getElementById('__modal');
     if (el) el.remove();
-    onOk({ students, teachers: selected.join(', ') });
+    onOk({ students, teachers: selected.join(', '), storeOverrides: { ...selectedStores } });
   };
   window.__dwBack = () => {
     const el = document.getElementById('__modal');
@@ -1496,6 +1510,10 @@ function buildTeacherHomeStore() {
   Object.entries(counts).forEach(([t, stores]) => {
     home[t] = Object.entries(stores).sort((a, b) => b[1] - a[1])[0][0];
   });
+  // 自行輸入老師的館別覆蓋
+  if (deepWaterAnswer && deepWaterAnswer.storeOverrides) {
+    Object.entries(deepWaterAnswer.storeOverrides).forEach(([t, s]) => { home[t] = s; });
+  }
   return home;
 }
 
