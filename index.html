@@ -353,7 +353,7 @@ const COURSE_GROUPS = {
   '兒童游泳': [/【[ＥE]】兒童游泳/, /【[ＦF]】兒童游泳/, /【[ＥE]】兒童體驗/, /【\s*深水體驗\s*】/, /【\s*深水池課程\s*】/],
 };
 // 歷史紀錄直接編輯功能開關（用完後改為 false）
-const HISTORY_EDIT_ENABLED = false;
+const HISTORY_EDIT_ENABLED = true;
 
 const CAT_ORDER = ['親子游泳', '幼兒游泳', '兒童游泳'];
 const CAT_CLS = { '親子游泳': 'cat-a', '幼兒游泳': 'cat-c', '兒童游泳': 'cat-e' };
@@ -2481,7 +2481,15 @@ function heditExclude(month) {
   // 儲存回 localStorage
   localStorage.setItem('lalaso_month_' + month, JSON.stringify(rec));
 
-  alert(`已從「${store}」移除「${teacher.replace(' 老師','')}」並儲存。`);
+  // 同步至 SharePoint（若已連線）
+  const cfg = getSpConfig();
+  if (cfg && spAccessToken) {
+    saveToSharePoint(month, rec)
+      .then(() => { alert(`已從「${store}」移除「${teacher.replace(' 老師','')}」並儲存至本地及 SharePoint。`); })
+      .catch(e => { alert(`本地已儲存，但 SharePoint 同步失敗：${e.message}`); });
+  } else {
+    alert(`已從「${store}」移除「${teacher.replace(' 老師','')}」並儲存至本地。`);
+  }
   renderMonthlyView();
 }
 
