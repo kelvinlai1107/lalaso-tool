@@ -352,6 +352,9 @@ const COURSE_GROUPS = {
   '幼兒游泳': [/【[ＣC]】幼兒游泳/, /【[ＤD]】幼兒游泳/, /【[ＣC]】幼兒體驗/],
   '兒童游泳': [/【[ＥE]】兒童游泳/, /【[ＦF]】兒童游泳/, /【[ＥE]】兒童體驗/, /【\s*深水體驗\s*】/, /【\s*深水池課程\s*】/],
 };
+// 歷史紀錄直接編輯功能開關（用完後改為 false）
+const HISTORY_EDIT_ENABLED = true;
+
 const CAT_ORDER = ['親子游泳', '幼兒游泳', '兒童游泳'];
 const CAT_CLS = { '親子游泳': 'cat-a', '幼兒游泳': 'cat-c', '兒童游泳': 'cat-e' };
 const CAT_LABEL = { '親子游泳': '親子游泳<br><small>ＡＢ</small>', '幼兒游泳': '幼兒游泳<br><small>ＣＤ</small>', '兒童游泳': '兒童游泳<br><small>ＥＦ</small>' };
@@ -2393,11 +2396,93 @@ function renderMonthlyView() {
         ).join('')}
       </div>
     </div>` : '';
+  const histEditHtml = HISTORY_EDIT_ENABLED ? (() => {
+    const storeOpts = stores.map(s => `<option value="${s}">${s}</option>`).join('');
+    const firstTeachers = rec.data[stores[0]]?.teachers || [];
+    const teacherOpts = firstTeachers.map(t => `<option value="${t}">${t.replace(' 老師','')}</option>`).join('');
+    return `<div id="hist-edit-wrap" style="margin-top:2rem;border-top:1.5px solid var(--border);padding-top:1.5rem;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--red-text,#e53e3e);">⚠ 歷史紀錄直接編輯（整欄移除）</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+        <div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:3px;">館別</div>
+          <select id="hedit-store" class="field-input" style="padding:6px 10px;min-width:90px;"
+            onchange="heditOnStoreChange('${month}')">${storeOpts}</select>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:3px;">老師</div>
+          <select id="hedit-teacher" class="field-input" style="padding:6px 10px;min-width:100px;">${teacherOpts}</select>
+        </div>
+        <button class="btn btn-sm" onclick="heditExclude('${month}')"
+          style="height:36px;background:var(--red-text,#e53e3e);color:#fff;border:none;border-radius:var(--radius-sm);padding:0 14px;cursor:pointer;">
+          整欄移除並儲存
+        </button>
+      </div>
+    </div>`;
+  })() : '';
+
   document.getElementById('monthly-content').innerHTML = `
     <div style="font-size:14px;font-weight:600;margin-bottom:12px;color:var(--text2);">${rec.title || month}</div>
     ${noteHtml}${adjHtml}
     <div class="store-tabs">${tabs}</div>
-    ${panels}`;
+    ${panels}
+    ${histEditHtml}`;
+}
+
+function heditOnStoreChange(month) {
+  const store = document.getElementById('hedit-store')?.value;
+  const records = loadAllHistory();
+  const rec = records.find(r => r.month === month);
+  if (!rec || !store) return;
+  const teachers = rec.data[store]?.teachers || [];
+  const el = document.getElementById('hedit-teacher');
+  if (el) el.innerHTML = teachers.map(t => `<option value="${t}">${t.replace(' 老師','')}</option>`).join('');
+}
+
+function heditExclude(month) {
+  const store = document.getElementById('hedit-store')?.value;
+  const teacher = document.getElementById('hedit-teacher')?.value;
+  if (!store || !teacher) { alert('請選擇館別及老師'); return; }
+  if (!confirm(`確定要從「${store}」移除「${teacher.replace(' 老師','')}」整欄嗎？\n此操作會直接修改並覆蓋已儲存的歷史紀錄。`)) return;
+
+  const records = loadAllHistory();
+  const rec = records.find(r => r.month === month);
+  if (!rec) { alert('找不到月份紀錄'); return; }
+
+  const sd = rec.data[store];
+  if (!sd) { alert('找不到館別資料'); return; }
+
+  // 從 teachers 清單移除
+  sd.teachers = sd.teachers.filter(t => t !== teacher);
+
+  // 清零 stats
+  if (sd.stat[teacher]) {
+    CAT_ORDER.forEach(c => { sd.stat[teacher][c] = { people: 0, sessions: 0 }; });
+  }
+
+  // 重建合計
+  const allStores = Object.keys(rec.data).filter(s => s !== '合計');
+  const allT = [...new Set(allStores.flatMap(s => rec.data[s]?.teachers || []))];
+  const combinedStat = {};
+  allT.forEach(t => {
+    combinedStat[t] = {};
+    CAT_ORDER.forEach(c => combinedStat[t][c] = { people: 0, sessions: 0 });
+  });
+  allStores.forEach(s => {
+    (rec.data[s]?.teachers || []).forEach(t => {
+      CAT_ORDER.forEach(c => {
+        combinedStat[t][c].people += rec.data[s].stat[t]?.[c]?.people || 0;
+        combinedStat[t][c].sessions += rec.data[s].stat[t]?.[c]?.sessions || 0;
+      });
+    });
+  });
+  const finalT = allT.filter(t => CAT_ORDER.some(c => (combinedStat[t]?.[c]?.people || 0) > 0 || (combinedStat[t]?.[c]?.sessions || 0) > 0));
+  rec.data['合計'] = { teachers: finalT, stat: combinedStat };
+
+  // 儲存回 localStorage
+  localStorage.setItem('lalaso_month_' + month, JSON.stringify(rec));
+
+  alert(`已從「${store}」移除「${teacher.replace(' 老師','')}」並儲存。`);
+  renderMonthlyView();
 }
 
 function switchMonthlyTab(idx, el) {
