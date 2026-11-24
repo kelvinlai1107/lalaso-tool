@@ -1906,9 +1906,11 @@ function renderAdjSection(stores) {
   const adjChips = adjList.map((a, idx) => `
     <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;
       background:var(--surface2);border:0.5px solid var(--border2);border-radius:99px;font-size:12px;">
-      ${a.store} ${a.teacher.replace(' 老師','')} ${a.cat}：
-      ${fmt(a.oldPeople)}→<strong>${fmt(a.newPeople)}</strong>人次 /
-      ${a.oldSessions}→<strong>${a.newSessions}</strong>堂
+      ${a.type === 'exclude'
+        ? `${a.store} ${a.teacher.replace(' 老師','')} <strong>整欄移除</strong>`
+        : `${a.store} ${a.teacher.replace(' 老師','')} ${a.cat}：
+           ${fmt(a.oldPeople)}→<strong>${fmt(a.newPeople)}</strong>人次 /
+           ${a.oldSessions}→<strong>${a.newSessions}</strong>堂`}
       <button onclick="removeAdj(${idx})"
         style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;line-height:1;padding:0;margin-left:2px;">×</button>
     </span>`).join('');
@@ -1957,6 +1959,8 @@ function renderAdjSection(stores) {
             </div>
             <div id="adj-preview" style="font-size:13px;color:var(--text2);padding-bottom:8px;min-width:90px;"></div>
             <button class="btn btn-outline btn-sm" onclick="applyAdj()" style="height:36px;">套用</button>
+            <button class="btn btn-outline btn-sm" onclick="applyExclude()"
+              style="height:36px;border-color:var(--red-text,#e53e3e);color:var(--red-text,#e53e3e);">整欄移除此老師</button>
           </div>
         </div>
       </div>
@@ -2059,15 +2063,66 @@ function applyAdj() {
   if (adjEl2) adjEl2.dataset.adjCount = window.__adjustments.length;
 }
 
+function applyExclude() {
+  const store = document.getElementById('adj-store')?.value;
+  const teacher = document.getElementById('adj-teacher')?.value;
+  if (!store || !teacher) { alert('請選擇館別及老師'); return; }
+  const sd = window.__exportData?.[store];
+  if (!sd) { alert('找不到館別資料'); return; }
+
+  // 儲存原始 stats 供還原
+  const savedStats = {};
+  CAT_ORDER.forEach(c => {
+    savedStats[c] = { ...(sd.stat[teacher]?.[c] || { people: 0, sessions: 0 }) };
+  });
+
+  // 從老師清單移除
+  sd.teachers = sd.teachers.filter(t => t !== teacher);
+
+  // 清零 stats
+  CAT_ORDER.forEach(c => {
+    if (sd.stat[teacher]) sd.stat[teacher][c] = { people: 0, sessions: 0 };
+  });
+
+  (window.__adjustments = window.__adjustments || []).push({ type: 'exclude', store, teacher, savedStats });
+
+  const adjEl = document.getElementById('adj-section');
+  if (adjEl) adjEl.dataset.adjCount = window.__adjustments.length;
+
+  const stores = Object.keys(window.__exportData).filter(s => s !== '合計');
+  rebuildCombinedExportData(stores);
+
+  const statBox = document.getElementById('statbox-' + store);
+  if (statBox) statBox.innerHTML = buildHistoryStoreTable({ data: window.__exportData }, store);
+  const combinedBox = document.getElementById('statbox-__combined__');
+  if (combinedBox) combinedBox.innerHTML = buildHistoryStoreTable({ data: window.__exportData }, '合計');
+
+  renderAdjSection(stores);
+  const adjEl2 = document.getElementById('adj-section');
+  if (adjEl2) adjEl2.dataset.adjCount = window.__adjustments.length;
+}
+
 function removeAdj(idx) {
   const adjs = window.__adjustments || [];
   const a = adjs[idx];
   if (!a) return;
 
-  // 還原舊值
-  if (window.__exportData?.[a.store]?.stat?.[a.teacher]?.[a.cat]) {
-    window.__exportData[a.store].stat[a.teacher][a.cat].people = a.oldPeople;
-    window.__exportData[a.store].stat[a.teacher][a.cat].sessions = a.oldSessions;
+  if (a.type === 'exclude') {
+    // 還原 stats
+    const sd = window.__exportData?.[a.store];
+    if (sd) {
+      CAT_ORDER.forEach(c => {
+        if (sd.stat[a.teacher]) sd.stat[a.teacher][c] = a.savedStats[c];
+      });
+      // 還原至老師清單（若不在則補回）
+      if (!sd.teachers.includes(a.teacher)) sd.teachers.push(a.teacher);
+    }
+  } else {
+    // 還原舊值
+    if (window.__exportData?.[a.store]?.stat?.[a.teacher]?.[a.cat]) {
+      window.__exportData[a.store].stat[a.teacher][a.cat].people = a.oldPeople;
+      window.__exportData[a.store].stat[a.teacher][a.cat].sessions = a.oldSessions;
+    }
   }
   adjs.splice(idx, 1);
 
